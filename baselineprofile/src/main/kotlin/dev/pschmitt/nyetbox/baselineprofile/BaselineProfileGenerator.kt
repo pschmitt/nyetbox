@@ -41,8 +41,16 @@ class BaselineProfileGenerator {
     fun seedFixtureState() {
         device.executeShellCommand("am force-stop $TARGET_PACKAGE")
         device.executeShellCommand("pm clear $TARGET_PACKAGE")
-        val packages = device.executeShellCommand("pm list packages $TARGET_PACKAGE")
-        println("BaselineProfileGenerator: installed packages matching target: $packages")
+        // A println emitted before logcat -c below races the test framework's own log-tailing
+        // (which also reads the device's logcat) and can vanish before it's ever relayed to the
+        // CI console - printing dumpsys package's *return value* here instead sidesteps that,
+        // since it's captured directly rather than round-tripped through logcat.
+        val receiverDump =
+            device.executeShellCommand("dumpsys package $TARGET_PACKAGE")
+                .lineSequence()
+                .filter { "BenchmarkSeedReceiver" in it || "receivers:" in it }
+                .joinToString("\n")
+        println("BaselineProfileGenerator: dumpsys package receiver info:\n$receiverDump")
         device.executeShellCommand("logcat -c")
         // pm clear above puts the app into Android's "stopped" state, in which normal broadcasts
         // - even explicit ones targeting a specific component - are enqueued but never delivered

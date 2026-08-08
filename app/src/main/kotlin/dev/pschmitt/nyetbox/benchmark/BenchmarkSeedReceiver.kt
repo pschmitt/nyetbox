@@ -1,5 +1,6 @@
 package dev.pschmitt.nyetbox.benchmark
 
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -55,7 +56,13 @@ private val BENCHMARK_BUILD_TYPES = setOf("benchmarkRelease", "nonMinifiedReleas
  * this receiver to configure a fixture server profile and seed a few cache rows directly via the
  * real repository/DAO write paths, then relaunches for the actual profiled cold start. See
  * NBC-426.
+ *
+ * Logs via [android.util.Log], not Timber: [dev.pschmitt.nyetbox.NyetboxApp.onCreate] only plants
+ * a Timber tree for `BuildConfig.DEBUG` builds, and this receiver only ever does anything on the
+ * non-debuggable `benchmarkRelease`/`nonMinifiedRelease` build types, where Timber would be a
+ * silent no-op.
  */
+@SuppressLint("LogNotTimber")
 @AndroidEntryPoint
 class BenchmarkSeedReceiver : BroadcastReceiver() {
 

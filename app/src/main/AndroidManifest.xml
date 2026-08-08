@@ -186,12 +186,15 @@
 
         <!-- Only ever acts on the androidx.baselineprofile plugin's "benchmarkRelease"/
              "nonMinifiedRelease" build types (both non-debuggable, release-derived) - a no-op on
-             the real "debug"/"release" builds shipped to users. exported=false, so only adb
-             shell's explicit-component am broadcast can reach it. See BenchmarkSeedReceiver's own
-             doc comment (NBC-426). -->
+             the real "debug"/"release" builds shipped to users regardless of who sends this
+             broadcast, so exported=true (needed for adb shell's explicit-component am broadcast
+             to reliably reach it on API 34 - exported=false plus explicit targeting was
+             unreliable in testing) costs nothing on a real install. See BenchmarkSeedReceiver's
+             own doc comment (NBC-426). -->
         <receiver
             android:name=".benchmark.BenchmarkSeedReceiver"
-            android:exported="false" />
+            android:exported="true"
+            tools:ignore="ExportedReceiver" />
 
         <!-- WorkManager is initialized manually in NyetboxApp (Configuration.Provider) so
              Hilt can inject HiltWorkerFactory into it - disable the default ContentProvider-based
