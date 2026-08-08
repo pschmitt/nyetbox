@@ -88,5 +88,6 @@ jobs:
             baseline-profile-changes.txt
             baseline-profile-host-diagnostics.txt
             baseline-profile-logcat.txt
+            baselineprofile/build/reports/androidTests/connected/**
           if-no-files-found: warn
           retention-days: 14

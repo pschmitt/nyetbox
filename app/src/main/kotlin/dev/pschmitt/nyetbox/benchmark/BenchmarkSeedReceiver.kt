@@ -29,6 +29,7 @@ const val BENCHMARK_SEED_ACTION = "dev.pschmitt.nyetbox.benchmark.SEED"
  */
 const val BENCHMARK_SEED_COMPLETE_MARKER = "NYETBOX_BENCHMARK_SEED_COMPLETE"
 
+private const val TAG = "BenchmarkSeedReceiver"
 private const val FIXTURE_BASE_URL = "https://benchmark.invalid"
 private const val FIXTURE_TOKEN = "benchmark-fixture-token"
 
@@ -67,16 +68,20 @@ class BenchmarkSeedReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        Log.i(TAG, "onReceive: action=${intent.action} buildType=${BuildConfig.BUILD_TYPE}")
         if (
             BuildConfig.BUILD_TYPE !in BENCHMARK_BUILD_TYPES ||
                 intent.action != BENCHMARK_SEED_ACTION
         ) {
+            Log.w(TAG, "onReceive: ignoring - build type or action mismatch")
             return
         }
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 seed(context.applicationContext)
+            } catch (t: Throwable) {
+                Log.e(TAG, "seed() failed", t)
             } finally {
                 pendingResult.finish()
             }
@@ -107,7 +112,7 @@ class BenchmarkSeedReceiver : BroadcastReceiver() {
         // "setting up your NetBox instance" overlay.
         settingsRepository.recordSuccessfulSync()
 
-        Log.i("BenchmarkSeedReceiver", BENCHMARK_SEED_COMPLETE_MARKER)
+        Log.i(TAG, BENCHMARK_SEED_COMPLETE_MARKER)
     }
 }
 

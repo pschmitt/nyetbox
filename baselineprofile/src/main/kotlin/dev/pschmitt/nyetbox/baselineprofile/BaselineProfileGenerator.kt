@@ -41,14 +41,20 @@ class BaselineProfileGenerator {
     fun seedFixtureState() {
         device.executeShellCommand("am force-stop $TARGET_PACKAGE")
         device.executeShellCommand("pm clear $TARGET_PACKAGE")
+        val packages = device.executeShellCommand("pm list packages $TARGET_PACKAGE")
+        println("BaselineProfileGenerator: installed packages matching target: $packages")
         device.executeShellCommand("logcat -c")
-        device.executeShellCommand("am broadcast -n $SEED_RECEIVER -a $SEED_ACTION")
+        val broadcastResult = device.executeShellCommand("am broadcast -n $SEED_RECEIVER -a $SEED_ACTION")
+        println("BaselineProfileGenerator: am broadcast result: $broadcastResult")
         val deadline = System.currentTimeMillis() + 30_000
         while (System.currentTimeMillis() < deadline) {
             if (device.executeShellCommand("logcat -d").contains(SEED_COMPLETE_MARKER)) return
             Thread.sleep(500)
         }
-        error("Benchmark seed broadcast did not complete within 30s - see logcat for details")
+        val logcat = device.executeShellCommand("logcat -d")
+        error(
+            "Benchmark seed broadcast did not complete within 30s. Full logcat:\n$logcat"
+        )
     }
 
     @Test
