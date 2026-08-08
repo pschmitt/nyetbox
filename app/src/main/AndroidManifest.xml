@@ -184,6 +184,15 @@
                 android:resource="@xml/nyetbox_rackview_widget_info" />
         </receiver>
 
+        <!-- Only ever acts on the androidx.baselineprofile plugin's "benchmarkRelease"/
+             "nonMinifiedRelease" build types (both non-debuggable, release-derived) - a no-op on
+             the real "debug"/"release" builds shipped to users. exported=false, so only adb
+             shell's explicit-component am broadcast can reach it. See BenchmarkSeedReceiver's own
+             doc comment (NBC-426). -->
+        <receiver
+            android:name=".benchmark.BenchmarkSeedReceiver"
+            android:exported="false" />
+
         <!-- WorkManager is initialized manually in NyetboxApp (Configuration.Provider) so
              Hilt can inject HiltWorkerFactory into it - disable the default ContentProvider-based
              auto-init to avoid double initialization. -->

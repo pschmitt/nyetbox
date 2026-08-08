@@ -33,18 +33,27 @@ private const val FIXTURE_BASE_URL = "https://benchmark.invalid"
 private const val FIXTURE_TOKEN = "benchmark-fixture-token"
 
 /**
- * Only ever present in the `benchmarkRelease` build type (see
- * `app/src/benchmarkRelease/AndroidManifest.xml` -
- * this class doesn't even compile into `debug`/`release`) - lets the `:baselineprofile` module's
- * [androidx.benchmark.macro.junit4.BaselineProfileRule] journey start from an already-configured,
- * already-synced Dashboard instead of driving onboarding through a live NetBox instance every
- * generation run. `BaselineProfileRule` drives the target app as a black box via UiAutomator with
- * no Compose semantics access of its own, and this app's onboarding has no non-UI shortcut
- * otherwise (credentials persist through [SettingsRepository]'s `EncryptedSharedPreferences],
- * which can't be pre-seeded from outside the app's own process) - so the generator's setup step
- * instead force-stops the app, `am broadcast`s this receiver to configure a fixture server profile
- * and seed a few cache rows directly via the real repository/DAO write paths, then relaunches for
- * the actual profiled cold start. See NBC-426.
+ * The androidx.baselineprofile plugin's build types this receiver may legitimately act on -
+ * `benchmarkRelease` (the real profile-collection run) and `nonMinifiedRelease` (a correctness
+ * pass `generateBaselineProfile` also runs against, on a debuggable-adjacent variant closer to
+ * Studio's own profiler). Compiled into `main` (all build types, including real `release`) since
+ * Gradle source sets can't easily target two specific non-default build types without
+ * duplicating this file - see the runtime guard below instead.
+ */
+private val BENCHMARK_BUILD_TYPES = setOf("benchmarkRelease", "nonMinifiedRelease")
+
+/**
+ * A no-op on the real `debug`/`release` builds shipped to users (see [BENCHMARK_BUILD_TYPES]) -
+ * lets the `:baselineprofile` module's [androidx.benchmark.macro.junit4.BaselineProfileRule]
+ * journey start from an already-configured, already-synced Dashboard instead of driving
+ * onboarding through a live NetBox instance every generation run. `BaselineProfileRule` drives
+ * the target app as a black box via UiAutomator with no Compose semantics access of its own, and
+ * this app's onboarding has no non-UI shortcut otherwise (credentials persist through
+ * [SettingsRepository]'s `EncryptedSharedPreferences`, which can't be pre-seeded from outside the
+ * app's own process) - so the generator's setup step instead force-stops the app, `am broadcast`s
+ * this receiver to configure a fixture server profile and seed a few cache rows directly via the
+ * real repository/DAO write paths, then relaunches for the actual profiled cold start. See
+ * NBC-426.
  */
 @AndroidEntryPoint
 class BenchmarkSeedReceiver : BroadcastReceiver() {
@@ -58,7 +67,10 @@ class BenchmarkSeedReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (BuildConfig.BUILD_TYPE != "benchmarkRelease" || intent.action != BENCHMARK_SEED_ACTION) {
+        if (
+            BuildConfig.BUILD_TYPE !in BENCHMARK_BUILD_TYPES ||
+                intent.action != BENCHMARK_SEED_ACTION
+        ) {
             return
         }
         val pendingResult = goAsync()
