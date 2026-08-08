@@ -110,6 +110,7 @@ fun SettingsScreen(
                         SettingsCategory.Display,
                         SettingsCategory.Gestures,
                         SettingsCategory.NavigationBar,
+                        SettingsCategory.Shortcuts,
                         SettingsCategory.Notifications,
                     )
                     .forEach { category -> SettingsCategoryRow(category, onCategoryClick) }
@@ -174,6 +175,7 @@ fun SettingsCategoryScreen(
     val gestureModels by viewModel.gestureModels.collectAsStateWithLifecycle()
     val gestureObjects by viewModel.gestureObjects.collectAsStateWithLifecycle()
     val navBarItems by viewModel.navBarItems.collectAsStateWithLifecycle()
+    val shortcutItems by viewModel.shortcutItems.collectAsStateWithLifecycle()
     val scannerLens by viewModel.settingsRepository.scannerLens.collectAsStateWithLifecycle()
     val scannerRearLens by
         viewModel.settingsRepository.scannerRearLens.collectAsStateWithLifecycle()
@@ -504,6 +506,7 @@ fun SettingsCategoryScreen(
                         gestureModels = gestureModels,
                         gestureObjects = gestureObjects,
                         navBarItems = navBarItems,
+                        shortcutItems = shortcutItems,
                         scannerLens = scannerLens,
                         scannerRearLens = scannerRearLens,
                         printSettings = printSettings,
@@ -600,6 +603,16 @@ fun SettingsCategoryScreen(
                         onRemoveNavBarItem = viewModel::removeNavBarItem,
                         onMoveNavBarItem = viewModel::moveNavBarItem,
                         onResetNavBarItems = viewModel::resetNavBarItems,
+                        onAddShortcutItem = { action -> viewModel.addShortcutItem(action) },
+                        onAddShortcutModelItem = { action, model ->
+                            viewModel.addShortcutItem(action, model)
+                        },
+                        onAddShortcutObjectItem = { action, obj ->
+                            viewModel.addShortcutItem(action, obj)
+                        },
+                        onRemoveShortcutItem = viewModel::removeShortcutItem,
+                        onMoveShortcutItem = viewModel::moveShortcutItem,
+                        onResetShortcutItems = viewModel::resetShortcutItems,
                     ),
             )
         }

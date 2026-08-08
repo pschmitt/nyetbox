@@ -18,6 +18,11 @@ interface DeviceTypeDao {
 
     @Query("SELECT * FROM device_types") suspend fun getAll(): List<DeviceTypeEntity>
 
+    @Query(
+        "SELECT COUNT(*) FROM device_types WHERE frontImageUrl IS NOT NULL OR rearImageUrl IS NOT NULL"
+    )
+    suspend fun countWithImages(): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(deviceType: DeviceTypeEntity)
 }

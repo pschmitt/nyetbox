@@ -1,4 +1,15 @@
 <resources>
     <color name="ic_launcher_background">#011226</color>
     <color name="splash_background">#011226</color>
+
+    <!-- Static sample colors for the widget picker's previewLayout (nyetbox_widget_info.xml) -
+         approximating GlanceTheme's dynamic dark-surface palette, since the picker never binds a
+         real widget instance to render Glance's own theme. -->
+    <color name="widget_preview_surface">#1B1F22</color>
+    <color name="widget_preview_on_surface">#E2E2E5</color>
+    <color name="widget_preview_on_surface_variant">#9AA1A6</color>
+    <color name="widget_preview_primary">#8FD9BA</color>
+    <color name="widget_preview_primary_container">#39493F</color>
+    <color name="widget_preview_on_primary_container">#CFEEDB</color>
+    <color name="widget_preview_secondary_container">#33383B</color>
 </resources>

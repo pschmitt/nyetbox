@@ -9,6 +9,9 @@ import dev.pschmitt.nyetbox.scanner.NetBoxTarget
 import dev.pschmitt.nyetbox.scanner.NetBoxUrlParser
 import dev.pschmitt.nyetbox.ui.navigation.Route
 import dev.pschmitt.nyetbox.ui.settings.SettingsCategory
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 data class SharedMediaPayload(
     val uri: String,
@@ -69,6 +72,30 @@ internal fun routeForTarget(target: NetBoxTarget): Route? =
         is NetBoxTarget.Device -> Route.DeviceDetail(target.id)
         is NetBoxTarget.Object -> Route.Generic(target.endpointPath, target.id)
         is NetBoxTarget.DeviceAssetTag -> null
+    }
+
+const val ACTION_GESTURE = "dev.pschmitt.nyetbox.action.GESTURE"
+const val EXTRA_GESTURE_ACTION = "dev.pschmitt.nyetbox.extra.GESTURE_ACTION"
+const val EXTRA_GESTURE_TARGET = "dev.pschmitt.nyetbox.extra.GESTURE_TARGET"
+
+/**
+ * Encodes a [GestureAction] (+ optional [GestureTarget]) as intent extras so launcher shortcuts
+ * and widget taps - both of which must hand Android a plain [Intent] rather than call into
+ * Compose directly - resolve through the exact same [routeForGesture] as an in-app gesture
+ * shortcut, instead of each inventing its own routing.
+ */
+fun Intent.putGestureExtras(action: GestureAction, target: GestureTarget?): Intent = apply {
+    this.action = ACTION_GESTURE
+    putExtra(EXTRA_GESTURE_ACTION, action.storageKey)
+    target?.let { putExtra(EXTRA_GESTURE_TARGET, Json.encodeToString(it)) }
+}
+
+internal fun extractGestureAction(intent: Intent?): GestureAction? =
+    GestureAction.fromStorageOrNull(intent?.getStringExtra(EXTRA_GESTURE_ACTION))
+
+internal fun extractGestureTarget(intent: Intent?): GestureTarget? =
+    intent?.getStringExtra(EXTRA_GESTURE_TARGET)?.let {
+        runCatching { Json.decodeFromString<GestureTarget>(it) }.getOrNull()
     }
 
 /** Pure route selection for configured gesture actions; side effects remain in MainActivity. */

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Nyetbox</string>
+    <string name="rackview_widget_label">Nyetbox: Rack view</string>
 </resources>

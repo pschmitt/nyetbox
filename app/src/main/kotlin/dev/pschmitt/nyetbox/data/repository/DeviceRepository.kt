@@ -102,6 +102,8 @@ class DeviceRepository @Inject constructor(private val api: NetBoxApi, private v
 
     suspend fun cachedDeviceCount(): Int = dao.count()
 
+    fun observeCount(): Flow<Int> = dao.observeCount()
+
     suspend fun cachedDevices(): List<DeviceEntity> = dao.getAll()
 
     suspend fun removeCachedDevice(id: Int) {

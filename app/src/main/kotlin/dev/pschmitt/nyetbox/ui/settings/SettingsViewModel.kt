@@ -25,6 +25,7 @@ import dev.pschmitt.nyetbox.data.repository.SettingsRepository
 import dev.pschmitt.nyetbox.data.schema.jsonInt
 import dev.pschmitt.nyetbox.sync.SyncScheduler
 import dev.pschmitt.nyetbox.sync.SyncStatusRepository
+import dev.pschmitt.nyetbox.widget.WidgetUpdater
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -62,6 +63,7 @@ constructor(
     private val genericObjectRepository: GenericObjectRepository,
     private val cacheDatabaseManager: CacheDatabaseManager,
     private val fileDownloadRepository: FileDownloadRepository,
+    private val widgetUpdater: WidgetUpdater,
 ) : ViewModel() {
 
     private val _isLoadingCurrentUser = MutableStateFlow(false)
@@ -83,6 +85,8 @@ constructor(
         settingsRepository.gestureTargets
 
     val navBarItems: StateFlow<List<NavBarItem>> = settingsRepository.navBarItems
+
+    val shortcutItems: StateFlow<List<NavBarItem>> = settingsRepository.shortcutItems
 
     val gestureModels: StateFlow<List<NetBoxModelEntity>> =
         directoryRepository
@@ -334,9 +338,7 @@ constructor(
             val database = cacheDatabaseManager.activeDatabase.value
             _cachedObjectCount.value = database.netBoxObjectDao().countAll()
             _cachedImageCount.value =
-                database.deviceTypeDao().getAll().count {
-                    it.frontImageUrl != null || it.rearImageUrl != null
-                } + database.imageAttachmentDao().getAll().size
+                database.deviceTypeDao().countWithImages() + database.imageAttachmentDao().count()
             fileDownloadRepository.persistentStats().let { stats ->
                 _persistentCacheBytes.value = stats.bytes
                 _persistentCacheFiles.value = stats.fileCount
@@ -427,6 +429,38 @@ constructor(
         settingsRepository.resetNavBarItems()
     }
 
+    fun addShortcutItem(action: GestureAction) {
+        settingsRepository.setShortcutItems(shortcutItems.value + NavBarItem(action))
+    }
+
+    fun addShortcutItem(action: GestureAction, model: NetBoxModelEntity) {
+        val target = GestureTarget(endpointPath = model.endpointPath, label = model.modelLabel)
+        settingsRepository.setShortcutItems(shortcutItems.value + NavBarItem(action, target))
+    }
+
+    fun addShortcutItem(action: GestureAction, obj: NetBoxObjectEntity) {
+        val target =
+            GestureTarget(endpointPath = obj.endpointPath, id = obj.id, label = obj.display)
+        settingsRepository.setShortcutItems(shortcutItems.value + NavBarItem(action, target))
+    }
+
+    fun removeShortcutItem(index: Int) {
+        settingsRepository.setShortcutItems(
+            shortcutItems.value.filterIndexed { i, _ -> i != index }
+        )
+    }
+
+    fun moveShortcutItem(from: Int, to: Int) {
+        val items = shortcutItems.value.toMutableList()
+        if (from !in items.indices || to !in items.indices) return
+        items.add(to, items.removeAt(from))
+        settingsRepository.setShortcutItems(items)
+    }
+
+    fun resetShortcutItems() {
+        settingsRepository.resetShortcutItems()
+    }
+
     fun setScannerLens(lens: ScannerLens) {
         settingsRepository.setScannerLens(lens)
     }
@@ -445,6 +479,7 @@ constructor(
             refreshCurrentUser()
             syncScheduler.syncNow()
         }
+        viewModelScope.launch { widgetUpdater.updateAll() }
     }
 
     fun addHiddenField(key: String) {

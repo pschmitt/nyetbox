@@ -57,6 +57,8 @@ interface DeviceDao {
 
     @Query("SELECT COUNT(*) FROM devices") suspend fun count(): Int
 
+    @Query("SELECT COUNT(*) FROM devices") fun observeCount(): Flow<Int>
+
     /**
      * The incremental-sync watermark - see
      * [dev.pschmitt.nyetbox.data.db.NetBoxObjectDao.maxLastUpdated].

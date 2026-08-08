@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tonal circular background for the widget picker's static preview action-button glyphs - see
+     nyetbox_widget_info.xml's previewLayout. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="@color/widget_preview_secondary_container" />
+</shape>

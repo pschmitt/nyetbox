@@ -147,6 +147,14 @@ enum class GestureAction(val storageKey: String, val label: String) {
             entries.firstOrNull { it.storageKey == value } ?: fallback
 
         /**
+         * Like [fromStorage], but an absent/unrecognized [value] means "nothing to dispatch"
+         * rather than silently falling back to [GlobalSearch] - used for intent extras (launcher
+         * shortcuts, widget taps) where a missing extra genuinely means no gesture was intended.
+         */
+        fun fromStorageOrNull(value: String?): GestureAction? =
+            entries.firstOrNull { it.storageKey == value }
+
+        /**
          * Actions that always resolve to a [dev.pschmitt.nyetbox.ui.navigation.Route] via
          * [dev.pschmitt.nyetbox.routeForGesture] - the only ones a nav-bar slot can use, since a
          * slot must always be able to show a clear "selected" state.
@@ -155,6 +163,14 @@ enum class GestureAction(val storageKey: String, val label: String) {
             get() = entries.filterNot {
                 it == Off || it == Sync || it == OfflineOn || it == OfflineOff
             }
+
+        /**
+         * The subset of [navigational] offered as launcher shortcuts. Excludes [Dashboard]:
+         * long-pressing the launcher icon and picking "Home" duplicates what a plain tap on the
+         * icon already does, wasting one of Android's ~4 shortcut slots on a no-op.
+         */
+        val shortcutable: List<GestureAction>
+            get() = navigational - Dashboard
     }
 }
 
@@ -338,6 +354,9 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
     private val _navBarItems = MutableStateFlow(loadNavBarItems())
     val navBarItems: StateFlow<List<NavBarItem>> = _navBarItems.asStateFlow()
 
+    private val _shortcutItems = MutableStateFlow(loadShortcutItems())
+    val shortcutItems: StateFlow<List<NavBarItem>> = _shortcutItems.asStateFlow()
+
     private val _scannerLens = MutableStateFlow(loadScannerLens())
     val scannerLens: StateFlow<ScannerLens> = _scannerLens.asStateFlow()
 
@@ -510,6 +529,26 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
     fun resetNavBarItems() {
         prefs.edit().remove(KEY_NAV_BAR_ITEMS).apply()
         _navBarItems.value = defaultNavBarItems()
+    }
+
+    fun setShortcutItems(items: List<NavBarItem>) {
+        val truncated = items.take(MAX_SHORTCUT_ITEMS)
+        prefs
+            .edit()
+            .putString(
+                KEY_SHORTCUT_ITEMS,
+                settingsJson.encodeToString(
+                    kotlinx.serialization.builtins.ListSerializer(NavBarItem.serializer()),
+                    truncated,
+                ),
+            )
+            .apply()
+        _shortcutItems.value = truncated
+    }
+
+    fun resetShortcutItems() {
+        prefs.edit().remove(KEY_SHORTCUT_ITEMS).apply()
+        _shortcutItems.value = defaultShortcutItems()
     }
 
     fun setScannerLens(lens: ScannerLens) {
@@ -1241,6 +1280,34 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
             NavBarItem(GestureAction.Add),
         )
 
+    private fun loadShortcutItems(): List<NavBarItem> {
+        val stored = prefs.getString(KEY_SHORTCUT_ITEMS, null)
+        if (!stored.isNullOrBlank()) {
+            runCatching {
+                settingsJson.decodeFromString(
+                    kotlinx.serialization.builtins.ListSerializer(NavBarItem.serializer()),
+                    stored,
+                )
+            }
+                .getOrNull()
+                ?.takeIf { it.isNotEmpty() }
+                ?.let {
+                    return it.take(MAX_SHORTCUT_ITEMS)
+                }
+        }
+        return defaultShortcutItems()
+    }
+
+    // Mirrors defaultNavBarItems() minus Dashboard (see GestureAction.shortcutable) - the same
+    // three non-Dashboard actions the nav bar already defaults to, so day-one shortcuts feel like
+    // a natural extension of what's already on screen rather than a new concept to learn.
+    private fun defaultShortcutItems(): List<NavBarItem> =
+        listOf(
+            NavBarItem(GestureAction.GlobalSearch),
+            NavBarItem(GestureAction.Scanner),
+            NavBarItem(GestureAction.Add),
+        )
+
     private fun gesturePreferenceKey(shortcut: GestureShortcut): String =
         if (shortcut == GestureShortcut.TwoFingerDown) {
             KEY_GESTURE_ACTION
@@ -1381,6 +1448,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         const val MAX_PINNED_MODEL_PATHS = 5
         const val KEY_NAV_BAR_ITEMS = "nav_bar_items"
         const val MAX_NAV_BAR_ITEMS = 5
+        const val KEY_SHORTCUT_ITEMS = "shortcut_items"
+        const val MAX_SHORTCUT_ITEMS = 4
         const val KEY_SYNC_ATTACHMENTS = "sync_attachments_to_disk"
         const val KEY_SYNC_ONLY_ON_WIFI = "sync_only_on_wifi"
         const val KEY_SYNC_WHILE_ROAMING = "sync_while_roaming"

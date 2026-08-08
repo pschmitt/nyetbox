@@ -170,6 +170,8 @@ private class FakeDeviceDao(private val devices: List<DeviceEntity>) : DeviceDao
 
     override suspend fun count(): Int = devices.size
 
+    override fun observeCount(): Flow<Int> = flowOf(devices.size)
+
     override suspend fun maxLastUpdated(): String? = error("unused")
 
     override suspend fun pruneStale(cutoff: Long) = error("unused")

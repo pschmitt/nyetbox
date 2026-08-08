@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Rounded tonal chip background for the widget picker's static preview (see
+     nyetbox_widget_info.xml's previewLayout) - mirrors the real widget's cornerRadius(16.dp)
+     primaryContainer chip. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/widget_preview_primary_container" />
+    <corners android:radius="16dp" />
+</shape>

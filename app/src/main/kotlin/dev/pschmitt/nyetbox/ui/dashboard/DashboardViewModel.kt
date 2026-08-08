@@ -67,9 +67,8 @@ constructor(
                     deviceCount = deviceRepository.cachedDeviceCount(),
                     objectCount = database.netBoxObjectDao().countAll(),
                     imageCount =
-                        database.deviceTypeDao().getAll().count {
-                            it.frontImageUrl != null || it.rearImageUrl != null
-                        } + database.imageAttachmentDao().getAll().size,
+                        database.deviceTypeDao().countWithImages() +
+                            database.imageAttachmentDao().count(),
                     fileCount = stats.fileCount,
                     bytes = stats.bytes,
                 )

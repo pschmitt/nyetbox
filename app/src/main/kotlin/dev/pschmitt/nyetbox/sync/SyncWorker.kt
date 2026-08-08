@@ -8,6 +8,7 @@ import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dev.pschmitt.nyetbox.data.repository.SettingsRepository
+import dev.pschmitt.nyetbox.widget.WidgetUpdater
 
 @HiltWorker
 class SyncWorker
@@ -19,6 +20,7 @@ constructor(
     private val settingsRepository: SettingsRepository,
     private val syncNotifier: SyncNotifier,
     private val syncStatusRepository: SyncStatusRepository,
+    private val widgetUpdater: WidgetUpdater,
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         if (!settingsRepository.isConfigured) return Result.success()
@@ -61,6 +63,7 @@ constructor(
                 onSuccess = {
                     syncStatusRepository.publishProgress(null)
                     syncNotifier.notifySyncSucceeded(it.reconciliation)
+                    widgetUpdater.updateAll()
                     Result.success()
                 },
                 onFailure = { error ->
@@ -70,6 +73,7 @@ constructor(
                     // A PeriodicWorkRequest's attempt count resets on its next period regardless,
                     // so this only bounds retries *within* one run, not across runs.
                     syncStatusRepository.publishProgress(null)
+                    widgetUpdater.updateAll()
                     if (runAttemptCount < MAX_RETRY_ATTEMPTS) {
                         syncNotifier.notifySyncRetry(runAttemptCount + 1)
                         Result.retry()

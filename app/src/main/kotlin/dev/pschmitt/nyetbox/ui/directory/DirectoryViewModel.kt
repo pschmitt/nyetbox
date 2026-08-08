@@ -7,6 +7,7 @@ import dev.pschmitt.nyetbox.data.db.NetBoxModelEntity
 import dev.pschmitt.nyetbox.data.repository.DirectoryRepository
 import dev.pschmitt.nyetbox.data.repository.SettingsRepository
 import dev.pschmitt.nyetbox.sync.SyncScheduler
+import dev.pschmitt.nyetbox.widget.WidgetUpdater
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,6 +25,7 @@ constructor(
     private val directoryRepository: DirectoryRepository,
     val settingsRepository: SettingsRepository,
     private val syncScheduler: SyncScheduler,
+    private val widgetUpdater: WidgetUpdater,
 ) : ViewModel() {
 
     val modelsByApp: StateFlow<Map<String, List<NetBoxModelEntity>>> =
@@ -66,5 +68,6 @@ constructor(
     fun setOfflineMode(enabled: Boolean) {
         settingsRepository.setOfflineMode(enabled)
         if (!enabled) syncScheduler.syncNow()
+        viewModelScope.launch { widgetUpdater.updateAll() }
     }
 }

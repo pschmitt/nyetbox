@@ -32,6 +32,7 @@ internal fun formatBytes(bytes: Long): String =
     }
 
 private const val MAX_NAV_BAR_ITEMS = 5
+private const val MAX_SHORTCUT_ITEMS = 4
 
 private val TWO_FINGER_SHORTCUTS =
     setOf(
@@ -75,6 +76,7 @@ internal data class SettingsCategoryState(
     val gestureModels: List<NetBoxModelEntity>,
     val gestureObjects: List<NetBoxObjectEntity>,
     val navBarItems: List<NavBarItem>,
+    val shortcutItems: List<NavBarItem>,
     val scannerLens: ScannerLens,
     val scannerRearLens: ScannerRearLens,
     val printSettings: PrintSettings,
@@ -137,6 +139,12 @@ internal data class SettingsCategoryActions(
     val onRemoveNavBarItem: (Int) -> Unit,
     val onMoveNavBarItem: (Int, Int) -> Unit,
     val onResetNavBarItems: () -> Unit,
+    val onAddShortcutItem: (GestureAction) -> Unit,
+    val onAddShortcutModelItem: (GestureAction, NetBoxModelEntity) -> Unit,
+    val onAddShortcutObjectItem: (GestureAction, NetBoxObjectEntity) -> Unit,
+    val onRemoveShortcutItem: (Int) -> Unit,
+    val onMoveShortcutItem: (Int, Int) -> Unit,
+    val onResetShortcutItems: () -> Unit,
 )
 
 @Composable
@@ -160,6 +168,7 @@ internal fun SettingsCategoryContent(
             )
         SettingsCategory.Gestures -> GestureSettingsContent(state, actions)
         SettingsCategory.NavigationBar -> NavBarSettingsContent(state, actions)
+        SettingsCategory.Shortcuts -> ShortcutSettingsContent(state, actions)
         SettingsCategory.Notifications -> NotificationSettingsContent(state, actions)
         SettingsCategory.About -> AboutSettingsContent()
     }
@@ -933,6 +942,105 @@ private fun NavBarSettingsContent(state: SettingsCategoryState, actions: Setting
             },
             onObjectSelected = { obj ->
                 actions.onAddNavBarObjectItem(action, obj)
+                pickerAction = null
+            },
+        )
+    }
+}
+
+@Composable
+private fun ShortcutSettingsContent(state: SettingsCategoryState, actions: SettingsCategoryActions) {
+    var pickerAction by remember { mutableStateOf<GestureAction?>(null) }
+    var addMenuExpanded by remember { mutableStateOf(false) }
+    val items = state.shortcutItems
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        SettingsGroupCard(title = "Launcher shortcuts", icon = Icons.Default.AppShortcut) {
+            items.forEachIndexed { index, item ->
+                SettingsListItem(
+                    leadingContent = {
+                        Icon(iconForGestureAction(item.action), contentDescription = null)
+                    },
+                    headlineContent = { Text(item.target?.label ?: item.action.label) },
+                    trailingContent = {
+                        Row {
+                            IconButton(
+                                onClick = { actions.onMoveShortcutItem(index, index - 1) },
+                                enabled = index > 0,
+                            ) {
+                                Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move up")
+                            }
+                            IconButton(
+                                onClick = { actions.onMoveShortcutItem(index, index + 1) },
+                                enabled = index < items.lastIndex,
+                            ) {
+                                Icon(
+                                    Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "Move down",
+                                )
+                            }
+                            IconButton(
+                                onClick = { actions.onRemoveShortcutItem(index) },
+                                enabled = items.size > 1,
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Remove")
+                            }
+                        }
+                    },
+                )
+            }
+            if (items.size < MAX_SHORTCUT_ITEMS) {
+                Box {
+                    SettingsListItem(
+                        modifier = Modifier.clickable { addMenuExpanded = true },
+                        leadingContent = { Icon(Icons.Default.Add, contentDescription = null) },
+                        headlineContent = { Text("Add shortcut") },
+                    )
+                    DropdownMenu(
+                        expanded = addMenuExpanded,
+                        onDismissRequest = { addMenuExpanded = false },
+                    ) {
+                        GestureAction.shortcutable.forEach { candidate ->
+                            DropdownMenuItem(
+                                text = { Text(candidate.label) },
+                                leadingIcon = {
+                                    Icon(iconForGestureAction(candidate), contentDescription = null)
+                                },
+                                onClick = {
+                                    addMenuExpanded = false
+                                    when (candidate) {
+                                        GestureAction.AddSpecific,
+                                        GestureAction.ListSpecific,
+                                        GestureAction.DetailSpecific -> pickerAction = candidate
+                                        else -> actions.onAddShortcutItem(candidate)
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        SettingsSingleItemCard {
+            SettingsListItem(
+                modifier = Modifier.clickable { actions.onResetShortcutItems() },
+                leadingContent = { Icon(Icons.Default.RestartAlt, contentDescription = null) },
+                headlineContent = { Text("Reset to defaults") },
+            )
+        }
+    }
+    pickerAction?.let { action ->
+        ActionTargetPickerDialog(
+            action = action,
+            models = state.gestureModels,
+            objects = state.gestureObjects,
+            onDismiss = { pickerAction = null },
+            onModelSelected = { model ->
+                actions.onAddShortcutModelItem(action, model)
+                pickerAction = null
+            },
+            onObjectSelected = { obj ->
+                actions.onAddShortcutObjectItem(action, obj)
                 pickerAction = null
             },
         )

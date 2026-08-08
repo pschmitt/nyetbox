@@ -3,6 +3,227 @@
 Running backlog/changelog for Nyetbox. One `## NBC-N:` entry per feature or fix,
 numbered sequentially (never reuse or renumber an id). See `AGENTS.md` for the full convention.
 
+## NBC-419: rack-view widget (scrollable, per-unit device layout)
+
+A second, separate home-screen widget (not another content mode of NBC-418's widget - see
+`RackViewGlanceWidget`'s class doc for why): shows one specific rack's unit-by-unit device layout,
+picked once at config time, as a genuinely scrollable list (unlike NBC-418's fixed-row content) -
+explicit follow-up request: "a rack view widget. this one needs to be resizable/scrollable."
+
+- [x] Reused existing, already-synced, non-SVG per-unit data - `RackElevationRepository.observe
+      (rackId, RackFace)` → `Flow<List<RackElevationEntity>>` (populated during every full sync,
+      independent of the in-app SVG diagram toggle) - confirmed via research this was a clean fit,
+      no new fetch-and-derive layer needed. Merges contiguous same-device slots into blocks the
+      same way `ui/generic/GenericDetailRack.kt`'s (private, so mirrored rather than imported)
+      `mergeRackSlots` does, reusing its fixed per-device color palette for visual consistency with
+      the in-app rack view.
+- [x] `widget/RackViewGlanceWidget.kt` - `SizeMode.Exact` + Glance's `LazyColumn` (backed by a real
+      RemoteViews `ListView`, not a plain `Column`) so the widget is natively scrollable regardless
+      of how it's resized, rather than clipping/truncating content like NBC-418's widget needs
+      explicit row-count math for. Config (rack id/label, face, compact) and elevation data are
+      both read *reactively* from day one (`RackViewConfigStore` + `RackElevationRepository`'s own
+      `Flow`, `remember(rackId, face) { ... }`-keyed so the derived Flow recreates when either
+      changes) - applying NBC-418's reconfigure-bug lesson from the start instead of relearning it.
+      Tapping an occupied unit navigates to that device's detail page.
+- [x] `widget/RackViewConfigStore.kt`, `widget/RackViewWidgetReceiver.kt`,
+      `widget/RackViewWidgetConfigActivity.kt` - config screen: search-filterable rack picker
+      (reuses `GenericObjectRepository.observeObjects("api/dcim/racks/", "")`, no new query),
+      front/rear face toggle, compact mode, and a live preview card driven by the same real,
+      already-synced elevation data the widget itself renders (same pattern as NBC-418's).
+- [x] `AndroidManifest.xml` - new exported `<receiver>`/`<activity>` pair, mirroring NBC-418's;
+      `res/xml/nyetbox_rackview_widget_info.xml` (4x3 default cells, resizable both axes) +
+      `res/layout/widget_rackview_preview.xml` static picker preview + `res/string
+      /rackview_widget_label` so the two widgets are distinguishable in the picker (both would
+      otherwise fall back to the app's own label). `WidgetUpdater.updateAll()` now refreshes both
+      widgets from the same single seam.
+- [x] Remote `:app:compileDebugKotlin`, `ktfmtCheck`, `:app:lintDebug` (0 errors - only cosmetic
+      `HardcodedText`/`ContentDescription`/`UseCompoundDrawables` warnings on the static preview
+      layout, same category as NBC-418's own preview layout), `:app:testDebugUnitTest` all passed.
+- [x] Verified on the Mi Pad 4: both widgets show distinct labels/previews in the picker; placed
+      the rack widget, picked a real cached rack via the search dialog, confirmed the live preview
+      matched real elevation data; confirmed the placed widget renders the same data with a real
+      native scrollbar, confirmed dragging actually scrolls it, and confirmed tapping an occupied
+      unit opens that device's detail screen.
+
+Status: implemented and verified on-device, 2026-08-08.
+
+## NBC-418: home-screen widget with a configurable tap target
+
+A single Glance widget: fixed display (cached device count + sync status, matching
+`DashboardViewModel`'s own data sources), but what tapping it does is chosen once via a config
+screen shown when it's added to the home screen (and again from its own long-press "Configure" on
+API 31+) - reuses the same action+target picker (`ActionTargetPickerDialog`) NBC-415's nav bar
+customizer already shipped, rather than a new picker UI.
+
+- [x] Added `androidx.glance`/`androidx.glance-appwidget` (1.1.1) - confirmed via
+      `:app:dependencies --configuration debugRuntimeClasspath` that Glance's own
+      `androidx.compose.runtime` request converges cleanly onto this project's pinned 1.11.4, no
+      forced downgrade.
+- [x] `widget/NyetboxGlanceWidget.kt` - fixed layout (sync status via the existing
+      `formatRelativeSyncTime` helper + `DeviceRepository.cachedDeviceCount()`), one tap target
+      per instance stored via Glance's own `PreferencesGlanceStateDefinition` (keyed by
+      `GlanceId`, so no new Room table/SharedPreferences scheme needed), defaulting to
+      `GestureAction.Dashboard` until configured.
+- [x] `widget/NyetboxWidgetReceiver.kt` (`@AndroidEntryPoint GlanceAppWidgetReceiver`) and
+      `widget/WidgetConfigActivity.kt` (`@AndroidEntryPoint ComponentActivity`, shown via
+      `APPWIDGET_CONFIGURE`, reuses `ActionTargetPickerDialog` for the two-step action/target
+      pick).
+- [x] `AndroidManifest.xml` - new exported `<receiver>` (`APPWIDGET_UPDATE`) and `<activity>`
+      (`APPWIDGET_CONFIGURE`); `res/xml/nyetbox_widget_info.xml` + a `res/layout/widget_loading.xml`
+      RemoteViews placeholder (Glance's required `initialLayout`/`previewLayout`).
+- [x] `widget/WidgetUpdater.kt` - one seam every sync/offline-mode-toggle call site refreshes the
+      widget through (`SyncWorker.kt`'s success/failure fold, `DirectoryViewModel`/
+      `SettingsViewModel`'s `setOfflineMode`), instead of each one independently knowing how to
+      talk to Glance.
+- [x] Remote `:app:assembleDebug`, `ktfmtCheck`, `:app:testDebugUnitTest` all passed. Lint added
+      one new hint (`ReportShortcutUsage`, from NBC-417 below, baselined - optional
+      launcher-ranking signal, not a functional issue) and no other new findings; suppressed a
+      false-positive `Overdraw` warning on the widget's RemoteViews placeholder directly (lint's
+      own detector doc admits it can mis-attribute a layout's theme via inexact pattern matching,
+      which doesn't apply to a widget host layout with no owning Activity).
+- [x] Bug fix (found during on-device verification on zf10/Mi Pad 4): the widget always rendered
+      its default "Stats" content regardless of what was picked in the config screen, on a
+      freshly-placed instance. Root cause (confirmed via temporary Timber diagnostics + real
+      logcat): `GlanceAppWidget.update(context, id)` is a silent no-op when called from
+      `WidgetConfigActivity` during a widget's *first-ever* configuration - the launcher hasn't
+      finished placing the instance yet, so the update has nothing to render into. Reconfiguring an
+      already-placed widget worked fine, which is what made this easy to miss without deliberately
+      testing the first-placement path. Fixed with `widget/WidgetRefreshWorker.kt`
+      (`@HiltWorker CoroutineWorker` calling `WidgetUpdater.updateAll()`), enqueued twice from
+      `saveConfig` (+3s and +10s delay) via `WorkManager` - decoupled from the config Activity's own
+      lifecycle, and two delays because `GlanceAppWidgetManager.getGlanceIds()` was confirmed to
+      still miss a genuinely-fresh instance a few seconds after placement.
+- [x] Material 3 visual redesign (per explicit follow-up request: "more pretty", per-object
+      icons like the in-app UI, bigger action buttons, modern M3 look):
+      `NyetboxGlanceWidget.kt` rewritten around Glance's `components` package (`Scaffold`,
+      `TitleBar`) and `GlanceTheme`/`GlanceTheme.colors` (Glance's own Material-You-aware dynamic
+      color theme, built into the base `glance` artifact - no `glance-material3` bridge needed).
+      Bookmark/changelog rows now show a tonal circular icon matching what the in-app UI would show
+      for that object type, via new `widget/WidgetObjectIcons.kt` (an exact mirror of
+      `ui/directory/AppIcons.kt`'s app-key/endpoint-path mapping, returning `@DrawableRes Int`
+      instead of a Compose `ImageVector`, since Glance's `Image` can't render one directly). Action
+      buttons switched from plain 32dp `Image`s to 56dp `CircleIconButton`s with tonal
+      `secondaryContainer`/`onSecondaryContainer` colors. 19 new vector drawables under
+      `res/drawable/ic_object_*.xml` (per-NetBox-type glyphs) and `ic_glyph_*.xml` (flat action-row
+      glyphs, as opposed to the existing circle-backed `ic_shortcut_*.xml` shortcuts use), traced
+      from `google/material-design-icons` source SVGs rather than transcribed from memory, to
+      guarantee pixel-accurate reuse of the exact icons `AppIcons.kt` already picks in-app.
+      Researched exact Glance component/`GlanceTheme` API signatures from `androidx/androidx`'s
+      GitHub `api/*.txt` dumps before writing any code - the full rewrite compiled clean on the
+      first attempt.
+- [x] On-device verification (zf10, Mi Pad 4, px5): placed/reconfigured widgets, confirmed the
+      timing fix via real logcat (`WidgetRefreshWorker` running and completing, followed by a
+      correct re-render for a widget's very first configuration - previously silently stuck on
+      Stats), and confirmed the M3 redesign visually - per-object icons render correctly (hub icon
+      for `dcim.device` bookmarks, layers/category icons for changelog rows), the Stats widget's
+      tonal `primaryContainer` device-count chip, and a configured 3-button action row rendering as
+      visibly bigger tonal circles than the old flat icons.
+- [x] Second bug fix (found on real-world use, not the earlier verification pass): reconfiguring
+      an *already-placed* widget via long-press -> pencil silently had no effect. Root cause
+      (found from `GlanceAppWidget`/`AppWidgetSession` source, not guessed): `update()`/
+      `updateAll()` only recompose an *already-running* composition session - they don't re-invoke
+      `provideGlance`, per its own doc comment - so a one-shot `getAppWidgetState` read at the top
+      of `provideGlance` (the shape this widget had) is invisible to any session that's still alive
+      when Save fires, which is exactly what a `WidgetRefreshWorker` retry a few seconds later also
+      can't fix (same still-alive session, same stale composition). Fixed per Glance's own
+      recommended pattern - stopped one-shot-reading config and read it *reactively* inside the
+      composition instead: new `widget/WidgetConfigStore.kt` (an in-memory
+      `StateFlow<Map<appWidgetId, WidgetInstanceConfig>>`, published by `saveConfig` and
+      `collectAsState()`'d in `provideGlance`), plus switched bookmarks/changes/device
+      count/sync status from one-shot reads to `collectAsState()` on the repositories' own
+      `Flow`s/`StateFlow`s (added `DeviceDao.observeCount()`/`DeviceRepository.observeCount()` for
+      the one that didn't have a Flow yet). Verified on the Mi Pad 4 with a genuinely delayed
+      repro (75s wait before Save, not immediately after placement) - confirmed broken before the
+      fix, confirmed fixed after.
+- [x] Responsive layout (widget is `resizeMode="horizontal|vertical"`, previously rendered one
+      fixed layout regardless of size): `sizeMode = SizeMode.Exact` + `LocalSize.current` inside
+      the composition. List row count now derived from actual widget height
+      (`visibleRowCount`, fetching up to 8 rows unconditionally instead of only 4 for whichever
+      content was configured, so switching content types doesn't need a re-fetch), the Stats
+      row switches to a stacked `Column` under a width threshold instead of squeezing a `Row`,
+      and action buttons shrink from 56dp/16dp gaps to 44dp/8dp when the configured count wouldn't
+      otherwise fit the current width. Verified on Mi Pad 4: resizing a Bookmarks widget taller
+      revealed 2 additional rows that were previously clipped/hidden at the smaller size.
+- [x] Widget-picker preview showed the `widget_loading.xml` spinner forever (previewLayout was
+      pointed at the same placeholder as initialLayout, and the picker never binds a real widget
+      instance to actually resolve past "loading"). Fixed with a new static
+      `res/layout/widget_preview.xml` RemoteViews mockup (sample Stats content + 3 action-button
+      glyphs) - hit one RemoteViews restriction along the way (confirmed via on-device logcat:
+      `Class not allowed to be inflated android.widget.Space`), fixed by using
+      `layout_marginStart` instead of `<Space>` elements for the action-row gaps.
+- [x] Compact mode: new per-instance `compact: Boolean` (`KEY_COMPACT`) hides the `TitleBar`
+      entirely (`Scaffold(titleBar = null)`) to fit more content on small widgets - toggle added to
+      `WidgetConfigActivity`'s config screen.
+- [x] Live preview in the config screen itself (nice-to-have): `WidgetPreviewCard` in
+      `WidgetConfigActivity.kt` - a parallel plain-Compose (not Glance) mockup driven by the same
+      real repository data the widget itself renders, updating live as the user changes
+      content/actions/compact before saving. `WidgetConfigViewModel` extended with
+      `bookmarks`/`changes`/`deviceCount`/`statusText`/`offlineMode` for this.
+- [x] Remote `:app:compileDebugKotlin`, `ktfmtCheck`, `:app:lintDebug`, `:app:testDebugUnitTest`
+      all passed (one `FlowOperatorInvokedInComposition` lint error fixed by `remember`-memoizing
+      the mapped bookmarks/changes flows instead of calling `.map` inline in the composition; one
+      `UseAppTint` error suppressed on `widget_preview.xml` with `tools:ignore` - it's a plain
+      RemoteViews layout, not an AppCompat Activity, so there's no inflater to back-port
+      `app:tint`, and native `android:tint` already works). All 5 fixes verified on the Mi Pad 4:
+      picker preview, delayed reconfigure, resize-driven row count, compact mode, and the config
+      screen's live preview.
+- [x] Action buttons made "pop more" (explicit follow-up: bigger where space allows, an optional
+      label, more visual emphasis): replaced `androidx.glance.appwidget.components.CircleIconButton`
+      with a custom Box/Column button (`ActionButton`) - `CircleIconButton` has its own fixed
+      icon-to-container proportions that don't suit a button ranging from 44dp to 84dp. Sizing
+      (`actionButtonSize`) now fills the available row width evenly across however many buttons are
+      configured (up to `MAX_ACTION_BUTTON_SIZE = 84.dp`), rather than picking from two fixed
+      tiers - a widget with only 1-2 buttons and room to spare now gets visibly bigger buttons, not
+      just the same size as a 3-button row. Background switched from the passive list rows'
+      `secondaryContainer` to `primaryContainer`, so action buttons visually stand out from
+      everything else in the widget. New per-instance `showActionLabels: Boolean`
+      (`KEY_SHOW_ACTION_LABELS`, default **on**) shows each action's name under its button; the
+      action row's reserved height (used by `visibleRowCount` to size list content around it) now
+      accounts for the actual button size and label, instead of a fixed constant. Config screen and
+      its live preview both updated to match (toggle + bigger labeled preview buttons).
+- [x] Remote `:app:compileDebugKotlin`, `ktfmtCheck`, `:app:lintDebug`, `:app:testDebugUnitTest` all
+      passed, zero new findings. Verified on the Mi Pad 4: buttons render visibly bigger and more
+      vibrant with labels ("Global search"/"QR scanner"/"Settings") under each; toggling "Show
+      labels" off removes the labels and the buttons still render correctly.
+
+Status: implemented, bug-fixed (twice), redesigned, made responsive, and verified on-device,
+2026-08-08.
+
+## NBC-417: configurable launcher shortcuts
+
+Long-press the app icon to jump straight to an action, without opening the app first. Reuses
+`NavBarItem`/`GestureAction`/`GestureTarget` as-is (no new data model) and the exact same
+`ActionTargetPickerDialog` + reorder-row UI shape NBC-415's nav bar customizer already shipped, so
+this is the third consumer of that same "action + optional NetBox target" model, not a parallel
+system.
+
+- [x] `SettingsRepository.kt` - `GestureAction.shortcutable` (= `navigational` minus `Dashboard`,
+      since a "Home" shortcut duplicates what tapping the icon itself already does), new
+      `shortcutItems: StateFlow<List<NavBarItem>>` persisted list (`KEY_SHORTCUT_ITEMS`,
+      `MAX_SHORTCUT_ITEMS = 4`), default `[GlobalSearch, Scanner, Add]` (the nav bar's own
+      non-Dashboard defaults).
+- [x] New Settings category "App shortcuts" - `ShortcutSettingsContent` in
+      `SettingsCategoryContent.kt` mirrors `NavBarSettingsContent` (reorder/remove rows, add-action
+      dropdown, reset-to-defaults), wired through `SettingsViewModel.kt`/`SettingsScreen.kt`.
+- [x] `shortcuts/ShortcutSyncer.kt` - publishes the list via
+      `ShortcutManagerCompat.setDynamicShortcuts`, replacing the whole set atomically on every
+      change (`NyetboxApp.onCreate()` at startup, plus a `MainActivity` `LaunchedEffect
+      (shortcutItems)` so Settings edits take effect live). New hand-authored vector-drawable icons
+      under `res/drawable/ic_shortcut_*.xml` (shortcut icons need real drawable resources, not
+      Compose `ImageVector`s).
+- [x] Shared plumbing (also used by NBC-418's widget taps): `MainActivityRouting.kt` gained
+      `EXTRA_GESTURE_ACTION`/`EXTRA_GESTURE_TARGET` + `putGestureExtras`/`extractGestureAction`/
+      `extractGestureTarget` (JSON-encoded target), and `MainActivity.kt`'s existing inline
+      gesture-dispatch `when` block was extracted into one shared `dispatchGestureAction(...)`
+      method, now called from the in-app swipe-gesture handler *and* a new `pendingGesture`
+      `LaunchedEffect` fed by shortcut/widget taps - one dispatch path regardless of origin.
+- [x] Remote `:app:assembleDebug`, `ktfmtCheck`, `:app:testDebugUnitTest` all passed; lint added
+      one new hint (see NBC-418's lint note above), baselined.
+
+Status: implemented and compiles/lints clean, 2026-08-08 - pending on-device verification (edit the
+list in Settings, confirm the launcher long-press menu updates live, confirm each shortcut lands on
+the right screen or triggers Sync).
+
 ## NBC-416: fix the store screenshot dashboard race for real (logcat marker, not overlay polling)
 
 NBC-408 (Aug 7) re-checked `DashboardScreen`'s initial-sync overlay tag right before the dashboard
@@ -7860,3 +8081,357 @@ incoming `ACTION_SEND` handler to reopen the same item view for its own URL.
 
 Status: **done**, 2026-08-06; verified with remote compilation, the full unit test suite, and
 deployment to all attached physical devices.
+
+## NBC-420: `ShortcutSyncer.sync()` runs twice on every cold start, both times on the main thread
+
+`shortcuts/ShortcutSyncer.kt`'s `sync()` performs a synchronous Binder IPC to the system
+`ShortcutManager` service (`ShortcutManagerCompat.setDynamicShortcuts`) plus builds an
+`IconCompat.createWithResource` per configured shortcut (up to 4). It is called from two places
+that both fire on every single cold start, both on the main thread:
+
+1. `NyetboxApp.onCreate()` (`NyetboxApp.kt:43`) - synchronously, before `Application.onCreate()`
+   returns, i.e. squarely inside the cold-start critical path before the first frame.
+2. `MainActivity.kt:104`'s `LaunchedEffect(shortcutItems) { shortcutSyncer.sync() }` - which is
+   meant to catch Settings edits, but `shortcutItems` is a `StateFlow` whose *initial* value is
+   also emitted on first composition, so this re-publishes the exact same shortcut list a second
+   time during startup, again on the Main dispatcher (LaunchedEffect's default context).
+
+The work is redundant (same list published twice) and both call sites do Binder IPC on the UI
+thread. On the Mi Pad 4 this is measurable dead weight in the pre-first-frame stack; the
+launcher-shortcut list only actually *needs* republishing when the user edits it in Settings.
+
+- [ ] Remove the `shortcutSyncer.sync()` call from `NyetboxApp.onCreate()` entirely - the
+      `LaunchedEffect(shortcutItems)` in `MainActivity` already covers startup (its initial
+      emission publishes the current list) as well as later edits, so the App-level call is pure
+      duplication. (If a headless entry path that never reaches `MainActivity` is a concern:
+      shortcuts only matter once a launcher shows them, and the launcher launches `MainActivity`.)
+- [ ] Make `ShortcutSyncer.sync()` hop off the main thread: either make it a `suspend fun` invoked
+      via `withContext(Dispatchers.Default)` (callers: the `LaunchedEffect` can just call it from
+      a coroutine), or wrap the body in its own internally-owned scope. The
+      `ShortcutManagerCompat.setDynamicShortcuts` call and icon building must not run on Main.
+- [ ] Verification: unit-test-level - none needed (no logic change); on-device - cold start the
+      debug build on the Mi Pad 4 and confirm via logcat/`adb shell dumpsys shortcut` that the
+      shortcut list is still published correctly after startup, and that editing the list in
+      Settings > App shortcuts still updates the launcher long-press menu live (NBC-417's
+      verification flow). Optionally confirm with a `Debug.startMethodTracing`/logcat timestamp
+      that `Application.onCreate` no longer includes the ShortcutManager IPC.
+
+Measured 2026-08-08 (Mi Pad 4): debug cold start is 5.2s with 48/132/43-frame Choreographer
+skips, but a release build cold-starts in 991ms with *zero* skip warnings - so most of the debug
+startup pain is unoptimized-bytecode overhead, not this. The double-publish + main-thread Binder
+IPC is still real and still pure waste on every launch, but it's a small cleanup, not a
+cold-start fix - keep it low priority.
+
+Status: **done**, 2026-08-08 - removed the `NyetboxApp.onCreate()` call and made `sync()` a
+`suspend fun` that hops to `Dispatchers.Default` before touching `ShortcutManagerCompat`; the
+`MainActivity` `LaunchedEffect(shortcutItems)` is now the only call site and still covers both
+cold start (its initial `StateFlow` emission) and Settings edits. Remote `:app:compileDebugKotlin`,
+`:app:testDebugUnitTest`, and `:app:lintDebug` all passed; no on-device re-verification of the
+launcher long-press menu was performed this pass.
+
+## NBC-421: the gesture/widget target picker loads the entire `netbox_objects` table into memory
+and substring-scans every row's full JSON on every keystroke, on the main thread
+
+`ui/settings/SettingsGestures.kt`'s `ActionTargetPickerDialog` (shared by the gesture editor, the
+nav-bar customizer, launcher-shortcut settings, and both widget config screens) receives
+`objects: List<NetBoxObjectEntity>` produced by two ViewModels the same way:
+
+- `SettingsViewModel.kt:99-102` (`gestureObjects`) and
+- `widget/WidgetConfigActivity.kt:105-108` (`WidgetConfigViewModel.objects`)
+
+both do `genericObjectRepository.observeAllObjects().stateIn(...)` - i.e. they hold *every cached
+NetBox object of every endpoint*, **including each row's full raw `json` blob** (the by-far
+largest column), in a `StateFlow` for as long as the Settings screen / widget config Activity is
+subscribed. On a realistic cache (~7000 objects at several KB of JSON each) that is tens of MB of
+heap and a heavy initial Room query, paid on *opening Settings categories that show the
+picker* - and re-paid on every `netbox_objects` invalidation (any sync page upsert) while
+subscribed.
+
+On top of that, inside the dialog (`SettingsGestures.kt:127-141`), `filteredObjects` is computed
+directly in the composable body (not `remember`ed), and its filter runs
+`obj.json.contains(targetQuery, ignoreCase = true)` - a case-insensitive substring scan over every
+row's multi-KB JSON string - on the **main thread, on every recomposition, for every keystroke**
+typed into the picker's search field. The results are then rendered with a `forEach` inside a
+`verticalScroll(Column)` (line 179) - no lazy virtualization, so picking a type with thousands of
+cached instances (e.g. interfaces) composes every row at once (the same anti-pattern NBC-374
+removed from the detail tabs).
+
+- [ ] Replace the two `observeAllObjects()` producers with a query-driven lookup: the picker's
+      object step always has a concrete `detailModel`/endpoint selected before any objects are
+      shown, so it never actually needs more than one endpoint's matches, let alone the whole
+      table. Expose e.g. `observeObjectChoices(endpointPath, query, limit = 50)` from
+      `GenericObjectRepository` backed by `NetBoxObjectDao.searchAllInEndpoint` (already indexed
+      by endpoint and LIMIT-bounded), drive it from the dialog's `targetQuery` (hoisted into the
+      ViewModel or passed via a lambda), and replace the `objects: List<NetBoxObjectEntity>`
+      parameter with the already-filtered, bounded result list.
+- [ ] While at it, render the object list with a `LazyColumn` (bounded height inside the dialog)
+      instead of `forEach` in a `verticalScroll` `Column`, and drop the in-memory
+      `obj.json.contains(...)` clause (the DAO query's `json LIKE` keeps full-JSON matching, with
+      SQLite doing the scan off the main thread).
+- [ ] Update both call sites (`SettingsViewModel`/`SettingsGestures.kt` consumers and
+      `WidgetConfigViewModel`/`WidgetConfigActivity`) - after this, nothing outside
+      `GlobalSearchRepository`'s index should consume `observeAllObjects()` wholesale anymore.
+- [ ] Verification: unit test the new repository query method (endpoint scoping + limit + query
+      matching, mirroring `GenericObjectRepositoryTest`'s existing fakes); on-device, open
+      Settings > Navigation bar (or a widget's config), add a "specific item" target for a
+      high-cardinality type (Interfaces), and confirm typing in the search field stays smooth
+      (no multi-frame Choreographer skips in logcat while typing) and results appear correctly.
+
+Confirmed live 2026-08-08 on the Mi Pad 4 (debug build, real cache of 6,883 objects / ~11.5MB of
+JSON): merely *opening the Gestures settings category* grew the app's Java heap from 43MB to 94MB
+(+51MB, `dumpsys meminfo`) and rendered one 550ms frame plus 3×150ms/200ms frames during the
+transition (`dumpsys gfxinfo` histogram diff). That's before even opening the picker dialog or
+typing a character into it.
+
+Status: not started (confirmed on-device: +51MB heap and a 550ms frame just from subscribing the
+flow).
+
+## NBC-422: dashboard and global search decode every cached device-type's JSON on the main thread
+on every `netbox_objects` change (and rebuild a full-devices map alongside)
+
+`DashboardViewModel.kt:175-193` and `GlobalSearchViewModel.kt:107-124` contain the same
+copy-pasted pair of flows used only to resolve list-row thumbnails:
+
+- `devicesById`: `deviceRepository.observeDevices("")` → `associateBy { it.id }` - re-reads the
+  *entire* `devices` table and rebuilds the full map on every `devices`-table invalidation.
+- `deviceTypeFrontImagesById`: `genericObjectRepository.observeObjects(DEVICE_TYPES, "")` →
+  `frontImageUrlFromRawJson(t.json)` per row - **decodes every cached device-type's JSON** on
+  every emission, plus pays `observeObjects`' natural sort (regex-chunked comparator) for a result
+  that immediately becomes an unordered `Map`.
+
+Both `.map` lambdas execute in the collector's context - `stateIn(viewModelScope)` =
+`Dispatchers.Main.immediate` - so all of this JSON decoding and map building happens **on the main
+thread**. Worse, Room invalidation is table-level: *any* upsert into `netbox_objects` (every
+~200-row page of every endpoint during a sync) re-triggers the device-types query and the full
+re-decode. With the dashboard open during a background sync (the normal state of the app right
+after launch, since the startup sync fires 10s in), this decode-sort-map cycle runs dozens of
+times back-to-back on the UI thread - exactly when the user is first interacting with the app.
+
+This is the NBC-390 pattern one level up: the decision "which image URL does device-type X have"
+is re-derived from raw JSON at read time on every change, instead of computed once at sync/write
+time.
+
+- [ ] Precompute the front-image URL at sync time, following NBC-390's `relatedObjectId`
+      precedent: add a nullable `frontImageUrl: String?` column to `NetBoxObjectEntity`
+      (migration N→N+1), populated in `GenericObjectRepository.toEntity()` via the existing
+      `frontImageUrlFromRawJson` logic applied to the already-parsed `JsonObject` (zero extra
+      decode cost at write time), for `api/dcim/device-types/` rows (null elsewhere).
+- [ ] Add a DAO projection query for the thumbnail map, e.g.
+      `SELECT id, frontImageUrl FROM netbox_objects WHERE endpointPath = :p AND frontImageUrl IS
+      NOT NULL` returning a small POJO - no JSON column transfer, no sort - and use it from both
+      ViewModels; keep a read-time `frontImageUrlFromRawJson` fallback for rows predating the
+      migration (same "narrow, never replace" safety-net shape as NBC-390's `IS NULL` clause) or
+      simply accept thumbnails appearing after the next sync.
+- [ ] Slim `devicesById` the same way: both consumers only ever read `deviceTypeId` (see
+      `thumbnailFor`), so a `SELECT id, deviceTypeId FROM devices` projection map (or a JOIN
+      that resolves device → its type's frontImageUrl in SQL) replaces shipping every full
+      `DeviceEntity` into a map.
+- [ ] Move whatever mapping work remains off the main thread with `.flowOn(Dispatchers.Default)`
+      before `stateIn` in both ViewModels.
+- [ ] Two smaller call sites take the same precomputed column: `GenericListScreen.kt:158` does
+      `remember(obj.json) { frontImageUrlFromRawJson(obj.json) }` *per list row* - a full JSON
+      parse of the row's multi-KB blob on the main thread the first time each row scrolls into
+      view. With the column in place, the row can read `obj.frontImageUrl` directly, deleting the
+      parse from the scroll path.
+- [ ] Micro-fix while touching it: `isMediaUrl` (`data/schema/NetBoxJson.kt:39-40`) calls
+      `toHttpUrlOrNull()` *twice* per candidate (once inside `isHttpUrl`, once itself) - okhttp's
+      URL parser runs an IDNA mapping-table pass per call (this exact frame was caught on the
+      main thread mid-cold-start, see below). Parse once and reuse, or check
+      `"/media/"` containment on the raw string after a cheap scheme prefix check.
+- [ ] Verification: extend `GenericObjectRepositoryTest` for the write-time population of the new
+      column; on-device, open the dashboard, trigger "Sync now", and confirm dashboard/search
+      thumbnails still render while the dashboard stays smooth during the sync (bar below).
+
+Confirmed live 2026-08-08 on the Mi Pad 4:
+
+- A SIGQUIT stack dump ~4s into a debug cold start caught the main thread `Runnable` inside
+  exactly this pipeline: `DashboardViewModel`'s map #3 → `frontImageUrlFromRawJson` →
+  `HttpUrl.parse` → `okhttp3.internal.idn.IdnaMappingTable.map` - i.e. this flow was actively
+  burning the UI thread during startup (238 cached device types on this install).
+- Release build (so *not* a debug artifact): with the dashboard open and completely untouched
+  while a forced full sync ran, the app rendered 768 frames in 15s - continuous recomposition
+  churn - with the bulk of frames at 20-36ms and tails to 117ms (74 janky) on a 60Hz panel.
+  The normal first-run experience (dashboard open, startup sync running) is exactly this state.
+- Debug builds additionally logged `Choreographer: Skipped 132 frames!` right after first frame
+  on the Mi Pad 4 and 2×~34 frames on the Zenfone 10, with this pipeline as a main contributor.
+
+Status: not started (confirmed on-device in both debug and release).
+
+## NBC-423: per-list search has no debounce and re-sorts the whole endpoint on the main thread on
+every keystroke
+
+`GenericListViewModel.kt:56-66`: `objects` is `_query.flatMapLatest { repository.observeObjects(
+endpointPath, it, ...) }` with **no debounce** on `_query` - every raw keystroke in a list
+screen's search bar (NBC-372's per-list `key:value` search) immediately tears down and restarts a
+Room query (`LIKE '%q%'` over the endpoint), then pays `observeObjects`' natural sort
+(`naturalDisplayComparator` - a regex-chunking comparator allocating a fresh `findAll` sequence
+per *comparison*, i.e. O(n log n) regex work per emission) - and the whole pipeline is collected
+via `stateIn(viewModelScope)` on `Dispatchers.Main.immediate`, so the sort of a potentially
+multi-thousand-row endpoint (interfaces, IP addresses) runs on the main thread per keystroke.
+`GlobalSearchViewModel` already debounces 300ms and ranks on `Dispatchers.Default`
+(`flowOn(Dispatchers.Default)`, NBC-353) - the per-list search bars predate that lesson.
+
+`DeviceListViewModel.kt` has the same no-debounce + main-thread-collection shape for the device
+list (its sort happens in SQL so it's cheaper, but the structured-filter path
+(`createSearchFields()`/`matchesFilters` per device per emission, `DeviceRepository.kt:30-37`)
+also runs on Main when `key:value` filters are used).
+
+- [ ] In `GenericListViewModel`, debounce the query like global search does:
+      `_query.debounce(300).distinctUntilChanged()` feeding the existing `flatMapLatest` (keep
+      the un-debounced `query` StateFlow for the text field's own display value).
+- [ ] Add `.flowOn(Dispatchers.Default)` to the `objects` pipeline (after `flatMapLatest`,
+      before `stateIn`) so the natural sort and any in-memory `key:value` filtering run off the
+      main thread. Do the same for `DeviceListViewModel`'s `devices` flow.
+- [ ] Cheap win inside `naturalCompare` (`GenericObjectRepository.kt:78-90`), independent of the
+      above: precompute each entity's chunked key once per emission (sort by a precomputed
+      decomposition) instead of re-running `NATURAL_SORT_CHUNK.findAll` on both operands for
+      every pairwise comparison. Only do this if profiling shows the sort itself still matters
+      after the dispatcher move; otherwise skip.
+- [ ] Verification: extend/keep `naturalCompare`'s existing unit tests green; on-device (Mi Pad
+      4), open the largest generic list available (Interfaces or IP addresses), type a several-
+      character query at normal speed, and confirm no dropped-frame bursts in logcat
+      (`Choreographer` skips) and no visible input lag; confirm results still update correctly
+      after the 300ms pause.
+
+Confirmed live 2026-08-08 by typing at ~3 chars/sec into list search bars and diffing `dumpsys
+gfxinfo` histograms per burst:
+
+- Mi Pad 4, debug, device list ("shelly"): 19 frames, 13 janky, frames up to 200/250ms.
+- Mi Pad 4, debug, Interfaces list (602 cached rows): 18 frames, 11 janky, 3×150ms + 250ms.
+- Mi Pad 4, **release** (real-user conditions), device list: still 44/53/77/85/89ms single-frame
+  hitches per keystroke - visible input jank, just milder than debug.
+- Zenfone 10, debug, device list: 21 frames, 8 janky, up to 129ms - so this is not
+  worst-device-only.
+
+Status: **done**, 2026-08-08 - added `.debounce(300)` before the `flatMapLatest` and
+`.flowOn(Dispatchers.Default)` to both `GenericListViewModel.objects` and
+`DeviceListViewModel.devices` (the un-debounced `query`/`_query` StateFlow still drives the text
+field's own display value). Skipped the optional `naturalCompare` precomputation bullet per its own
+"only if profiling shows the sort itself still matters after the dispatcher move" gate. Remote
+`:app:compileDebugKotlin`, `:app:testDebugUnitTest`, and `:app:lintDebug` all passed; the
+`Choreographer`-skip/no-visible-lag on-device re-check was not re-run this pass.
+
+## NBC-424: cache-summary counts load entire tables into memory to count them
+
+`DashboardViewModel.loadCacheSummary()` (`DashboardViewModel.kt:61-77`) computes `imageCount` via
+`database.deviceTypeDao().getAll().count { it.frontImageUrl != null || it.rearImageUrl != null } +
+database.imageAttachmentDao().getAll().size` - materializing every `DeviceTypeEntity` and every
+`ImageAttachmentEntity` row just to produce two integers. `SettingsViewModel.kt:341-343` has the
+identical copy-pasted computation for the Settings cache card. Both run every time their screen
+loads the summary. The right shape already exists next door: `netBoxObjectDao().countAll()` and
+`deviceRepository.cachedDeviceCount()` are plain SQL `COUNT(*)` queries.
+
+- [ ] Add `@Query("SELECT COUNT(*) FROM device_types WHERE frontImageUrl IS NOT NULL OR
+      rearImageUrl IS NOT NULL") suspend fun countWithImages(): Int` to `DeviceTypeDao` (adjust
+      table/column names to the actual entity definitions), and a `COUNT(*)` to
+      `ImageAttachmentDao` (e.g. `suspend fun count(): Int`).
+- [ ] Use them from both `DashboardViewModel.loadCacheSummary()` and `SettingsViewModel`'s
+      equivalent, removing the `getAll()` calls there (check whether those `getAll()`s have any
+      other remaining callers before removing the DAO methods themselves - `TopologyViewModel`
+      etc. still use `DeviceTypeRepository.cachedAll()`).
+- [ ] Verification: rely on Room's compile-time query validation via a remote
+      `:app:compileDebugKotlin` plus the existing unit test suite, and on-device confirm the
+      Settings cache card and dashboard cache summary still show the same counts as before.
+
+Status: **done**, 2026-08-08 - added `DeviceTypeDao.countWithImages()` and
+`ImageAttachmentDao.count()` (plain `COUNT(*)` queries) and switched both
+`DashboardViewModel.loadCacheSummary()` and `SettingsViewModel.refreshCacheCounts()` to use them
+instead of `getAll().count{}`/`getAll().size`; the `getAll()` methods themselves still have other
+callers (`DeviceTypeRepository.cachedAll()`, `ImageAttachmentRepository.cachedAll()`) so they were
+left in place. Remote `:app:compileDebugKotlin`, `:app:testDebugUnitTest`, and `:app:lintDebug` all
+passed; on-device confirmation that both cache-summary cards still show correct counts was not
+performed this pass.
+
+## NBC-425: every placed Glance widget recomposes on the app's main thread - at cold start and on
+every Room invalidation - competing with whatever the user is doing
+
+Glance runs widget compositions **in the app process, on the main thread** (confirmed, not
+assumed: a SIGQUIT dump ~6s into a Mi Pad 4 debug cold start caught `tid=1 "main"` `Runnable`
+deep inside `RackViewGlanceWidget.provideGlance`'s `Scaffold`/`LazyColumn` item composition, with
+the main thread having accumulated ~7s of user CPU since process start). Two consequences for
+this app, which encourages placing several widgets (the test device has 4 instances: stats,
+bookmarks, and two rack views):
+
+1. **Cold start**: the AppWidget host re-establishes every placed widget's session the moment the
+   process starts (logcat: `AppWidgetServiceImpl: Trying to notify widget update ... widget id
+   4/5/7/8` fires immediately at process creation), so all placed widgets compose on the main
+   thread exactly while `MainActivity` is trying to render its own first frames. On the Mi Pad 4
+   debug build this contributed to a `Choreographer: Skipped 132 frames!` (~2.2s) burst right
+   after first frame. (Release-build magnitude unmeasured - the release install had no widgets
+   placed - so treat the *size* as debug-observed, but the on-main-thread mechanism is inherent.)
+2. **While the app is in use**: both widgets read their data reactively via `collectAsState` on
+   Room-backed flows (`NyetboxGlanceWidget.kt:166-173`: bookmarks, changelog, device count;
+   `RackViewGlanceWidget.kt:126-131`: rack elevation slots). Room invalidation is table-level, so
+   any live widget session recomposes on the main thread whenever *anything* touches those tables
+   - e.g. repeatedly during a sync's page-by-page upserts, stacked on top of the NBC-422 churn,
+   while the user is actively using the app. The rack widget is the expensive one: Glance's
+   `LazyColumn` is RemoteViews-adapter-backed and composes every merged block of a ~42U rack per
+   pass, per instance.
+
+The reactive reads themselves are deliberate (NBC-418's reconfigure fix) and must stay - the fix
+is to stop *equal* re-emissions from recomposing at all, and to keep each pass cheap:
+
+- [ ] Add `.distinctUntilChanged()` to every flow a widget composition collects, so a table
+      invalidation that produced identical data (the common case during unrelated-endpoint sync
+      pages) doesn't recompose the session: the `remember`ed `bookmarksFlow`/`changesFlow` and
+      `deviceRepository.observeCount()` in `NyetboxGlanceWidget.provideGlance`, and the
+      `remember(rackId, face)` elevation flow in `RackViewGlanceWidget.provideGlance`. (Entity
+      classes are data classes, so list equality is structural and correct here.)
+- [ ] Additionally debounce the two list flows (e.g. `.debounce(500)`) so a genuine burst of
+      changes during a sync coalesces into at most a couple of re-renders instead of one per
+      upserted page - a home-screen widget has no business updating faster than that.
+- [ ] Verification: unit-level - none practical (Glance session behavior); on-device (Mi Pad 4,
+      with all widget types placed): trigger "Sync now" with the app open and confirm via logcat
+      + `dumpsys gfxinfo` histogram diff that frame times while idling on the dashboard improve
+      vs. before, and that widgets still show correct data after the sync lands (bookmark edit
+      shows up, rack layout change after a NetBox-side move shows up on the next sync). Confirm
+      the NBC-418 reconfigure flow (long-press → configure → save while session alive) still
+      applies instantly - distinctUntilChanged must sit on the *data* flows, not the config
+      StateFlows... (config flows may keep it too, since publish() emits a structurally new map -
+      just re-verify the delayed-reconfigure repro from NBC-418).
+
+Status: **done**, 2026-08-08 - added `.distinctUntilChanged()` to `NyetboxGlanceWidget`'s
+`bookmarksFlow`/`changesFlow`/`deviceRepository.observeCount()` and to
+`RackViewGlanceWidget`'s `remember(rackId, face)` elevation flow, plus `.debounce(500)` on the two
+list flows. Remote `:app:compileDebugKotlin`, `:app:testDebugUnitTest`, and `:app:lintDebug` all
+passed; the on-device frame-time diff during a "Sync now" with all widget types placed, and the
+NBC-418 delayed-reconfigure repro, were not re-run this pass.
+
+## NBC-426: no Baseline Profile - release builds pay JIT warmup exactly where the app already
+hovers below 60fps (cold start, first scrolls)
+
+The project ships no Baseline Profile at all: no `baseline-prof.txt` under `app/src/main/`, no
+`androidx.baselineprofile`/macrobenchmark tooling anywhere in `gradle/libs.versions.toml` or
+`app/build.gradle.kts` (checked 2026-08-08; the `ProfileInstaller` logcat line at startup comes
+from a transitive androidx dependency and installs nothing without a profile to install). That
+means every fresh release install runs Compose scroll/composition paths interpreted/JIT until
+background dexopt eventually kicks in - precisely the warmup window in which measured release
+performance on the Mi Pad 4 (the project's weakest device, 60Hz panel) sits above budget:
+
+- Release cold start: 991ms to first frame (fine), but the first minutes of use are the window a
+  baseline profile targets.
+- Release device-list fling (387 devices, fresh install): 372 frames of which ~110 landed in the
+  30-40ms band and a large cluster at 19-26ms (`dumpsys gfxinfo` histogram) - i.e. sustained
+  ~30-50fps while flinging, without any single obviously-guilty app function (R8-obfuscated
+  stack samples during the fling showed ordinary Compose composition/measure work, not one hot
+  path). This diffuse "everything is a bit slow" profile is the classic baseline-profile use
+  case, complementary to the targeted fixes in NBC-421/422/423.
+
+- [ ] Add a `:baselineprofile` test module using the `androidx.baselineprofile` Gradle plugin +
+      `androidx.benchmark.macro.junit4` (standard AGP setup per Android docs), with one
+      `BaselineProfileGenerator` journey: cold start → dashboard → device list scroll → open a
+      device detail → global search. Reuse the E2E screenshot CI's emulator setup
+      (`.github/workflows/`, NBC-200/367 infrastructure) to *generate* the profile on a
+      gradle-managed device in CI, or generate locally-on-remote (rofl-13) if the CI leg is too
+      much scope - committing the generated `baseline-prof.txt` is the deliverable either way.
+- [ ] Add `androidx.profileinstaller:profileinstaller` as an explicit dependency so the profile
+      actually installs on release builds (Obtainium/GitHub sideloads don't get Play Cloud
+      Profiles, so the shipped baseline profile is the only AOT hint those installs will ever
+      have).
+- [ ] Verification: `./gradlew :app:generateBaselineProfile` (remote) succeeds and the committed
+      profile is non-empty; on the Mi Pad 4, install the release APK fresh, cold start once, and
+      re-run the same device-list fling measurement - the 30-40ms band should shrink
+      substantially on first-session scrolling vs. the numbers above.
+
+Status: not started (absence of tooling confirmed against the repo; release frame numbers
+measured on the Mi Pad 4, 2026-08-08).

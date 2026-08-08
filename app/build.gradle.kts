@@ -118,6 +118,10 @@ dependencies {
     implementation(libs.androidx.core)
     implementation(libs.androidx.core.splashscreen)
 
+    // Home-screen widget
+    implementation(libs.androidx.glance)
+    implementation(libs.androidx.glance.appwidget)
+
     // Compose / Material 3
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.runtime)

@@ -2,6 +2,7 @@ package dev.pschmitt.nyetbox.ui.settings
 
 import androidx.annotation.Keep
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AppShortcut
 import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.FolderSpecial
@@ -25,6 +26,7 @@ enum class SettingsCategory(val title: String, val subtitle: String) {
     Printing("Printing", "Printer and label defaults"),
     Gestures("Gestures", "Gesture shortcuts"),
     NavigationBar("Navigation bar", "Choose and reorder bottom bar buttons"),
+    Shortcuts("App shortcuts", "Long-press the app icon to jump straight to an action"),
     Display("Display", "Theme, fields, and item types shown by default"),
     Notifications("Notifications", "NetBox change alerts"),
     About("About", "Application and build information");
@@ -39,6 +41,7 @@ enum class SettingsCategory(val title: String, val subtitle: String) {
                 Printing -> Icons.Default.Print
                 Gestures -> Icons.Default.TouchApp
                 NavigationBar -> Icons.Default.ViewCarousel
+                Shortcuts -> Icons.Default.AppShortcut
                 Display -> Icons.Default.Visibility
                 Notifications -> Icons.Default.Notifications
                 About -> Icons.Default.Info

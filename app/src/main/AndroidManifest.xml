@@ -136,6 +136,54 @@
             </intent-filter>
         </activity>
 
+        <!-- Started by the launcher (a different app/process) both before a placed widget
+             instance is confirmed and again from a placed widget's own long-press "Configure"
+             entry (see widgetFeatures="reconfigurable" below), so it must be exported. -->
+        <activity
+            android:name=".widget.WidgetConfigActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Nyetbox">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <!-- Receives APPWIDGET_UPDATE broadcasts from the launcher, so it must be exported. -->
+        <receiver android:name=".widget.NyetboxWidgetReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/nyetbox_widget_info" />
+        </receiver>
+
+        <!-- Same reasoning as WidgetConfigActivity above - a second, separate widget (see
+             RackViewGlanceWidget's class doc for why it's not just another content mode of the
+             first one). -->
+        <activity
+            android:name=".widget.RackViewWidgetConfigActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Nyetbox">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <!-- android:label distinguishes this from NyetboxWidgetReceiver in the widget picker,
+             which otherwise falls back to the app's own label ("Nyetbox") for both. -->
+        <receiver
+            android:name=".widget.RackViewWidgetReceiver"
+            android:exported="true"
+            android:label="@string/rackview_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/nyetbox_rackview_widget_info" />
+        </receiver>
+
         <!-- WorkManager is initialized manually in NyetboxApp (Configuration.Provider) so
              Hilt can inject HiltWorkerFactory into it - disable the default ContentProvider-based
              auto-init to avoid double initialization. -->

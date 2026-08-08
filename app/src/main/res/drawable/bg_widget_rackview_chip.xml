@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sample unit-row chip background for the rack-view widget's static picker preview - see
+     nyetbox_rackview_widget_info.xml's previewLayout. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/widget_preview_secondary_container" />
+    <corners android:radius="6dp" />
+</shape>

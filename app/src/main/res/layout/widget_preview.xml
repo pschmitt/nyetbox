@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Static RemoteViews mockup shown in the widget picker (previewLayout) - the picker never binds
+     a real widget instance, so this can't be Glance-rendered live content; it approximates the
+     actual Stats content + action row with sample data instead of a spinner (which is what
+     widget_loading.xml, previously reused here, looked like forever). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/widget_preview_surface"
+    android:orientation="vertical"
+    android:padding="16dp"
+    tools:ignore="UseAppTint">
+    <!-- android:tint (not app:tint) is correct here: this is a plain framework-inflated RemoteViews
+         layout, not an AppCompat Activity, so there's no AppCompat view-inflater to back-port
+         app:tint - and android:tint on ImageView has worked natively since API 21 regardless. -->
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_object_hub"
+            android:tint="@color/widget_preview_primary" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:text="Nyetbox"
+            android:textColor="@color/widget_preview_on_surface"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Synced"
+                android:textColor="@color/widget_preview_on_surface"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Last synced 5m ago"
+                android:textColor="@color/widget_preview_on_surface_variant"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_widget_preview_chip"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="10dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="128"
+                android:textColor="@color/widget_preview_on_primary_container"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="devices"
+                android:textColor="@color/widget_preview_on_primary_container"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_widget_preview_circle"
+            android:padding="10dp"
+            android:src="@drawable/ic_glyph_search"
+            android:tint="@color/widget_preview_on_surface" />
+
+        <!-- android.widget.Space isn't in RemoteViews' allowed-class list (confirmed on-device:
+             "Class not allowed to be inflated android.widget.Space") - use margins instead. -->
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="16dp"
+            android:background="@drawable/bg_widget_preview_circle"
+            android:padding="10dp"
+            android:src="@drawable/ic_glyph_scanner"
+            android:tint="@color/widget_preview_on_surface" />
+
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="16dp"
+            android:background="@drawable/bg_widget_preview_circle"
+            android:padding="10dp"
+            android:src="@drawable/ic_glyph_settings"
+            android:tint="@color/widget_preview_on_surface" />
+    </LinearLayout>
+
+</LinearLayout>

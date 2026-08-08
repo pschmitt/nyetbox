@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A simple viewfinder-corners glyph (not traced from a Material icon) representing the QR
+     scanner, distinct enough at shortcut size without needing exact upstream icon path data. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="@color/ic_launcher_background"
+        android:pathData="M24,4 A20,20 0 1 1 24,44 A20,20 0 1 1 24,4 Z" />
+    <group android:translateX="12" android:translateY="12">
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="1.6"
+            android:strokeLineCap="round"
+            android:pathData="M2,7 L2,3 L6,3 M18,3 L22,3 L22,7 M22,17 L22,21 L18,21 M6,21 L2,21 L2,17" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M9,9h6v6h-6z" />
+    </group>
+</vector>
