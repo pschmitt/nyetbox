@@ -1,0 +1,92 @@
+name: Baseline Profile
+
+# Manual only (NBC-426) - a baseline profile is committed source regenerated occasionally as the
+# app's own hot paths change, not something every PR/release needs to re-derive. Unlike Android
+# E2E/Screenshots, generation needs no live NetBox: BenchmarkSeedReceiver configures a fixture
+# server profile and seeds a few cache rows directly via the app's own repository/DAO code, so the
+# profiled cold start lands on an already-populated Dashboard without onboarding against a real
+# server (see BenchmarkSeedReceiver's doc comment).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    name: Generate baseline profile
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21.0.11'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      # Build before the emulator starts - see android-e2e.yaml's identical step for why
+      # (compiling concurrently with a booted emulator has previously starved it of CPU badly
+      # enough to drop it off adb entirely).
+      - name: Build the benchmarkRelease and :baselineprofile APKs
+        run: ./gradlew :app:assembleBenchmarkRelease :baselineprofile:assembleBenchmarkRelease --stacktrace
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # Matches android-e2e.yaml's emulator config (same api-level/arch/profile/target - a
+      # non-Play google_apis image, required for BaselineProfileRule's profileable-app collection)
+      # and the same generous timeout/RAM headroom that workflow's own comments explain.
+      - name: Generate the baseline profile in an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_2
+          target: google_apis
+          force-avd-creation: true
+          emulator-boot-timeout: 1800
+          disable-animations: true
+          ram-size: 4096M
+          heap-size: 512M
+          cores: 4
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
+          script: ./gradlew :app:generateBaselineProfile --stacktrace
+
+      - name: Show what changed
+        run: git status --porcelain -- app/src | tee baseline-profile-changes.txt
+
+      - name: Capture emulator diagnostics
+        if: ${{ failure() }}
+        run: |
+          {
+            echo "--- adb devices ---"
+            timeout 10s adb devices -l
+            echo "--- host memory ---"
+            free -h
+          } > baseline-profile-host-diagnostics.txt 2>&1 || true
+          timeout 60s adb logcat -d > baseline-profile-logcat.txt || true
+
+      # Uploaded rather than auto-committed: a generated baseline profile is a real content
+      # change worth a human glance (and a normal PR review) before it lands on main, not
+      # something a CI bot should push directly.
+      - name: Upload generated baseline profile
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: baseline-profile
+          path: |
+            app/src/**/baselineProfiles/**
+            baseline-profile-changes.txt
+            baseline-profile-host-diagnostics.txt
+            baseline-profile-logcat.txt
+          if-no-files-found: warn
+          retention-days: 14

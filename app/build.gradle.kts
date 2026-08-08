@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.androidx.baselineprofile)
 }
 
 ksp {
@@ -112,11 +113,25 @@ android {
     }
 }
 
+// NBC-426: the androidx.baselineprofile plugin auto-creates a "benchmark" build type (release-
+// derived, non-debuggable, profileable, signed with the same debug-keystore-or-CI-secret fallback
+// as release above) that :baselineprofile's BaselineProfileGenerator drives. Manual generation
+// only - a baseline profile is committed source, not something every release build should try to
+// regenerate on a machine that may have no connected device at all.
+baselineProfile { automaticGenerationDuringBuild = false }
+
 dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core)
     implementation(libs.androidx.core.splashscreen)
+
+    // Installs the committed app/src/main/baselineProfiles/baseline-prof.txt on real devices at
+    // install/first-launch time (NBC-426) - without this dependency, the committed profile is
+    // inert on any install that doesn't go through Play's Cloud Profile delivery (i.e. every
+    // Obtainium/GitHub Releases/F-Droid sideload this app ships to).
+    implementation(libs.androidx.profileinstaller)
+    baselineProfile(project(":baselineprofile"))
 
     // Home-screen widget
     implementation(libs.androidx.glance)

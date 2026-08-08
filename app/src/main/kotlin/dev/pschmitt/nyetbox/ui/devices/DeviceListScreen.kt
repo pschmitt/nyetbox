@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -123,7 +124,7 @@ fun DeviceListScreen(
                     } else {
                         LazyColumn(
                             state = listState,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).testTag("e2e-device-list"),
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
@@ -165,7 +166,7 @@ private fun DeviceRow(
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testTag("e2e-device-list-row"),
         shape = RoundedCornerShape(20.dp),
         colors =
             CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),

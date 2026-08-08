@@ -25,6 +25,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -222,6 +224,12 @@ class MainActivity : FragmentActivity() {
                     CompositionLocalProvider(LocalActivePointerCount provides activePointerCount) {
                         Box(
                             Modifier.fillMaxSize()
+                                // Exposes Compose testTags as UiAutomator/Espresso view resource-ids
+                                // (e.g. "e2e-search-card") - required for the :baselineprofile
+                                // module's macrobenchmark journey, which drives the app as a black
+                                // box with no Compose semantics access of its own (NBC-426). Purely
+                                // additive: no behavior change for real users.
+                                .semantics { testTagsAsResourceId = true }
                                 .trackActivePointerCount { activePointerCount = it }
                                 .then(gestureModifier)
                         ) {

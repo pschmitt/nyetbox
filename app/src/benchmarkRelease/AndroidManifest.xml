@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Only merged into the `benchmarkRelease` build type (auto-created by the androidx.baselineprofile
+    plugin applied in app/build.gradle.kts - a release-derived, non-debuggable, profileable
+    variant) - never debug or the real release shipped to users. See BenchmarkSeedReceiver's own
+    doc comment for what this exists for (NBC-426).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <receiver
+            android:name=".benchmark.BenchmarkSeedReceiver"
+            android:exported="false" />
+    </application>
+</manifest>

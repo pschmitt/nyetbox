@@ -1,6 +1,9 @@
 [versions]
 android-plugin = "9.3.1"
 androidx-activity = "1.13.0"
+# Shared by the :baselineprofile macrobenchmark module and androidx.profileinstaller in :app -
+# both are versioned together upstream (NBC-426).
+androidx-baselineprofile = "1.5.0-beta01"
 androidx-camera = "1.6.1"
 androidx-compose = "1.11.4"
 # Decoupled from androidx-compose above - this artifact's release cadence lags the rest of Compose
@@ -14,6 +17,7 @@ androidx-glance = "1.1.1"
 androidx-hilt = "1.4.0"
 androidx-lifecycle = "2.11.0"
 androidx-navigation = "2.9.8"
+androidx-profileinstaller = "1.4.1"
 androidx-room = "2.8.4"
 androidx-security-crypto = "1.1.0"
 androidx-biometric = "1.1.0"
@@ -41,6 +45,8 @@ zxing-core = "3.5.4"
 
 [libraries]
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "androidx-activity" }
+androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "androidx-baselineprofile" }
+androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "androidx-profileinstaller" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "androidx-activity" }
 androidx-camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "androidx-camera" }
 androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "androidx-camera" }
@@ -100,6 +106,8 @@ zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing-c
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "android-plugin" }
+android-test = { id = "com.android.test", version.ref = "android-plugin" }
+androidx-baselineprofile = { id = "androidx.baselineprofile", version.ref = "androidx-baselineprofile" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin-compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
