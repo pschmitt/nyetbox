@@ -44,7 +44,12 @@ class BaselineProfileGenerator {
         val packages = device.executeShellCommand("pm list packages $TARGET_PACKAGE")
         println("BaselineProfileGenerator: installed packages matching target: $packages")
         device.executeShellCommand("logcat -c")
-        val broadcastResult = device.executeShellCommand("am broadcast -n $SEED_RECEIVER -a $SEED_ACTION")
+        // pm clear above puts the app into Android's "stopped" state, in which normal broadcasts
+        // - even explicit ones targeting a specific component - are enqueued but never delivered
+        // (confirmed via logcat: "Enqueued broadcast ... : 0", no onReceive ever logged).
+        // -f 0x20 is Intent.FLAG_INCLUDE_STOPPED_PACKAGES, overriding that.
+        val broadcastResult =
+            device.executeShellCommand("am broadcast -f 0x20 -n $SEED_RECEIVER -a $SEED_ACTION")
         println("BaselineProfileGenerator: am broadcast result: $broadcastResult")
         val deadline = System.currentTimeMillis() + 30_000
         while (System.currentTimeMillis() < deadline) {
