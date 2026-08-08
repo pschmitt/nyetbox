@@ -67,7 +67,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.pschmitt.nyetbox.data.db.DeviceEntity
+import dev.pschmitt.nyetbox.data.db.DeviceLookup
 import dev.pschmitt.nyetbox.data.db.NetBoxModelEntity
 import dev.pschmitt.nyetbox.data.repository.GlobalSearchRepository
 import dev.pschmitt.nyetbox.data.repository.SearchHit
@@ -207,7 +207,7 @@ fun GlobalSearchScreen(
 private fun RecentSearchList(
     recentResults: List<SearchHit>,
     modelsByEndpointPath: Map<String, NetBoxModelEntity>,
-    devicesById: Map<Int, DeviceEntity>,
+    devicesById: Map<Int, DeviceLookup>,
     deviceTypeFrontImagesById: Map<Int, String>,
     objectTypeAccents: Map<String, ThemeAccent>,
     onResultClick: (endpointPath: String, id: Int, display: String) -> Unit,
@@ -255,7 +255,7 @@ private fun SearchResultsContent(
     results: List<SearchHit>,
     recentKeys: Set<String>,
     modelsByEndpointPath: Map<String, NetBoxModelEntity>,
-    devicesById: Map<Int, DeviceEntity>,
+    devicesById: Map<Int, DeviceLookup>,
     deviceTypeFrontImagesById: Map<Int, String>,
     objectTypeAccents: Map<String, ThemeAccent>,
     onSelectType: (NetBoxModelEntity) -> Unit,
@@ -707,7 +707,7 @@ private fun searchStatusIcon(value: String) =
 
 private fun searchThumbnailFor(
     hit: SearchHit,
-    devicesById: Map<Int, DeviceEntity>,
+    devicesById: Map<Int, DeviceLookup>,
     deviceTypeFrontImagesById: Map<Int, String>,
 ): SearchThumbnail? =
     when (hit.endpointPath) {
@@ -722,7 +722,7 @@ private fun searchThumbnailFor(
 
 private fun searchAssetTagFor(
     hit: SearchHit,
-    devicesById: Map<Int, DeviceEntity>,
+    devicesById: Map<Int, DeviceLookup>,
 ): String? =
     hit.assetTag
         ?: if (hit.endpointPath == GlobalSearchRepository.DEVICES_ENDPOINT_PATH) {
@@ -733,13 +733,13 @@ private fun searchAssetTagFor(
 
 private fun searchHasAssetTagField(
     hit: SearchHit,
-    devicesById: Map<Int, DeviceEntity>,
+    devicesById: Map<Int, DeviceLookup>,
 ): Boolean =
     hit.hasAssetTagField ||
         (hit.endpointPath == GlobalSearchRepository.DEVICES_ENDPOINT_PATH &&
             devicesById[hit.id] != null)
 
-private fun searchStatusFor(hit: SearchHit, devicesById: Map<Int, DeviceEntity>): String? =
+private fun searchStatusFor(hit: SearchHit, devicesById: Map<Int, DeviceLookup>): String? =
     hit.status
         ?: if (hit.endpointPath == GlobalSearchRepository.DEVICES_ENDPOINT_PATH) {
             devicesById[hit.id]?.statusLabel

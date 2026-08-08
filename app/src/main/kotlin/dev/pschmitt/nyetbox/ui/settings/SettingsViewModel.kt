@@ -27,6 +27,7 @@ import dev.pschmitt.nyetbox.sync.SyncScheduler
 import dev.pschmitt.nyetbox.sync.SyncStatusRepository
 import dev.pschmitt.nyetbox.widget.WidgetUpdater
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -96,10 +97,9 @@ constructor(
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val gestureObjects: StateFlow<List<NetBoxObjectEntity>> =
-        genericObjectRepository
-            .observeAllObjects()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    /** See [GenericObjectRepository.observeObjectChoices] - backs [ActionTargetPickerDialog]. */
+    fun gestureObjectChoices(endpointPath: String, query: String): Flow<List<NetBoxObjectEntity>> =
+        genericObjectRepository.observeObjectChoices(endpointPath, query)
 
     private val _isUpdatingBaseUrl = MutableStateFlow(false)
     val isUpdatingBaseUrl: StateFlow<Boolean> = _isUpdatingBaseUrl.asStateFlow()

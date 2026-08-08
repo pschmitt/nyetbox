@@ -4,6 +4,7 @@ import dev.pschmitt.nyetbox.data.api.NetBoxApi
 import dev.pschmitt.nyetbox.data.api.dto.DeviceDto
 import dev.pschmitt.nyetbox.data.db.DeviceDao
 import dev.pschmitt.nyetbox.data.db.DeviceEntity
+import dev.pschmitt.nyetbox.data.db.DeviceLookup
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -37,6 +38,9 @@ class DeviceRepository @Inject constructor(private val api: NetBoxApi, private v
     }
 
     fun observeDevice(id: Int): Flow<DeviceEntity?> = dao.observeById(id)
+
+    /** See [DeviceLookup] - backs dashboard/search list-row thumbnail, asset tag, and status. */
+    fun observeDeviceLookup(): Flow<List<DeviceLookup>> = dao.observeLookup()
 
     suspend fun refreshDevice(id: Int): Result<DeviceEntity> = runCatching {
         val entity = api.getDevice(id).toEntity()

@@ -6,8 +6,15 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
+/** See [NetBoxObjectEntity.frontImageUrl] - a thumbnail-only projection, no `json` column. */
+data class ObjectThumbnail(val id: Int, val frontImageUrl: String)
+
 @Dao
 interface NetBoxObjectDao {
+    @Query(
+        "SELECT id, frontImageUrl FROM netbox_objects WHERE endpointPath = :endpointPath AND frontImageUrl IS NOT NULL"
+    )
+    fun observeThumbnails(endpointPath: String): Flow<List<ObjectThumbnail>>
     @Query(
         "SELECT * FROM netbox_objects WHERE endpointPath = :endpointPath ORDER BY display COLLATE NOCASE"
     )

@@ -3,7 +3,7 @@ package dev.pschmitt.nyetbox.ui.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.pschmitt.nyetbox.data.db.DeviceEntity
+import dev.pschmitt.nyetbox.data.db.DeviceLookup
 import dev.pschmitt.nyetbox.data.db.NetBoxModelEntity
 import dev.pschmitt.nyetbox.data.repository.DeviceRepository
 import dev.pschmitt.nyetbox.data.repository.DirectoryRepository
@@ -16,7 +16,6 @@ import dev.pschmitt.nyetbox.data.repository.queryRemainderAfterTypeSelection
 import dev.pschmitt.nyetbox.data.repository.rankSearchHits
 import dev.pschmitt.nyetbox.data.repository.recentVisitsToSearchHits
 import dev.pschmitt.nyetbox.data.repository.typeFilterSuggestions
-import dev.pschmitt.nyetbox.data.schema.frontImageUrlFromRawJson
 import dev.pschmitt.nyetbox.ui.common.CacheFirstRefreshState
 import dev.pschmitt.nyetbox.ui.common.runCacheFirstRefresh
 import javax.inject.Inject
@@ -104,10 +103,11 @@ constructor(
             .map(::recentVisitsToSearchHits)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val devicesById: StateFlow<Map<Int, DeviceEntity>> =
+    val devicesById: StateFlow<Map<Int, DeviceLookup>> =
         deviceRepository
-            .observeDevices("")
+            .observeDeviceLookup()
             .map { devices -> devices.associateBy { it.id } }
+            .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     // Sourced from the device type's own generically-synced object, not the DeviceTypeEntity
@@ -115,12 +115,8 @@ constructor(
     // so a device type with zero devices would never surface a thumbnail here otherwise.
     val deviceTypeFrontImagesById: StateFlow<Map<Int, String>> =
         genericObjectRepository
-            .observeObjects(GlobalSearchRepository.DEVICE_TYPES_ENDPOINT_PATH, "")
-            .map { types ->
-                types
-                    .mapNotNull { t -> frontImageUrlFromRawJson(t.json)?.let { t.id to it } }
-                    .toMap()
-            }
+            .observeThumbnails(GlobalSearchRepository.DEVICE_TYPES_ENDPOINT_PATH)
+            .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     private val knownModels: StateFlow<List<NetBoxModelEntity>> =
@@ -197,7 +193,7 @@ constructor(
 
     fun thumbnailFor(
         hit: SearchHit,
-        devicesById: Map<Int, DeviceEntity>,
+        devicesById: Map<Int, DeviceLookup>,
         deviceTypeFrontImagesById: Map<Int, String>,
     ): SearchThumbnail? =
         when (hit.endpointPath) {

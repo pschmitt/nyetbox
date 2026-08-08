@@ -33,7 +33,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.pschmitt.nyetbox.data.db.NetBoxObjectEntity
 import dev.pschmitt.nyetbox.data.repository.parseGlobalSearchQuery
 import dev.pschmitt.nyetbox.data.schema.assetTagStateFromRawJson
-import dev.pschmitt.nyetbox.data.schema.frontImageUrlFromRawJson
 import dev.pschmitt.nyetbox.ui.common.AssetTagBadge
 import dev.pschmitt.nyetbox.ui.common.MissingAssetTagBadge
 import dev.pschmitt.nyetbox.ui.common.ModernSearchField
@@ -155,7 +154,7 @@ private fun ObjectRow(
     onClick: () -> Unit,
 ) {
     val assetTag = remember(obj.json) { assetTagStateFromRawJson(obj.json) }
-    val frontImageUrl = remember(obj.json) { frontImageUrlFromRawJson(obj.json) }
+    val frontImageUrl = obj.frontImageUrl
 
     Card(
         onClick = onClick,

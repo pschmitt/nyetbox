@@ -173,7 +173,6 @@ fun SettingsCategoryScreen(
     val gestureActions by viewModel.settingsRepository.gestureActions.collectAsStateWithLifecycle()
     val gestureTargets by viewModel.gestureTargets.collectAsStateWithLifecycle()
     val gestureModels by viewModel.gestureModels.collectAsStateWithLifecycle()
-    val gestureObjects by viewModel.gestureObjects.collectAsStateWithLifecycle()
     val navBarItems by viewModel.navBarItems.collectAsStateWithLifecycle()
     val shortcutItems by viewModel.shortcutItems.collectAsStateWithLifecycle()
     val scannerLens by viewModel.settingsRepository.scannerLens.collectAsStateWithLifecycle()
@@ -504,7 +503,7 @@ fun SettingsCategoryScreen(
                         gestureActions = gestureActions,
                         gestureTargets = gestureTargets,
                         gestureModels = gestureModels,
-                        gestureObjects = gestureObjects,
+                        objectChoices = viewModel::gestureObjectChoices,
                         navBarItems = navBarItems,
                         shortcutItems = shortcutItems,
                         scannerLens = scannerLens,

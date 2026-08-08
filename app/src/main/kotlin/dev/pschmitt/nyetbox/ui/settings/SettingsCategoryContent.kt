@@ -22,6 +22,7 @@ import dev.pschmitt.nyetbox.data.db.NetBoxObjectEntity
 import dev.pschmitt.nyetbox.data.repository.*
 import dev.pschmitt.nyetbox.ui.common.SyncIssueCard
 import dev.pschmitt.nyetbox.ui.common.iconForGestureAction
+import kotlinx.coroutines.flow.Flow
 
 internal fun formatBytes(bytes: Long): String =
     when {
@@ -74,7 +75,7 @@ internal data class SettingsCategoryState(
     val gestureActions: Map<GestureShortcut, GestureAction>,
     val gestureTargets: Map<GestureShortcut, GestureTarget>,
     val gestureModels: List<NetBoxModelEntity>,
-    val gestureObjects: List<NetBoxObjectEntity>,
+    val objectChoices: (endpointPath: String, query: String) -> Flow<List<NetBoxObjectEntity>>,
     val navBarItems: List<NavBarItem>,
     val shortcutItems: List<NavBarItem>,
     val scannerLens: ScannerLens,
@@ -812,7 +813,7 @@ private fun GestureSettingsContent(
                         action = state.gestureActions[shortcut] ?: GestureAction.Off,
                         target = state.gestureTargets[shortcut],
                         models = state.gestureModels,
-                        objects = state.gestureObjects,
+                        objectChoices = state.objectChoices,
                         onActionSelected = { action ->
                             actions.onSetGestureAction(shortcut, action)
                         },
@@ -835,7 +836,7 @@ private fun GestureSettingsContent(
                         action = state.gestureActions[shortcut] ?: GestureAction.Off,
                         target = state.gestureTargets[shortcut],
                         models = state.gestureModels,
-                        objects = state.gestureObjects,
+                        objectChoices = state.objectChoices,
                         onActionSelected = { action ->
                             actions.onSetGestureAction(shortcut, action)
                         },
@@ -934,7 +935,7 @@ private fun NavBarSettingsContent(state: SettingsCategoryState, actions: Setting
         ActionTargetPickerDialog(
             action = action,
             models = state.gestureModels,
-            objects = state.gestureObjects,
+            objectChoices = state.objectChoices,
             onDismiss = { pickerAction = null },
             onModelSelected = { model ->
                 actions.onAddNavBarModelItem(action, model)
@@ -1033,7 +1034,7 @@ private fun ShortcutSettingsContent(state: SettingsCategoryState, actions: Setti
         ActionTargetPickerDialog(
             action = action,
             models = state.gestureModels,
-            objects = state.gestureObjects,
+            objectChoices = state.objectChoices,
             onDismiss = { pickerAction = null },
             onModelSelected = { model ->
                 actions.onAddShortcutModelItem(action, model)

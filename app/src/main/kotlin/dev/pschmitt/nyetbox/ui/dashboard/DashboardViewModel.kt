@@ -6,7 +6,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.pschmitt.nyetbox.data.db.BookmarkEntity
 import dev.pschmitt.nyetbox.data.db.CacheDatabaseManager
 import dev.pschmitt.nyetbox.data.db.DashboardStatEntity
-import dev.pschmitt.nyetbox.data.db.DeviceEntity
+import dev.pschmitt.nyetbox.data.db.DeviceLookup
 import dev.pschmitt.nyetbox.data.db.NetBoxModelEntity
 import dev.pschmitt.nyetbox.data.db.NewsItemEntity
 import dev.pschmitt.nyetbox.data.db.ObjectChangeEntity
@@ -20,18 +20,19 @@ import dev.pschmitt.nyetbox.data.repository.GlobalSearchRepository
 import dev.pschmitt.nyetbox.data.repository.PendingEditRepository
 import dev.pschmitt.nyetbox.data.repository.RecentVisitRepository
 import dev.pschmitt.nyetbox.data.repository.SettingsRepository
-import dev.pschmitt.nyetbox.data.schema.frontImageUrlFromRawJson
 import dev.pschmitt.nyetbox.sync.SyncProgress
 import dev.pschmitt.nyetbox.sync.SyncScheduler
 import dev.pschmitt.nyetbox.sync.SyncStatusRepository
 import dev.pschmitt.nyetbox.sync.shouldScheduleStartup
 import dev.pschmitt.nyetbox.ui.common.CacheSummary
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -171,10 +172,11 @@ constructor(
             .observeRecent(limit = 50)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val devicesById: StateFlow<Map<Int, DeviceEntity>> =
+    val devicesById: StateFlow<Map<Int, DeviceLookup>> =
         deviceRepository
-            .observeDevices("")
+            .observeDeviceLookup()
             .map { devices -> devices.associateBy { it.id } }
+            .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     // Sourced from the device type's own generically-synced object, not the DeviceTypeEntity
@@ -183,12 +185,8 @@ constructor(
     // thumbnail here otherwise.
     val deviceTypeFrontImagesById: StateFlow<Map<Int, String>> =
         genericObjectRepository
-            .observeObjects(GlobalSearchRepository.DEVICE_TYPES_ENDPOINT_PATH, "")
-            .map { types ->
-                types
-                    .mapNotNull { t -> frontImageUrlFromRawJson(t.json)?.let { t.id to it } }
-                    .toMap()
-            }
+            .observeThumbnails(GlobalSearchRepository.DEVICE_TYPES_ENDPOINT_PATH)
+            .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     val conflictCount: StateFlow<Int> =
@@ -224,7 +222,7 @@ constructor(
     fun thumbnailFor(
         endpointPath: String,
         id: Int,
-        devicesById: Map<Int, DeviceEntity>,
+        devicesById: Map<Int, DeviceLookup>,
         deviceTypeFrontImagesById: Map<Int, String>,
     ): DashboardThumbnail? =
         when (endpointPath) {

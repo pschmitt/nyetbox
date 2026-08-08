@@ -37,4 +37,13 @@ data class NetBoxObjectEntity(
      * predates the sync pass that started filling it in.
      */
     val relatedObjectId: Int? = null,
+    /**
+     * `front_image` pulled from this row's own JSON at sync/write time (only populated for
+     * `api/dcim/device-types/` rows; `null` elsewhere) - see
+     * [dev.pschmitt.nyetbox.data.schema.frontImageUrlFromRawJson]. Avoids decoding every cached
+     * device-type's JSON on the main thread on every dashboard/search read (NBC-422). `null` also
+     * covers rows cached before this column existed; callers needing a value for those should fall
+     * back to [dev.pschmitt.nyetbox.data.schema.frontImageUrlFromRawJson] on [json] directly.
+     */
+    val frontImageUrl: String? = null,
 )

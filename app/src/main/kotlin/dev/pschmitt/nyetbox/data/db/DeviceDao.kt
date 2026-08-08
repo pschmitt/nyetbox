@@ -6,10 +6,25 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Narrow projection of [DeviceEntity] for read paths that only ever need identity plus the fields
+ * used to render a dashboard/search list row (thumbnail, asset tag, status) - not every column,
+ * including the potentially sizable `comments`/`customFieldsJson` ones (NBC-422).
+ */
+data class DeviceLookup(
+    val id: Int,
+    val deviceTypeId: Int?,
+    val assetTag: String?,
+    val statusLabel: String?,
+)
+
 @Dao
 interface DeviceDao {
     @Query("SELECT * FROM devices ORDER BY name COLLATE NOCASE")
     fun observeAll(): Flow<List<DeviceEntity>>
+
+    @Query("SELECT id, deviceTypeId, assetTag, statusLabel FROM devices")
+    fun observeLookup(): Flow<List<DeviceLookup>>
 
     @Query(
         """

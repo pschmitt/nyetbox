@@ -293,3 +293,10 @@ val MIGRATION_17_18 =
             )
         }
     }
+
+val MIGRATION_18_19 =
+    object : Migration(18, 19) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `netbox_objects` ADD COLUMN `frontImageUrl` TEXT")
+        }
+    }

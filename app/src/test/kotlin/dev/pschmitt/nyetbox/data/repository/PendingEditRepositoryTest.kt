@@ -4,6 +4,7 @@ import dev.pschmitt.nyetbox.data.api.GenericNetBoxApi
 import dev.pschmitt.nyetbox.data.api.dto.PagedResponseDto
 import dev.pschmitt.nyetbox.data.db.NetBoxObjectDao
 import dev.pschmitt.nyetbox.data.db.NetBoxObjectEntity
+import dev.pschmitt.nyetbox.data.db.ObjectThumbnail
 import dev.pschmitt.nyetbox.data.db.PendingEditDao
 import dev.pschmitt.nyetbox.data.db.PendingEditEntity
 import dev.pschmitt.nyetbox.sync.SyncIssueReporter
@@ -459,6 +460,9 @@ internal class FakeNetBoxObjectDao : NetBoxObjectDao {
         flowOf(last)
 
     override fun observeAllObjects(): Flow<List<NetBoxObjectEntity>> = flowOf(listOfNotNull(last))
+
+    override fun observeThumbnails(endpointPath: String): Flow<List<ObjectThumbnail>> =
+        flowOf(emptyList())
 
     override suspend fun getById(endpointPath: String, id: Int): NetBoxObjectEntity? =
         last?.takeIf {

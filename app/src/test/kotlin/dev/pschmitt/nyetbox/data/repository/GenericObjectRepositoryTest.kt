@@ -4,6 +4,7 @@ import dev.pschmitt.nyetbox.data.api.GenericNetBoxApi
 import dev.pschmitt.nyetbox.data.api.dto.PagedResponseDto
 import dev.pschmitt.nyetbox.data.db.NetBoxObjectDao
 import dev.pschmitt.nyetbox.data.db.NetBoxObjectEntity
+import dev.pschmitt.nyetbox.data.db.ObjectThumbnail
 import dev.pschmitt.nyetbox.data.schema.NetBoxRef
 import dev.pschmitt.nyetbox.sync.SyncIssueReporter
 import kotlinx.coroutines.flow.Flow
@@ -113,6 +114,85 @@ class GenericObjectRepositoryTest {
 
         assertEquals(listOf(1), result.map { it.id })
     }
+
+    // NBC-421: ActionTargetPickerDialog's per-endpoint, bounded, query-driven object choices -
+    // replaces loading the entire netbox_objects table into the picker's composition.
+
+    @Test
+    fun `object choices are scoped to one endpoint and match the query`() = runTest {
+        val dao =
+            InMemoryNetBoxObjectDao(
+                listOf(
+                    siteObject(id = 1, name = "Site Alpha", description = "Primary"),
+                    siteObject(id = 2, name = "Site Beta", description = "Secondary"),
+                )
+            )
+        val repository = repository(dao)
+
+        val result = repository.observeObjectChoices(endpointPath, "alpha").first()
+
+        assertEquals(listOf(1), result.map { it.id })
+    }
+
+    @Test
+    fun `object choices are bounded by limit`() = runTest {
+        val dao =
+            InMemoryNetBoxObjectDao(
+                (1..5).map { id -> siteObject(id = id, name = "Site $id", description = "") }
+            )
+        val repository = repository(dao)
+
+        val result = repository.observeObjectChoices(endpointPath, "", limit = 2).first()
+
+        assertEquals(2, result.size)
+    }
+
+    // NBC-422: front_image is precomputed at write time for device-types rows only, so
+    // dashboard/search thumbnail lookups never need to decode a row's JSON at read time.
+
+    @Test
+    fun `caching a device type precomputes its front image url`() = runTest {
+        val dao = InMemoryNetBoxObjectDao()
+        val repository = repository(dao)
+
+        repository.cacheLocalObject(
+            NetBoxRef.DEVICE_TYPES_ENDPOINT_PATH,
+            deviceTypeObject(id = 1, frontImage = "https://netbox.example/media/devicetype-images/x.jpg"),
+        )
+
+        assertEquals(
+            "https://netbox.example/media/devicetype-images/x.jpg",
+            dao.stored(NetBoxRef.DEVICE_TYPES_ENDPOINT_PATH, 1)?.frontImageUrl,
+        )
+    }
+
+    @Test
+    fun `front image url is not precomputed for other endpoints`() = runTest {
+        val dao = InMemoryNetBoxObjectDao()
+        val repository = repository(dao)
+
+        repository.cacheLocalObject(
+            endpointPath,
+            JsonObject(
+                mapOf(
+                    "id" to JsonPrimitive(1),
+                    "name" to JsonPrimitive("Site Alpha"),
+                    "description" to JsonPrimitive("Primary"),
+                )
+            ),
+        )
+
+        assertEquals(null, dao.stored(endpointPath, 1)?.frontImageUrl)
+    }
+
+    private fun deviceTypeObject(id: Int, frontImage: String): JsonObject =
+        JsonObject(
+            mapOf(
+                "id" to JsonPrimitive(id),
+                "model" to JsonPrimitive("Model $id"),
+                "front_image" to JsonPrimitive(frontImage),
+            )
+        )
 
     // NBC-390: relation lookups used on every device-detail screen open (a device's interfaces,
     // ports, journal entries; a rack's devices) get an indexed shortcut computed once at
@@ -262,7 +342,18 @@ private class InMemoryNetBoxObjectDao(initial: List<NetBoxObjectEntity> = emptyL
         endpointPath: String,
         query: String,
         limit: Int,
-    ): Flow<List<NetBoxObjectEntity>> = flowOf(emptyList())
+    ): Flow<List<NetBoxObjectEntity>> =
+        flowOf(
+            objects.values
+                .filter {
+                    it.endpointPath == endpointPath &&
+                        (it.display.contains(query, ignoreCase = true) ||
+                            it.secondaryLine.orEmpty().contains(query, ignoreCase = true) ||
+                            it.json.contains(query, ignoreCase = true))
+                }
+                .sortedBy { it.display.lowercase() }
+                .take(limit)
+        )
 
     override fun observeByRelatedObjectId(
         endpointPath: String,
@@ -280,6 +371,14 @@ private class InMemoryNetBoxObjectDao(initial: List<NetBoxObjectEntity> = emptyL
 
     override fun observeAllObjects(): Flow<List<NetBoxObjectEntity>> =
         flowOf(objects.values.toList())
+
+    override fun observeThumbnails(endpointPath: String): Flow<List<ObjectThumbnail>> =
+        flowOf(
+            objects.values.mapNotNull {
+                if (it.endpointPath != endpointPath || it.frontImageUrl == null) null
+                else ObjectThumbnail(it.id, it.frontImageUrl)
+            }
+        )
 
     override suspend fun getById(endpointPath: String, id: Int): NetBoxObjectEntity? =
         objects[endpointPath to id]

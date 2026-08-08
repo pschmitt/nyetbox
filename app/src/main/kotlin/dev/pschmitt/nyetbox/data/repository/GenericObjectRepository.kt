@@ -4,6 +4,7 @@ import dev.pschmitt.nyetbox.data.api.GenericNetBoxApi
 import dev.pschmitt.nyetbox.data.db.NetBoxObjectDao
 import dev.pschmitt.nyetbox.data.db.NetBoxObjectEntity
 import dev.pschmitt.nyetbox.data.schema.NetBoxRef
+import dev.pschmitt.nyetbox.data.schema.frontImageUrl
 import dev.pschmitt.nyetbox.data.schema.jsonInt
 import dev.pschmitt.nyetbox.data.schema.jsonString
 import dev.pschmitt.nyetbox.sync.SyncIssueReporter
@@ -169,6 +170,25 @@ constructor(
 
     fun observeAllObjects(): Flow<List<NetBoxObjectEntity>> = dao.observeAllObjects()
 
+    /**
+     * Bounded, endpoint-scoped choices for [dev.pschmitt.nyetbox.ui.settings.ActionTargetPickerDialog]
+     * (NBC-421) - unlike [observeAllObjects], never loads more than [limit] rows or more than one
+     * endpoint's worth of cached objects, since the picker always has a concrete endpoint selected
+     * before it shows any instances.
+     */
+    fun observeObjectChoices(
+        endpointPath: String,
+        query: String,
+        limit: Int = 50,
+    ): Flow<List<NetBoxObjectEntity>> = dao.searchAllInEndpoint(endpointPath, query, limit)
+
+    /**
+     * `id -> frontImageUrl` for one endpoint's precomputed thumbnails (NBC-422) - a narrow
+     * projection query, no `json` column transfer and no in-memory decode/sort.
+     */
+    fun observeThumbnails(endpointPath: String): Flow<Map<Int, String>> =
+        dao.observeThumbnails(endpointPath).map { rows -> rows.associate { it.id to it.frontImageUrl } }
+
     suspend fun refreshObject(endpointPath: String, id: Int): Result<NetBoxObjectEntity> =
         runCatching {
             val entity = api.getObject("$endpointPath$id/").toEntity(endpointPath)
@@ -318,6 +338,7 @@ constructor(
             syncedAt = System.currentTimeMillis(),
             lastUpdated = jsonString("last_updated"),
             relatedObjectId = precomputedRelatedObjectId(endpointPath),
+            frontImageUrl = if (endpointPath == NetBoxRef.DEVICE_TYPES_ENDPOINT_PATH) frontImageUrl() else null,
         )
     }
 }

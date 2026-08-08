@@ -8,6 +8,7 @@ import dev.pschmitt.nyetbox.data.api.dto.IpAddressRefDto
 import dev.pschmitt.nyetbox.data.api.dto.PagedResponseDto
 import dev.pschmitt.nyetbox.data.db.DeviceDao
 import dev.pschmitt.nyetbox.data.db.DeviceEntity
+import dev.pschmitt.nyetbox.data.db.DeviceLookup
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -124,6 +125,18 @@ class DeviceRepositoryTest {
  */
 private class FakeDeviceDao(private val devices: List<DeviceEntity>) : DeviceDao {
     override fun observeAll(): Flow<List<DeviceEntity>> = flowOf(devices)
+
+    override fun observeLookup(): Flow<List<DeviceLookup>> =
+        flowOf(
+            devices.map {
+                DeviceLookup(
+                    id = it.id,
+                    deviceTypeId = it.deviceTypeId,
+                    assetTag = it.assetTag,
+                    statusLabel = it.statusLabel,
+                )
+            }
+        )
 
     override fun search(query: String): Flow<List<DeviceEntity>> =
         flowOf(

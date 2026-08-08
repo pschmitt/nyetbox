@@ -78,6 +78,7 @@ import dev.pschmitt.nyetbox.ui.directory.AppIcons
 import dev.pschmitt.nyetbox.ui.settings.ActionTargetPickerDialog
 import dev.pschmitt.nyetbox.ui.theme.NyetboxTheme
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -90,7 +91,7 @@ class WidgetConfigViewModel
 @Inject
 constructor(
     directoryRepository: DirectoryRepository,
-    genericObjectRepository: GenericObjectRepository,
+    private val genericObjectRepository: GenericObjectRepository,
     dashboardRepository: DashboardRepository,
     deviceRepository: DeviceRepository,
     settingsRepository: SettingsRepository,
@@ -102,10 +103,9 @@ constructor(
             .map { models -> models.distinctBy { it.endpointPath }.sortedBy { it.modelLabel.lowercase() } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val objects: StateFlow<List<NetBoxObjectEntity>> =
-        genericObjectRepository
-            .observeAllObjects()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    /** See [GenericObjectRepository.observeObjectChoices] - backs [ActionTargetPickerDialog]. */
+    fun objectChoices(endpointPath: String, query: String): Flow<List<NetBoxObjectEntity>> =
+        genericObjectRepository.observeObjectChoices(endpointPath, query)
 
     /** Live sample data for [WidgetPreviewCard] - the same sources the widget itself renders. */
     val bookmarks: StateFlow<List<BookmarkEntity>> =
@@ -238,7 +238,6 @@ private fun WidgetConfigScreen(
     onSave: () -> Unit,
 ) {
     val models by viewModel.models.collectAsState()
-    val objects by viewModel.objects.collectAsState()
     val bookmarks by viewModel.bookmarks.collectAsState()
     val changes by viewModel.changes.collectAsState()
     val deviceCount by viewModel.deviceCount.collectAsState()
@@ -367,7 +366,7 @@ private fun WidgetConfigScreen(
         ActionTargetPickerDialog(
             action = action,
             models = models,
-            objects = objects,
+            objectChoices = viewModel::objectChoices,
             onDismiss = { pickerAction = null },
             onModelSelected = { model ->
                 onActionsChange(

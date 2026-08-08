@@ -21,7 +21,7 @@ import androidx.room.RoomDatabase
             NewsItemEntity::class,
             CableTraceEntity::class,
         ],
-    version = 18,
+    version = 19,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

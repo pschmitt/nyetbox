@@ -2,6 +2,8 @@ package dev.pschmitt.nyetbox.ui.settings
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -18,6 +20,8 @@ import dev.pschmitt.nyetbox.data.repository.GestureAction
 import dev.pschmitt.nyetbox.data.repository.GestureShortcut
 import dev.pschmitt.nyetbox.data.repository.GestureTarget
 import dev.pschmitt.nyetbox.ui.common.iconForGestureAction
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 @Composable
 internal fun GestureShortcutRow(
@@ -25,7 +29,7 @@ internal fun GestureShortcutRow(
     action: GestureAction,
     target: GestureTarget?,
     models: List<dev.pschmitt.nyetbox.data.db.NetBoxModelEntity>,
-    objects: List<NetBoxObjectEntity>,
+    objectChoices: (endpointPath: String, query: String) -> Flow<List<NetBoxObjectEntity>>,
     onActionSelected: (GestureAction) -> Unit,
     onTargetSelected: (dev.pschmitt.nyetbox.data.db.NetBoxModelEntity) -> Unit,
     onDetailTargetSelected: (NetBoxObjectEntity) -> Unit,
@@ -88,7 +92,7 @@ internal fun GestureShortcutRow(
         ActionTargetPickerDialog(
             action = action,
             models = models,
-            objects = objects,
+            objectChoices = objectChoices,
             onDismiss = { targetPickerVisible = false },
             onModelSelected = { model ->
                 onTargetSelected(model)
@@ -112,7 +116,7 @@ internal fun GestureShortcutRow(
 internal fun ActionTargetPickerDialog(
     action: GestureAction,
     models: List<NetBoxModelEntity>,
-    objects: List<NetBoxObjectEntity>,
+    objectChoices: (endpointPath: String, query: String) -> Flow<List<NetBoxObjectEntity>>,
     onDismiss: () -> Unit,
     onModelSelected: (NetBoxModelEntity) -> Unit,
     onObjectSelected: (NetBoxObjectEntity) -> Unit,
@@ -124,21 +128,11 @@ internal fun ActionTargetPickerDialog(
             model.modelLabel.contains(targetQuery, ignoreCase = true) ||
             model.appLabel.contains(targetQuery, ignoreCase = true)
     }
-    val filteredObjects =
-        detailModel
-            ?.let { selectedModel ->
-                objects
-                    .asSequence()
-                    .filter { it.endpointPath == selectedModel.endpointPath }
-                    .filter { obj ->
-                        targetQuery.isBlank() ||
-                            obj.display.contains(targetQuery, ignoreCase = true) ||
-                            obj.secondaryLine.orEmpty().contains(targetQuery, ignoreCase = true) ||
-                            obj.json.contains(targetQuery, ignoreCase = true)
-                    }
-                    .toList()
+    val filteredObjects by
+        remember(detailModel?.endpointPath, targetQuery) {
+                detailModel?.let { objectChoices(it.endpointPath, targetQuery) } ?: flowOf(emptyList())
             }
-            .orEmpty()
+            .collectAsState(initial = emptyList())
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -151,7 +145,7 @@ internal fun ActionTargetPickerDialog(
             )
         },
         text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
+            Column {
                 OutlinedTextField(
                     value = targetQuery,
                     onValueChange = { targetQuery = it },
@@ -175,33 +169,40 @@ internal fun ActionTargetPickerDialog(
                             modifier = Modifier.padding(top = 16.dp),
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                    }
-                    filteredObjects.forEach { obj ->
-                        SettingsListItem(
-                            modifier = Modifier.clickable { onObjectSelected(obj) },
-                            leadingContent = {
-                                Icon(Icons.Default.Storage, contentDescription = null)
-                            },
-                            headlineContent = { Text(obj.display) },
-                            supportingContent = { obj.secondaryLine?.let { Text(it) } },
-                        )
+                    } else {
+                        LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+                            items(filteredObjects, key = { it.id }) { obj ->
+                                SettingsListItem(
+                                    modifier = Modifier.clickable { onObjectSelected(obj) },
+                                    leadingContent = {
+                                        Icon(Icons.Default.Storage, contentDescription = null)
+                                    },
+                                    headlineContent = { Text(obj.display) },
+                                    supportingContent = { obj.secondaryLine?.let { Text(it) } },
+                                )
+                            }
+                        }
                     }
                 } else {
-                    filteredModels.forEach { model ->
-                        SettingsListItem(
-                            modifier =
-                                Modifier.clickable {
-                                    if (action == GestureAction.DetailSpecific) {
-                                        detailModel = model
-                                        targetQuery = ""
-                                    } else {
-                                        onModelSelected(model)
-                                    }
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        filteredModels.forEach { model ->
+                            SettingsListItem(
+                                modifier =
+                                    Modifier.clickable {
+                                        if (action == GestureAction.DetailSpecific) {
+                                            detailModel = model
+                                            targetQuery = ""
+                                        } else {
+                                            onModelSelected(model)
+                                        }
+                                    },
+                                leadingContent = {
+                                    Icon(Icons.Default.Add, contentDescription = null)
                                 },
-                            leadingContent = { Icon(Icons.Default.Add, contentDescription = null) },
-                            headlineContent = { Text(model.modelLabel) },
-                            supportingContent = { Text(model.appLabel) },
-                        )
+                                headlineContent = { Text(model.modelLabel) },
+                                supportingContent = { Text(model.appLabel) },
+                            )
+                        }
                     }
                 }
             }

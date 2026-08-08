@@ -8183,8 +8183,21 @@ JSON): merely *opening the Gestures settings category* grew the app's Java heap 
 transition (`dumpsys gfxinfo` histogram diff). That's before even opening the picker dialog or
 typing a character into it.
 
-Status: not started (confirmed on-device: +51MB heap and a 550ms frame just from subscribing the
-flow).
+Status: **done**, 2026-08-08 - added `GenericObjectRepository.observeObjectChoices(endpointPath,
+query, limit = 50)` backed by the already-indexed, already-`LIMIT`-bounded
+`NetBoxObjectDao.searchAllInEndpoint`. `ActionTargetPickerDialog` and `GestureShortcutRow` now take
+an `objectChoices: (endpointPath, query) -> Flow<List<NetBoxObjectEntity>>` lambda instead of a
+materialized `objects: List<NetBoxObjectEntity>`, driven from the dialog's own `targetQuery` via
+`remember(detailModel?.endpointPath, targetQuery) { ... }.collectAsState()`; the in-memory
+`obj.json.contains(...)` scan is gone (the DAO's `json LIKE` clause covers it off the main thread)
+and the object list renders via `LazyColumn` instead of `forEach` in a `verticalScroll` `Column`.
+`SettingsViewModel.gestureObjects`/`WidgetConfigViewModel.objects` (both backed by
+`observeAllObjects()`) are replaced by `gestureObjectChoices()`/`objectChoices()` functions on each
+ViewModel; nothing outside `GlobalSearchRepository`'s index now consumes `observeAllObjects()`.
+Added `GenericObjectRepositoryTest` coverage for endpoint-scoping, query-matching, and the `limit`
+bound. Remote `:app:compileDebugKotlin`, `:app:testDebugUnitTest`, `:app:lintDebug`, and
+`:app:ktfmtCheck` all passed; the on-device heap/frame-time re-measurement (Settings > Gestures,
+then typing in the picker) was not re-run this pass.
 
 ## NBC-422: dashboard and global search decode every cached device-type's JSON on the main thread
 on every `netbox_objects` change (and rebuild a full-devices map alongside)
@@ -8255,7 +8268,35 @@ Confirmed live 2026-08-08 on the Mi Pad 4:
 - Debug builds additionally logged `Choreographer: Skipped 132 frames!` right after first frame
   on the Mi Pad 4 and 2×~34 frames on the Zenfone 10, with this pipeline as a main contributor.
 
-Status: not started (confirmed on-device in both debug and release).
+Status: **done**, 2026-08-08 - added a nullable `frontImageUrl` column to `NetBoxObjectEntity`
+(Room migration 18→19, `MIGRATION_18_19`), populated in `GenericObjectRepository.toEntity()` from
+the already-parsed `JsonObject` for `api/dcim/device-types/` rows only (`null` elsewhere, including
+rows cached before the migration - the ticket's own fallback option, "accept thumbnails appearing
+after the next sync," rather than a read-time decode fallback). Added
+`NetBoxObjectDao.observeThumbnails`/`GenericObjectRepository.observeThumbnails` (an `id ->
+frontImageUrl` projection, no `json` column, no sort) and switched both
+`DashboardViewModel.deviceTypeFrontImagesById` and `GlobalSearchViewModel.deviceTypeFrontImagesById`
+to it, with `.flowOn(Dispatchers.Default)`. `GenericListScreen.kt`'s per-row `remember(obj.json) {
+frontImageUrlFromRawJson(obj.json) }` now reads `obj.frontImageUrl` directly. Fixed the double
+`toHttpUrlOrNull()` parse in `isMediaUrl`.
+
+For `devicesById`: the ticket's claim that "both consumers only ever read deviceTypeId" turned out
+to be incomplete - `GlobalSearchScreen.kt`'s `searchAssetTagFor`/`searchHasAssetTagField`/
+`searchStatusFor` also read `assetTag`/`statusLabel` off the same map. Added
+`DeviceDao.observeLookup`/`DeviceRepository.observeDeviceLookup` projecting exactly those four
+columns (`id`, `deviceTypeId`, `assetTag`, `statusLabel`) as a new `DeviceLookup` type instead of
+shipping every `DeviceEntity` column (including `comments`/`customFieldsJson`), and updated both
+ViewModels' `devicesById` plus `thumbnailFor`/`searchThumbnailFor`/`searchAssetTagFor`/
+`searchHasAssetTagField`/`searchStatusFor` signatures to match - a narrower fix than the ticket
+described, but the correct one.
+
+Extended `GenericObjectRepositoryTest` (write-time `frontImageUrl` population, scoped to
+device-types) and `DeviceRepositoryTest`/`PendingEditRepositoryTest`'s fake DAOs for the new
+interface members. Remote `:app:compileDebugKotlin`, `:app:testDebugUnitTest`, `:app:lintDebug`, and
+`:app:ktfmtCheck` all passed. Not verified this pass: on-device main-thread stack sampling during a
+forced sync (the original repro), and Room's `app/schemas/.../19.json` export - already missing for
+schema versions 16-18 before this change, so this is a pre-existing gap in the remote build's KSP
+output, not something this migration introduced or fixed.
 
 ## NBC-423: per-list search has no debounce and re-sorts the whole endpoint on the main thread on
 every keystroke
