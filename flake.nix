@@ -57,10 +57,16 @@
           check-merge-conflicts.enable = true;
           check-added-large-files = {
             enable = true;
-            # Vendored, pre-migrated/pre-seeded Postgres dumps for the disposable CI NetBox
-            # fixtures (see justfile's netbox-fixture-regen) - deliberately committed binaries,
-            # not an accidental large-file slip.
-            excludes = [ "^ci/netbox/fixtures/.*\\.dump$" ];
+            excludes = [
+              # Vendored, pre-migrated/pre-seeded Postgres dumps for the disposable CI NetBox
+              # fixtures (see justfile's netbox-fixture-regen) - deliberately committed binaries,
+              # not an accidental large-file slip.
+              "^ci/netbox/fixtures/.*\\.dump$"
+              # Generated Baseline Profile (NBC-426, see .github/workflows/baseline-profile.yaml) -
+              # a large but deliberately committed text file, regenerated occasionally, not an
+              # accidental large-file slip either.
+              "^app/src/release/generated/baselineProfiles/.*\\.txt$"
+            ];
           };
           check-yaml.enable = true;
           nixfmt.enable = true;

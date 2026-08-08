@@ -8474,5 +8474,52 @@ performance on the Mi Pad 4 (the project's weakest device, 60Hz panel) sits abov
       re-run the same device-list fling measurement - the 30-40ms band should shrink
       substantially on first-session scrolling vs. the numbers above.
 
-Status: not started (absence of tooling confirmed against the repo; release frame numbers
+Status: **done**, 2026-08-09 - added a `:baselineprofile` module (`com.android.test` +
+`androidx.baselineprofile`) with a `BaselineProfileGenerator` journey (cold start -> dashboard ->
+open the nav drawer -> device list -> fling it -> open a device detail -> back out -> global search
+-> type a query), plus `androidx.profileinstaller` and the consumer plugin in `:app`. Applying the
+plugin auto-created a `benchmarkRelease` build type (release-derived, non-debuggable, profileable);
+`generateBaselineProfile` also runs a correctness pass against a second auto-created
+`nonMinifiedRelease` variant.
+
+Getting the actual generation run green took several iterations, each diagnosed from a real CI run
+(no local emulator available - this remote build host has no `/dev/kvm`, and the sandbox has no
+Android SDK):
+- `androidx.baselineprofile` 1.4.1 doesn't support AGP 9.3.1 ("Module `:app` is not a supported
+  android module") - needed `1.5.0-beta01`.
+- `BenchmarkSeedReceiver` (a new component that configures a fixture server profile and seeds a
+  few `DeviceEntity` rows directly via `SettingsRepository`/DAO write paths, so the profiled cold
+  start lands on an already-populated Dashboard without driving onboarding against a live NetBox -
+  necessary because `BaselineProfileRule` drives the app as a black box via UiAutomator with no
+  Compose semantics access, and `SettingsRepository`'s `EncryptedSharedPreferences` can't be
+  pre-seeded from outside the app's own process) originally lived in a `benchmarkRelease`-only
+  source set, so it was entirely absent during the `nonMinifiedRelease` pass - moved to `main` with
+  a runtime build-type allowlist (`benchmarkRelease`/`nonMinifiedRelease` only, no-op otherwise).
+- The seed broadcast still silently went nowhere afterward: `pm clear` (run before broadcasting, to
+  guarantee a clean fixture each run) puts the app into Android's "stopped" state, in which
+  broadcasts are enqueued but never delivered even to an explicit component - fixed with `-f 0x20`
+  (`FLAG_INCLUDE_STOPPED_PACKAGES`) on the `am broadcast` call.
+- Still timing out after that: `exported="false"` plus `adb shell am broadcast -n` turned out not
+  to reliably reach the receiver on this API level (confirmed via `dumpsys package` that the
+  manifest merge itself was correct - the component just wasn't accepting shell-issued deliveries).
+  Switched to `exported="true"`, safe here since the receiver already no-ops on every build type
+  except the two profiling ones regardless of who sends the broadcast.
+- `MainActivity` needed `Modifier.semantics { testTagsAsResourceId = true }` added to its Compose
+  root so UiAutomator could resolve the app's existing `e2e-*` Compose test tags at all; two more
+  tags (`e2e-device-list`, `e2e-device-list-row`) were added to `DeviceListScreen` for the journey's
+  scroll/tap steps.
+- `generateBaselineProfile` also needs the workflow itself to already exist on `main` -
+  `workflow_dispatch` can't be triggered against a workflow that only exists on a feature branch,
+  even when targeting that branch as the ref - so the whole feature landed on `main` directly
+  rather than via a validate-on-branch-then-merge flow.
+
+Verification: `./gradlew :app:generateBaselineProfile` succeeded on
+[a real CI run](https://github.com/pschmitt/nyetbox/actions/runs/31282229770) (`.github/workflows/baseline-profile.yaml`,
+`workflow_dispatch`-only, mirrors the existing E2E/Screenshots emulator setup) and produced a
+30,207-line, non-empty profile with confirmed coverage of `dashboard`/`devices`/`devicedetail`/
+`search` package classes - committed at `app/src/release/generated/baselineProfiles/`
+(`baseline-prof.txt` + an identical `startup-prof.txt`, expected since the generator passes
+`includeInStartupProfile = true`). Not verified this pass: the actual on-device frame-time
+improvement on the Mi Pad 4 from a fresh release install with this profile installed - the ticket's
+own suggested before/after fling comparison needs a physical device.
 measured on the Mi Pad 4, 2026-08-08).
