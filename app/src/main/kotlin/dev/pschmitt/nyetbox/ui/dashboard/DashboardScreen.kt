@@ -985,7 +985,9 @@ private fun StatsRow(
     val hasMoreBackward by remember {
         derivedStateOf {
             val first = listState.layoutInfo.visibleItemsInfo.firstOrNull()
-            first == null || first.index != 0 || first.offset < listState.layoutInfo.viewportStartOffset
+            first == null ||
+                first.index != 0 ||
+                first.offset < listState.layoutInfo.viewportStartOffset
         }
     }
     Box {
