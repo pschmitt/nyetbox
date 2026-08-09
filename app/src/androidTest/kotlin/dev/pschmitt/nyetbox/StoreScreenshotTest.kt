@@ -7,9 +7,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
@@ -41,8 +38,6 @@ class StoreScreenshotTest : NetBoxJourneyTest() {
     @Test
     fun captureStoreScreenshots() {
         try {
-            hideSystemBars()
-
             val baseUrl = arguments.getString("e2e_base_url") ?: error("e2e_base_url is required")
             val token = arguments.getString("e2e_token") ?: error("e2e_token is required")
 
@@ -67,23 +62,6 @@ class StoreScreenshotTest : NetBoxJourneyTest() {
             // can adb pull independently of screengrab's own success-gated pull step.
             captureE2eScreenshot("FAILURE_debug")
             throw t
-        }
-    }
-
-    // Large-screen (7in/10in) AVDs in gesture-nav mode show a persistent taskbar dock (pinned app
-    // icons) at the bottom that phone-sized screens never get - Screengrab.screenshot() takes a
-    // whole-display capture via UiAutomator, so it lands in every tablet screenshot otherwise.
-    // Fastlane's screengrab has no option to exclude it (only a "clean status bar" feature for the
-    // top bar), so ask the window itself to go edge-to-edge before the journey starts.
-    private fun hideSystemBars() {
-        composeRule.activity.runOnUiThread {
-            val window = composeRule.activity.window
-            WindowCompat.setDecorFitsSystemWindows(window, false)
-            WindowInsetsControllerCompat(window, window.decorView).apply {
-                hide(WindowInsetsCompat.Type.systemBars())
-                systemBarsBehavior =
-                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            }
         }
     }
 
