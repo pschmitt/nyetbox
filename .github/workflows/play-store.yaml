@@ -1,21 +1,26 @@
-name: Play Store (manual, disabled by default)
+name: Play Store
 
-# This workflow is intentionally manual. It always produces a signed AAB artifact for inspection;
-# the publishing job additionally requires the explicit `publish` input and the repository
-# variable PLAY_PUBLISH_ENABLED=true. No Play Console account or service-account secret is needed
-# until that gate is deliberately enabled.
+# Runs on the same semantic-version tags release.yaml publishes GitHub releases from ("vX.Y.Z" or
+# "X.Y.Z"), always building a signed AAB for inspection. The publishing job additionally requires
+# the repository variable PLAY_PUBLISH_ENABLED=true and a PLAY_SERVICE_ACCOUNT_JSON secret -
+# neither exists until those are deliberately set up in Settings > Secrets and variables, so a tag
+# push safely no-ops (well, fails loudly - see publish-gate) on a fresh checkout. A manual
+# workflow_dispatch run is also available for ad-hoc bundles with an arbitrary version, and never
+# publishes unless its own `publish` input is explicitly set.
 on:
+  push:
+    tags:
+      - v*
+      - '*.*.*'
   workflow_dispatch:
     inputs:
       version_code:
-        description: "Monotonically increasing Google Play version code"
-        required: true
-        default: "1"
+        description: "Override versionCode (leave blank on a tag build to use app/build.gradle.kts's own default, i.e. whatever the version-bump commit set)"
+        required: false
         type: string
       version_name:
-        description: "User-visible release version"
-        required: true
-        default: "1.0.0"
+        description: "Override versionName (leave blank on a tag build to use app/build.gradle.kts's own default)"
+        required: false
         type: string
       publish:
         description: "Upload the bundle to the Play internal-testing track"
@@ -31,29 +36,61 @@ permissions:
   contents: read
 
 jobs:
+  params:
+    name: Determine build parameters
+    runs-on: ubuntu-24.04
+    outputs:
+      version_code: ${{ steps.params.outputs.version_code }}
+      version_name: ${{ steps.params.outputs.version_name }}
+      publish: ${{ steps.params.outputs.publish }}
+    steps:
+      - name: Validate manual overrides
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          RELEASE_VERSION_CODE: ${{ inputs.version_code }}
+          RELEASE_VERSION_NAME: ${{ inputs.version_name }}
+        shell: bash
+        run: |
+          [[ -z "$RELEASE_VERSION_CODE" || "$RELEASE_VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || {
+            echo "version_code must be a positive integer" >&2
+            exit 1
+          }
+          [[ -z "$RELEASE_VERSION_NAME" || "$RELEASE_VERSION_NAME" =~ ^[0-9A-Za-z][0-9A-Za-z.+_-]*$ ]] || {
+            echo "version_name contains unsupported characters" >&2
+            exit 1
+          }
+
+      - name: Set outputs
+        id: params
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            {
+              echo "version_code=${{ inputs.version_code }}"
+              echo "version_name=${{ inputs.version_name }}"
+              echo "publish=${{ inputs.publish }}"
+            } >> "$GITHUB_OUTPUT"
+          else
+            # A tag push always builds from app/build.gradle.kts's own baked-in defaults (the same
+            # ones release.yaml's assembleRelease build relies on) rather than re-deriving a version
+            # from the tag name, so this can never drift from what the tag's GitHub release actually
+            # contains. Always attempts to publish - publish-gate below is what actually decides
+            # whether that goes anywhere.
+            {
+              echo "version_code="
+              echo "version_name="
+              echo "publish=true"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
   bundle:
     name: Validate and build signed AAB
+    needs: params
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-
-      - name: Validate release inputs
-        env:
-          RELEASE_VERSION_CODE: ${{ inputs.version_code }}
-          RELEASE_VERSION_NAME: ${{ inputs.version_name }}
-        shell: bash
-        run: |
-          [[ "$RELEASE_VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || {
-            echo "version_code must be a positive integer" >&2
-            exit 1
-          }
-          [[ "$RELEASE_VERSION_NAME" =~ ^[0-9A-Za-z][0-9A-Za-z.+_-]*$ ]] || {
-            echo "version_name contains unsupported characters" >&2
-            exit 1
-          }
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
@@ -81,14 +118,16 @@ jobs:
         run: ./gradlew testDebugUnitTest
 
       - name: Build signed Android App Bundle
-        run: >
-          ./gradlew bundleRelease
-          "-PversionCode=$RELEASE_VERSION_CODE"
-          "-PversionName=$RELEASE_VERSION_NAME"
-          --stacktrace --build-cache
+        # -P overrides are only appended when actually set, so a tag push falls through to
+        # app/build.gradle.kts's own defaults exactly like release.yaml's assembleRelease does.
+        run: |
+          args=(bundleRelease --stacktrace --build-cache)
+          [[ -n "$RELEASE_VERSION_CODE" ]] && args+=("-PversionCode=$RELEASE_VERSION_CODE")
+          [[ -n "$RELEASE_VERSION_NAME" ]] && args+=("-PversionName=$RELEASE_VERSION_NAME")
+          ./gradlew "${args[@]}"
         env:
-          RELEASE_VERSION_CODE: ${{ inputs.version_code }}
-          RELEASE_VERSION_NAME: ${{ inputs.version_name }}
+          RELEASE_VERSION_CODE: ${{ needs.params.outputs.version_code }}
+          RELEASE_VERSION_NAME: ${{ needs.params.outputs.version_name }}
           CI_KEYSTORE_PATH: ${{ steps.ci_keystore.outputs.filePath }}
           CI_KEYSTORE_PASSWORD: ${{ secrets.CI_KEYSTORE_PASSWORD }}
           CI_KEY_ALIAS: ${{ secrets.CI_KEY_ALIAS }}
@@ -107,14 +146,14 @@ jobs:
       - name: Upload Play artifact
         uses: actions/upload-artifact@v7
         with:
-          name: nyetbox-${{ inputs.version_name }}-${{ inputs.version_code }}-aab
+          name: nyetbox-${{ github.ref_name }}-aab
           path: app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
 
   publish-gate:
     name: Reject accidental publishing
-    needs: bundle
-    if: ${{ inputs.publish == true && vars.PLAY_PUBLISH_ENABLED != 'true' }}
+    needs: [params, bundle]
+    if: ${{ needs.params.outputs.publish == 'true' && vars.PLAY_PUBLISH_ENABLED != 'true' }}
     runs-on: ubuntu-24.04
     steps:
       - name: Require the repository-level publication gate
@@ -125,14 +164,14 @@ jobs:
 
   publish:
     name: Upload to Play internal testing
-    needs: bundle
-    if: ${{ inputs.publish == true && vars.PLAY_PUBLISH_ENABLED == 'true' }}
+    needs: [params, bundle]
+    if: ${{ needs.params.outputs.publish == 'true' && vars.PLAY_PUBLISH_ENABLED == 'true' }}
     runs-on: ubuntu-24.04
     steps:
       - name: Download Play artifact
         uses: actions/download-artifact@v8
         with:
-          name: nyetbox-${{ inputs.version_name }}-${{ inputs.version_code }}-aab
+          name: nyetbox-${{ github.ref_name }}-aab
           path: play-artifact
 
       - name: Check publication credentials

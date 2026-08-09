@@ -507,6 +507,49 @@ play-icon-upload:
       --type icon \
       --file "$temp_dir/nyetbox-icon.png"
 
+# Compose and upload the Play Console feature graphic (1024x500 - shown at the top of the store
+# listing, not locale-scoped). The SVG icon is rasterized to a standalone PNG first, then
+# composited onto the banner: compositing straight from the SVG in one `magick` pipeline drops its
+# alpha channel and leaves a white square behind the icon (tested; a separate rasterize step avoids
+# it). The tagline is a short banner-width phrase, not short_description.txt verbatim - that text
+# is tuned for the store listing body and is much too long to fit at a readable size here. Re-run
+# this whenever the wordmark, tagline, or icon colors change.
+play-feature-graphic-upload:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    source_icon="docs/images/nyetbox-icon.svg"
+    if [[ ! -f "$source_icon" ]]
+    then
+      printf 'Icon source not found: %s\n' "$source_icon" >&2
+      exit 1
+    fi
+    if ! command -v magick >/dev/null
+    then
+      printf 'ImageMagick `magick` is required to compose the feature graphic\n' >&2
+      exit 1
+    fi
+    if ! command -v gpc >/dev/null
+    then
+      printf 'gpc (playconsole-cli) is required for Play Console uploads\n' >&2
+      exit 1
+    fi
+    if ! gpc apps list --output json | rg -q '"package_name":"{{play_package}}"'
+    then
+      printf 'Play Console package %s was not found via `gpc apps list`\n' "{{play_package}}" >&2
+      exit 1
+    fi
+    temp_dir=$(mktemp -d)
+    trap 'rm -rf "$temp_dir"' EXIT
+    magick -background none "$source_icon" -resize 380x380 "$temp_dir/icon.png"
+    magick -size 1024x500 xc:"#011226" "$temp_dir/icon.png" -gravity West -geometry +64+0 -compose over -composite \
+      -gravity West -font Liberation-Sans-Bold -pointsize 100 -fill "#f4f7f8" -annotate +480-40 "Nyetbox" \
+      -gravity West -font Liberation-Sans -pointsize 32 -fill "#00e5d6" -annotate +482+55 "Offline-first NetBox companion" \
+      "$temp_dir/feature-graphic.png"
+    gpc --package {{play_package}} images upload \
+      --locale en-US \
+      --type featureGraphic \
+      --file "$temp_dir/feature-graphic.png"
+
 # --- Formatting / hooks ----------------------------------------------------
 
 # Format Kotlin sources locally with ktfmt (lightweight - not a Gradle build, safe to run on this

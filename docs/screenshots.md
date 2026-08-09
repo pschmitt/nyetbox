@@ -84,11 +84,13 @@ gpc apps list
 just screenshots-upload
 ```
 
-The upload recipe includes both phone and tablet screenshot buckets. The launcher icon can be
-uploaded separately after reviewing the flattened asset:
+The upload recipe includes both phone and tablet screenshot buckets. The launcher icon and the
+1024x500 feature graphic (the banner at the top of the store listing) are each composed from
+`docs/images/nyetbox-icon.svg` and uploaded separately, since neither is locale-scoped:
 
 ```console
 just play-icon-upload
+just play-feature-graphic-upload
 ```
 
 The recipe uploads each Fastlane output to the **release** package `dev.pschmitt.nyetbox`; the
