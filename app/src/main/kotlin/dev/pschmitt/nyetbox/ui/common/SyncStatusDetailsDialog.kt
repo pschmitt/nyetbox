@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -51,6 +52,7 @@ fun SyncStatusDetailsDialog(
     lastSuccessfulSyncAt: Long?,
     lastSyncSummary: LastSyncSummary?,
     cacheSummary: CacheSummary?,
+    onSyncNow: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
@@ -113,6 +115,13 @@ fun SyncStatusDetailsDialog(
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+        dismissButton = {
+            TextButton(onClick = onSyncNow, enabled = !isSyncing) {
+                Icon(Icons.Default.Sync, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(if (isSyncing) "Syncing…" else "Sync now")
+            }
+        },
     )
 }
 

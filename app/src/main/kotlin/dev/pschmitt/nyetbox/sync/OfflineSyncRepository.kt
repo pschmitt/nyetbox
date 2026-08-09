@@ -71,7 +71,7 @@ internal fun SyncProgress.itemProgressText(): String? =
 
 internal fun SyncProgress.notificationSubText(): String = buildList {
     add(if (isFullSync) "Full sync" else "Quick sync")
-    add("Step ${step.coerceIn(0, totalSteps.coerceAtLeast(1))} of ${totalSteps.coerceAtLeast(1)}")
+    add("${step.coerceIn(0, totalSteps.coerceAtLeast(1))}/${totalSteps.coerceAtLeast(1)}")
     itemProgressText()?.let(::add)
 }
     .joinToString(" · ")

@@ -636,6 +636,7 @@ fun DashboardScreen(
             lastSuccessfulSyncAt = lastSuccessfulSyncAt,
             lastSyncSummary = lastSyncSummary,
             cacheSummary = cacheSummary,
+            onSyncNow = viewModel::refresh,
             onDismiss = { showSyncStatusDetails = false },
         )
     }
