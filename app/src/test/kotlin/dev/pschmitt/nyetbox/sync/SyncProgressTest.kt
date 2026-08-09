@@ -17,7 +17,10 @@ class SyncProgressTest {
             )
 
         assertEquals("7 of 19 images/documents", progress.itemProgressText())
-        assertEquals("Step 8 of 12 · 7 of 19 images/documents", progress.notificationSubText())
+        assertEquals(
+            "Quick sync · Step 8 of 12 · 7 of 19 images/documents",
+            progress.notificationSubText(),
+        )
         assertEquals(
             "Downloading cached images and documents…\n7 of 19 images/documents",
             progress.notificationText(),
@@ -28,7 +31,16 @@ class SyncProgressTest {
     fun `formats stage progress without an item count`() {
         val progress = SyncProgress("Syncing devices…", step = 3, totalSteps = 10)
 
-        assertEquals("Step 3 of 10", progress.notificationSubText())
+        assertEquals("Quick sync · Step 3 of 10", progress.notificationSubText())
         assertEquals("Syncing devices…", progress.notificationText())
+    }
+
+    @Test
+    fun `prefixes full sync passes differently from quick incremental ones`() {
+        val quick = SyncProgress("Syncing devices…", step = 3, totalSteps = 10, isFullSync = false)
+        val full = SyncProgress("Syncing devices…", step = 3, totalSteps = 10, isFullSync = true)
+
+        assertEquals("Quick sync · Step 3 of 10", quick.notificationSubText())
+        assertEquals("Full sync · Step 3 of 10", full.notificationSubText())
     }
 }

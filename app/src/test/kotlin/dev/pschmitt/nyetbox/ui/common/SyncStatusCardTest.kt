@@ -41,7 +41,7 @@ class SyncStatusCardTest {
             )
 
         assertEquals(
-            "Step 8 of 12 · 7 of 19 images/documents",
+            "Quick sync · Step 8 of 12 · 7 of 19 images/documents",
             syncStatusSubText(
                 isSyncing = true,
                 syncProgress = progress,

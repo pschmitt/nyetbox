@@ -152,6 +152,7 @@ fun DashboardScreen(
     val pendingChangeCount by viewModel.pendingChangeCount.collectAsStateWithLifecycle()
     val offlineMode by viewModel.offlineMode.collectAsStateWithLifecycle()
     val lastSuccessfulSyncAt by viewModel.lastSuccessfulSyncAt.collectAsStateWithLifecycle()
+    val lastSyncSummary by viewModel.lastSyncSummary.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val syncProgress by viewModel.syncProgress.collectAsStateWithLifecycle()
     val showInitialSyncOverlay by viewModel.showInitialSyncOverlay.collectAsStateWithLifecycle()
@@ -633,6 +634,7 @@ fun DashboardScreen(
             isSyncing = isRefreshing,
             syncProgress = syncProgress,
             lastSuccessfulSyncAt = lastSuccessfulSyncAt,
+            lastSyncSummary = lastSyncSummary,
             cacheSummary = cacheSummary,
             onDismiss = { showSyncStatusDetails = false },
         )

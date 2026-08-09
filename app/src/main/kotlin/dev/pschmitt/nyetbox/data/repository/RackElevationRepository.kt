@@ -25,6 +25,9 @@ constructor(private val api: GenericNetBoxApi, private val dao: RackElevationDao
     fun observe(rackId: Int, face: RackFace): Flow<List<RackElevationEntity>> =
         dao.observe(rackId, face.apiValue)
 
+    /** Whether this rack has any cached elevation slots at all, either face (NBC-432). */
+    suspend fun hasCached(rackId: Int): Boolean = dao.count(rackId) > 0
+
     /** Refreshes one face while leaving the existing Room snapshot intact on failure. */
     suspend fun refresh(rackId: Int, face: RackFace): Result<Int> = runCatching {
         val slots =

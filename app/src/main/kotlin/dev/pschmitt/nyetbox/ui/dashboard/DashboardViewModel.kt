@@ -80,6 +80,7 @@ constructor(
     val syncIssue = settingsRepository.syncIssue
     val activeServer = settingsRepository.activeServer
     val lastSuccessfulSyncAt = settingsRepository.lastSuccessfulSyncAt
+    val lastSyncSummary = settingsRepository.lastSyncSummary
     val dashboardSectionOrder = settingsRepository.dashboardSectionOrder
     val hiddenDashboardSections = settingsRepository.hiddenDashboardSections
     val objectTypeAccents = settingsRepository.objectTypeAccents

@@ -28,6 +28,12 @@ constructor(
             }
         }
 
+    /** Whether a diagram is already persisted for [cacheKey] (NBC-433) - no network/read cost. */
+    suspend fun isCached(cacheKey: String): Boolean =
+        withContext(Dispatchers.IO) {
+            fileDownloadRepository.persistentFile(cacheKey, FILENAME) != null
+        }
+
     /** Refreshes the cached SVG while leaving the existing persistent copy intact on failure. */
     suspend fun refresh(url: String, cacheKey: String): Result<String> =
         withContext(Dispatchers.IO) {

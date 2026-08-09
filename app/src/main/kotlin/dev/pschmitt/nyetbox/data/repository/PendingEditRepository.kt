@@ -79,6 +79,13 @@ constructor(
     fun observeQueuedMutationCount(): Flow<Int> = pendingEditDao.observeQueuedMutationCount()
 
     /**
+     * Whether any local create/edit/delete is still waiting to be uploaded - the sync freshness
+     * short-circuit (NBC-427) must never skip a pass while this is true, since that's the only path
+     * that uploads a queued mutation.
+     */
+    suspend fun hasQueuedMutations(): Boolean = pendingEditDao.getQueuedMutations().isNotEmpty()
+
+    /**
      * Drops one local mutation and restores the last server-backed snapshot when it was an edit.
      */
     suspend fun revertPending(edit: PendingEditEntity) {

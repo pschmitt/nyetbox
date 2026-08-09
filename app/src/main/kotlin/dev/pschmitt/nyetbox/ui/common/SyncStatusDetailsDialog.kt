@@ -19,8 +19,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dev.pschmitt.nyetbox.data.repository.LastSyncSummary
 import dev.pschmitt.nyetbox.sync.SyncProgress
 import dev.pschmitt.nyetbox.ui.settings.formatBytes
+import java.util.concurrent.TimeUnit
 
 /**
  * Read-only snapshot of local cache size, computed on demand (see
@@ -47,6 +49,7 @@ fun SyncStatusDetailsDialog(
     isSyncing: Boolean,
     syncProgress: SyncProgress?,
     lastSuccessfulSyncAt: Long?,
+    lastSyncSummary: LastSyncSummary?,
     cacheSummary: CacheSummary?,
     onDismiss: () -> Unit,
 ) {
@@ -75,6 +78,13 @@ fun SyncStatusDetailsDialog(
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                 )
+                if (!isSyncing && lastSyncSummary != null) {
+                    Text(
+                        formatLastSyncSummary(lastSyncSummary),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 Spacer(Modifier.height(16.dp))
                 Text("Cached data", style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(8.dp))
@@ -104,6 +114,22 @@ fun SyncStatusDetailsDialog(
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
     )
+}
+
+/**
+ * "Last sync: quick check · 58s · 3 items refreshed" / "Last sync: full sync · 4m · 512 items
+ * refreshed" (NBC-435) - the after-the-fact answer to whether a sync was actually as cheap as it
+ * should have been, since the live progress text alone can't distinguish the two pass types.
+ */
+internal fun formatLastSyncSummary(summary: LastSyncSummary): String {
+    val seconds = TimeUnit.MILLISECONDS.toSeconds(summary.durationMillis).coerceAtLeast(0)
+    val durationText =
+        if (seconds < 60) "${seconds}s" else "${TimeUnit.SECONDS.toMinutes(seconds)}m"
+    val passLabel = if (summary.isFullSync) "full sync" else "quick check"
+    val itemsLabel =
+        if (summary.itemsRefreshed == 1) "1 item refreshed"
+        else "${summary.itemsRefreshed} items refreshed"
+    return "Last sync: $passLabel · $durationText · $itemsLabel"
 }
 
 @Composable

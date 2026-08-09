@@ -82,4 +82,12 @@ interface DeviceDao {
 
     /** See [dev.pschmitt.nyetbox.data.db.NetBoxObjectDao.pruneStale]. */
     @Query("DELETE FROM devices WHERE syncedAt < :cutoff") suspend fun pruneStale(cutoff: Long)
+
+    /**
+     * Count of cached devices in [rackId] whose [DeviceEntity.syncedAt] is at or after [cutoff] -
+     * used by the sync pass (NBC-432) to decide whether a rack's elevation needs re-fetching
+     * without decoding every device row.
+     */
+    @Query("SELECT COUNT(*) FROM devices WHERE rackId = :rackId AND syncedAt >= :cutoff")
+    suspend fun countChangedInRack(rackId: Int, cutoff: Long): Int
 }

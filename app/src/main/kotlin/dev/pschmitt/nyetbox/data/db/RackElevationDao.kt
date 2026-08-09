@@ -22,4 +22,8 @@ interface RackElevationDao {
 
     @Query("DELETE FROM rack_elevation WHERE rackId = :rackId AND face = :face")
     suspend fun clear(rackId: Int, face: String)
+
+    /** Whether any elevation slot (either face) is already cached for this rack (NBC-432). */
+    @Query("SELECT COUNT(*) FROM rack_elevation WHERE rackId = :rackId")
+    suspend fun count(rackId: Int): Int
 }

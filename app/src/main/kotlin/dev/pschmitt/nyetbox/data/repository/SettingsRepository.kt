@@ -80,6 +80,23 @@ data class PrintSettings(
 
 data class SyncIssue(val message: String, val occurredAt: Long, val details: String)
 
+/**
+ * Compact record of the most recently *completed* sync pass (NBC-435), so the UI can answer "was
+ * that sync as cheap as it should have been?" after the fact instead of showing identical progress
+ * text for a quick incremental check and the multi-minute full reconciliation pass.
+ *
+ * [itemsRefreshed] deliberately uses the neutral word "refreshed" rather than "changed": it's
+ * [OfflineSyncSummary]'s `devices + genericObjects` count, which for a handful of endpoints that
+ * can't be synced incrementally (see `OfflineSyncRepository`'s `SYNC_EXCLUDED_ENDPOINTS`/NBC-429)
+ * counts every fetched row, not just changed ones. The number gets more truthful as more of those
+ * gaps close.
+ */
+data class LastSyncSummary(
+    val isFullSync: Boolean,
+    val durationMillis: Long,
+    val itemsRefreshed: Int,
+)
+
 enum class BackupFrequency(val storageKey: String, val label: String, val intervalDays: Long) {
     Daily("daily", "Daily", 1),
     Weekly("weekly", "Weekly", 7),
@@ -384,6 +401,9 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
     private val _lastSuccessfulSyncAt = MutableStateFlow(loadLastSuccessfulSyncAt())
     val lastSuccessfulSyncAt: StateFlow<Long?> = _lastSuccessfulSyncAt.asStateFlow()
 
+    private val _lastSyncSummary = MutableStateFlow(loadLastSyncSummary())
+    val lastSyncSummary: StateFlow<LastSyncSummary?> = _lastSyncSummary.asStateFlow()
+
     private val _hiddenFieldKeys = MutableStateFlow(loadHiddenFieldKeys())
     val hiddenFieldKeys: StateFlow<Set<String>> = _hiddenFieldKeys.asStateFlow()
 
@@ -659,6 +679,17 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         Timber.i(E2E_SYNC_COMPLETE_MARKER)
     }
 
+    /** See [LastSyncSummary] - recorded alongside [recordSuccessfulSync] by the same clean pass. */
+    fun recordSyncSummary(summary: LastSyncSummary) {
+        prefs
+            .edit()
+            .putBoolean(serverScopedKey(KEY_LAST_SYNC_SUMMARY_FULL), summary.isFullSync)
+            .putLong(serverScopedKey(KEY_LAST_SYNC_SUMMARY_DURATION), summary.durationMillis)
+            .putInt(serverScopedKey(KEY_LAST_SYNC_SUMMARY_ITEMS), summary.itemsRefreshed)
+            .apply()
+        _lastSyncSummary.value = summary
+    }
+
     fun addHiddenField(key: String) {
         val normalized = normalizeHiddenFieldPreferenceKey(key) ?: return
         val updated = _hiddenFieldKeys.value + normalized
@@ -888,6 +919,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         _currentUser.value = loadCurrentUser()
         _syncIssue.value = loadSyncIssue()
         _lastSuccessfulSyncAt.value = loadLastSuccessfulSyncAt()
+        _lastSyncSummary.value = loadLastSyncSummary()
         return profile
     }
 
@@ -905,6 +937,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
             _currentUser.value = loadCurrentUser()
             _syncIssue.value = loadSyncIssue()
             _lastSuccessfulSyncAt.value = loadLastSuccessfulSyncAt()
+        _lastSyncSummary.value = loadLastSyncSummary()
         }
         return removed
     }
@@ -1206,6 +1239,15 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
             )
             .takeIf { it > 0L }
 
+    private fun loadLastSyncSummary(): LastSyncSummary? {
+        if (!prefs.contains(serverScopedKey(KEY_LAST_SYNC_SUMMARY_DURATION))) return null
+        return LastSyncSummary(
+            isFullSync = prefs.getBoolean(serverScopedKey(KEY_LAST_SYNC_SUMMARY_FULL), false),
+            durationMillis = prefs.getLong(serverScopedKey(KEY_LAST_SYNC_SUMMARY_DURATION), 0L),
+            itemsRefreshed = prefs.getInt(serverScopedKey(KEY_LAST_SYNC_SUMMARY_ITEMS), 0),
+        )
+    }
+
     private fun loadThemeMode(): ThemeMode =
         ThemeMode.fromStorage(prefs.getString(KEY_THEME_MODE, ThemeMode.FollowSystem.storageKey))
 
@@ -1479,6 +1521,9 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         const val KEY_SYNC_ISSUE_TIME = "sync_issue_time"
         const val KEY_SYNC_ISSUE_DETAILS = "sync_issue_details"
         const val KEY_LAST_SUCCESSFUL_SYNC = "last_successful_sync"
+        const val KEY_LAST_SYNC_SUMMARY_FULL = "last_sync_summary_full"
+        const val KEY_LAST_SYNC_SUMMARY_DURATION = "last_sync_summary_duration"
+        const val KEY_LAST_SYNC_SUMMARY_ITEMS = "last_sync_summary_items"
         const val MAX_SYNC_MESSAGE_LENGTH = 1000
         const val MAX_SYNC_DETAILS_LENGTH = 4000
         const val KEY_HIDDEN_FIELDS = "hidden_field_keys"

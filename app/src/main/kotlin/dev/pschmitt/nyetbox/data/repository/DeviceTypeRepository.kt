@@ -24,10 +24,10 @@ constructor(private val api: NetBoxApi, private val dao: DeviceTypeDao) {
 
     /**
      * Fetches and caches [id] only if it isn't already cached - device-type photos rarely change.
+     * Returns success immediately for an already-cached id; otherwise mirrors [refresh]'s result.
      */
-    suspend fun ensureCached(id: Int) {
-        if (dao.getById(id) == null) refresh(id)
-    }
+    suspend fun ensureCached(id: Int): Result<Unit> =
+        if (dao.getById(id) != null) Result.success(Unit) else refresh(id).map {}
 
     suspend fun refresh(id: Int): Result<DeviceTypeEntity> = runCatching {
         val entity = api.getDeviceType(id).toEntity()

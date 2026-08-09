@@ -113,6 +113,10 @@ class DeviceRepository @Inject constructor(private val api: NetBoxApi, private v
     suspend fun removeCachedDevice(id: Int) {
         dao.deleteById(id)
     }
+
+    /** See [dev.pschmitt.nyetbox.data.db.DeviceDao.countChangedInRack]. */
+    suspend fun countChangedInRack(rackId: Int, cutoff: Long): Int =
+        dao.countChangedInRack(rackId, cutoff)
 }
 
 internal fun DeviceDto.toEntity(): DeviceEntity =

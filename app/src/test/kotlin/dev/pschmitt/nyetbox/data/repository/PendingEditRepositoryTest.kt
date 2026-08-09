@@ -25,6 +25,30 @@ class PendingEditRepositoryTest {
 
     private val json = Json
 
+    // NBC-427: the sync freshness short-circuit must never skip while an edit is still queued.
+    @Test
+    fun `hasQueuedMutations reflects whether any local edit is still queued`() = runTest {
+        val pending = FakePendingEditDao()
+        val repository = repository(FakeApi(server("server", "v1")), pending, FakeNetBoxObjectDao())
+
+        assertEquals(false, repository.hasQueuedMutations())
+
+        pending.upsert(
+            PendingEditEntity(
+                endpointPath = "api/dcim/devices/",
+                id = 1,
+                baseJson = "{}",
+                localJson = "{}",
+                patchJson = "{}",
+                state = PendingEditEntity.QUEUED,
+                serverJson = null,
+                createdAt = 0L,
+            )
+        )
+
+        assertEquals(true, repository.hasQueuedMutations())
+    }
+
     @Test
     fun `server version divergence creates a conflict instead of patching`() = runTest {
         val api = FakeApi(server("server", "v2"))

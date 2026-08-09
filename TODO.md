@@ -8523,3 +8523,385 @@ Verification: `./gradlew :app:generateBaselineProfile` succeeded on
 improvement on the Mi Pad 4 from a fresh release install with this profile installed - the ticket's
 own suggested before/after fling comparison needs a physical device.
 measured on the Mi Pad 4, 2026-08-08).
+
+## NBC-427: one app open runs two complete sync passes back-to-back (missed periodic + startup
+worker) - add a freshness short-circuit to syncAllLocked
+
+Measured live on the Mi Pad 4 (debug 1.4.8 against netbox.brkn.lol, 2026-08-09, zero server-side
+changes): one cold app open produced **two complete sync passes in a row** - 1,236 GET requests
+(617 + 619, serialized) and ~2.8 MB received in total, ~2 minutes of visible "Syncing…". A later
+single-pass reopen of the same build measured 616 GETs, confirming ~620 requests is the per-pass
+baseline this doubling multiplies. Logcat shows why: the app had been
+closed long enough that the 6h `PeriodicWorkRequest` (`SyncScheduler.schedulePeriodic()`) was
+overdue, so WorkManager started it the moment the process came up (`WM-WorkerWrapper: Starting
+work for …SyncWorker` at 02:11:46, workSpecId `1f1aaf96…` generation=41 = `netbox-periodic-sync`),
+and 10 seconds later the NBC-370 startup work (`ac720c4d…` = `netbox-startup-sync`) fired as well.
+The two runs serialize on `cacheDatabaseManager.withActiveServer`, so the startup run waited for
+the periodic run to finish (first `NYETBOX_E2E_SYNC_COMPLETE` marker 02:12:50) and then re-ran the
+entire pass from scratch (second marker 02:13:50) - every unconditional step (device types,
+directory discovery, changelog, SVGs, topology export) twice. NBC-370's 10s startup delay can't
+help here: it only delays the startup work, it doesn't coalesce it with a periodic run that just
+completed. The same missing freshness check also means every reopen-after-force-stop runs a full
+pass regardless of recency: a third launch a mere ~3 minutes after two fully successful passes ran
+yet another complete 616-request sync (observed 02:26, "Syncing device types… Step 5 of 10" on the
+dashboard card). Note the sync-policy defaults (`SettingsRepository.kt:295-299`:
+`syncOnlyOnWifi=false`, `syncWhileRoaming=true`) mean this repeated cost lands on cellular/roaming
+users by default.
+
+- [x] Add a freshness short-circuit at the top of `OfflineSyncRepository.syncAllLocked()`
+      (`sync/OfflineSyncRepository.kt:115`, i.e. after the `withActiveServer` lock is held, before
+      any step runs): if `!forceFullSync` AND
+      `passStartedAt - (settingsRepository.lastSuccessfulSyncAt.value ?: 0) <
+      SYNC_FRESHNESS_WINDOW_MILLIS` (new constant, 5 minutes) AND
+      `pendingEditDao.getQueuedMutations().isEmpty()` (queued offline edits must never wait out
+      the window; expose via a small `PendingEditRepository.hasQueuedMutations()` helper), return
+      `Result.success(OfflineSyncSummary(0, 0, 0))` immediately. Implemented as a pure
+      `shouldSkipSyncPass()` top-level function called right after `passStartedAt` is computed.
+- [x] The short-circuit must return **before** the `runCatching`/`recordSuccessfulSync()` plumbing
+      at the bottom of `syncAllLocked` - a skipped pass must NOT bump `lastSuccessfulSyncAt`,
+      otherwise frequent app reopens would slide the window forever and a device opened every
+      4 minutes would never sync again. It must also not emit any `SyncProgress` steps (no
+      "Syncing…" flash for a skipped pass).
+- [x] `lastSuccessfulSyncAt` is only recorded on a fully-clean pass (`recordSuccessfulSync()` is
+      in the no-failure branch), so a failed/warned first pass leaves the window unset and the
+      second pass still runs - keep that property, it's what makes the skip safe. Unchanged.
+- [x] Unit test the skip decision as a pure function (fresh timestamp + no queued edits = skip;
+      forceFullSync always runs; queued edits always run) - `OfflineSyncGatingTest.kt`, plus
+      `PendingEditRepositoryTest`'s new `hasQueuedMutations` case.
+- [x] Live verification: confirmed on the Zenfone 10 (2026-08-09) - after a real sync completed
+      (1 `NYETBOX_E2E_SYNC_COMPLETE` marker, 553 requests), force-stopping and immediately
+      reopening the app produced **zero** OkHttp requests and zero E2E markers, i.e. the second
+      pass was skipped entirely as designed. The Mi Pad 4's equivalent immediate-reopen attempt did
+      still run a real sync (a prior pass hadn't completed cleanly enough to set the freshness
+      watermark), which is itself the documented "failed/warned pass leaves the window unset"
+      behavior working correctly, not a bug in the short-circuit.
+
+Status: **done**, 2026-08-09; freshness short-circuit implemented, unit tested, and confirmed live
+on the Zenfone 10 (clean skip-on-reopen) and Mi Pad 4 (correctly does NOT skip when the prior pass
+wasn't clean).
+
+## NBC-428: sync re-fetches all ~236 cached device types individually on every pass - the unused
+`ensureCached()` was written for exactly this
+
+The device-type step (`sync/OfflineSyncRepository.kt:166-177`) calls
+`deviceTypeRepository.refresh(deviceTypeId)` for every distinct device type referenced by cached
+devices, on every pass, full or incremental. Live on the Mi Pad 4 (debug 1.4.8, netbox.brkn.lol,
+2026-08-09, nothing changed server-side) this was **236 individual
+`GET /api/dcim/device-types/<id>/` requests per pass, 472 across the two passes of one app open**
+- the single largest request category, ~38% of a pass's 616 requests. Each response only feeds
+`DeviceTypeEntity` (front/rear stock-photo URLs, `DeviceTypeRepository.kt:39-46`), which rarely
+changes. `DeviceTypeRepository.ensureCached(id)` (`DeviceTypeRepository.kt:28-30`, doc comment:
+"device-type photos rarely change") already implements the fetch-only-if-missing behavior and
+currently has **zero callers** (verified via rg across `app/src/main/kotlin`) - it was written for
+this exact gap and never wired up.
+
+- [x] In the device-type loop in `syncAllLocked`, call `deviceTypeRepository.ensureCached(id)`
+      when `!isFullSyncPass`, and keep `refresh(id)` when `isFullSyncPass` - the 24h/forced full
+      pass remains the path that picks up changed device-type photos, mirroring the existing
+      incremental-vs-full contract used for devices/generic objects.
+- [x] Change `ensureCached` to return `Result<Unit>` (success when already cached, else the
+      underlying `refresh` result mapped to Unit) so the loop's existing
+      `recordFailure("Device type $id sync", …)` wiring keeps reporting real fetch failures.
+- [x] Unit test: incremental pass with a cached id makes no API call; incremental pass with an
+      uncached id fetches; full pass always fetches - `DeviceTypeRepositoryTest.kt`.
+- [x] Live verification (Mi Pad 4, 2026-08-09): an incremental pass with a real device/cable delta
+      (not even a fully idle "nothing changed" pass) made **zero** `GET
+      /api/dcim/device-types/<id>/` requests, confirming `ensureCached` served all 238 device
+      types from cache (was 236 GETs/pass unconditionally).
+
+Status: **done**, 2026-08-09; ensureCached() wired into the sync loop, unit tested, and confirmed
+live on the Mi Pad 4.
+
+## NBC-429: the generic model loop re-downloads the entire NetBox changelog (11 pages x 200 fat
+rows) on every sync pass - exclude `api/core/object-changes/`, the dashboard already caches it
+
+`DirectoryRepository` discovers `api/core/object-changes/` as a normal paginated model, so the
+generic model sync loop (`sync/OfflineSyncRepository.kt:196-213`) syncs it like inventory. But
+ObjectChange records have no `last_updated` field (they have `time`), so
+`GenericObjectRepository.lastUpdatedWatermark()` is permanently null for this endpoint and
+`syncModelIncrementally` (`OfflineSyncRepository.kt:352-366`) falls back to a **full unfiltered
+fetch on every pass, incremental or not**. Live on the Mi Pad 4 (2026-08-09, no server-side
+changes): `GET /api/core/object-changes/?limit=200&offset=0…2000` - 11 pages, ~2,200 rows - on
+*both* back-to-back passes of a single app open. These are the fattest rows NetBox serves (each
+carries full `prechange_data` + `postchange_data` snapshots), making this most of the pass's
+payload bytes alongside NBC-431. It's also redundant: `DashboardRepository.refreshChangelog()`
+(`DashboardRepository.kt:138-153`) already fetches the 25 most recent changes each pass and caches
+their snapshots under `__cache/object-changes/` for the diff screens.
+
+- [x] Add a `SYNC_EXCLUDED_ENDPOINTS = setOf("api/core/object-changes/")` constant in
+      `OfflineSyncRepository` and filter it out of `models` before the
+      `models.syncConcurrently(concurrency)` loop (line ~196). Keep the model in
+      `DirectoryRepository`/sidebar - the generic list screen still works cache-first with its
+      own on-open refresh.
+- [x] One-time cleanup of the ~2,200 already-cached changelog rows so they don't linger stale in
+      the generic cache (and global search) forever: for each excluded endpoint, call
+      `genericObjectRepository.pruneStale(endpointPath, Long.MAX_VALUE)` right where the model is
+      filtered out (a cheap no-op DELETE once the table is empty).
+- [x] Note for the future, out of scope here: `api/extras/tagged-objects/` has the same
+      no-`last_updated` shape and re-fetched 3 full pages (~600 rows) every pass in the same
+      trace - smaller, and its rows may back tag screens, so it was deliberately left alone.
+- [x] Unit test: model list containing the excluded endpoint never triggers a sync call for it -
+      `OfflineSyncGatingTest.kt`'s `isSyncExcluded` cases.
+- [x] Live verification (Mi Pad 4, 2026-08-09): confirmed via logcat - the only
+      `api/core/object-changes/` request across a real sync pass was the dashboard's own
+      `?limit=25&ordering=-time` fetch; zero `?limit=200&offset=...` paginated changelog requests.
+
+Status: **done**, 2026-08-09; exclusion + cleanup implemented, unit tested, and confirmed live on
+the Mi Pad 4.
+
+## NBC-430: NetBox model directory re-discovered with ~105 requests every sync pass - reuse the
+cached directory on incremental passes
+
+`directoryRepository.refresh()` runs unconditionally each pass ("Discovering NetBox models…",
+`sync/OfflineSyncRepository.kt:179-180`). Discovery is expensive by construction
+(`DirectoryRepository.kt:46-141`): `GET api/` root, one `GET api/<app>/` per app namespace, and -
+the costly part - **one `?limit=1&offset=0` probe request per candidate model**
+(`isPaginatedCollection`, lines 137-141). Live on the Mi Pad 4 (2026-08-09): 144 probe requests
+plus ~11 app-map requests plus the root, ~156 requests per pass (about a quarter of the whole
+pass's 616 requests), on every single sync - all to re-learn a model list that changes only when
+a NetBox plugin is installed/removed or NetBox is upgraded. The set of installed models is the
+textbook "changes ~never" input.
+
+- [x] In `syncAllLocked`, skip `directoryRepository.refresh()` when `!isFullSyncPass &&
+      directoryRepository.cachedModelCount() > 0`; the subsequent
+      `directoryRepository.cachedModels()` read (line 182) already works off the cache. Keep the
+      full discovery on full passes (24h interval / "Sync now"), which also keeps the existing
+      guarantee that a partially-failing discovery never replaces the last complete directory.
+      Implemented as `shouldRediscoverDirectory()`.
+- [x] Keep the progress step so step numbering stays stable, but reword it when skipped (e.g.
+      "Using cached model directory…") - or keep the message and let it complete instantly;
+      implementer's choice, just don't renumber `totalSteps` conditionally.
+- [x] Documented consequence (acceptable, matches the incremental contract everywhere else):
+      newly installed NetBox plugins/models appear in the sidebar after the next full pass
+      (<=24h) or a manual Settings "Sync now", not on every background sync.
+- [x] Unit test the skip condition - `OfflineSyncGatingTest.kt`'s `shouldRediscoverDirectory` cases.
+- [x] Live verification (Mi Pad 4, 2026-08-09): confirmed via logcat - an incremental pass made
+      zero `limit=1&offset=0` probe requests and zero `GET api/<app>/` url-map requests (was
+      ~105/pass).
+
+Status: **done**, 2026-08-09; directory-reuse gate implemented, unit tested, and confirmed live on
+the Mi Pad 4.
+
+## NBC-431: 4.4 MB topology XML export re-downloaded and rewritten to flash on every sync pass -
+gate it on device/cable changes
+
+When the netbox-topology-views plugin is present, `topologyRepository.refresh()` runs every pass
+(`sync/OfflineSyncRepository.kt:264-269`), and `TopologyRepository.refresh()`
+(`TopologyRepository.kt:34-45`) always downloads the full `xml-export` (server-side render of the
+whole topology, every option enabled - see `EXPORT_URL`) and rewrites the persisted file. Live on
+the Mi Pad 4 (2026-08-09): the export was fetched on both passes of one app open; the persisted
+`topology.xml` is **4,382,294 bytes** (measured via `run-as` in
+`files/offline-attachments/`) - the single largest artifact any sync step produces, re-downloaded
+(gzip helps on the wire, but the server re-renders it and the device re-parses + rewrites 4.4 MB
+to flash) even when nothing in the topology changed. With the default sync policy
+(`syncOnlyOnWifi=false`, `syncWhileRoaming=true`, `SettingsRepository.kt:295-299`) this recurs on
+cellular every 6h.
+
+- [x] Gate the topology step: refresh only when `isFullSyncPass`, or when this pass actually
+      changed topology inputs - `devices > 0` (the device delta count already computed at
+      `OfflineSyncRepository.kt:157-161`) or the cables endpoint's incremental sync returned > 0
+      objects. For the latter, capture the per-endpoint count for `"api/dcim/cables/"` inside the
+      model loop (the `syncResult.fold(onSuccess = { count -> … })` block at lines 199-205
+      already has the count; stash it in an `AtomicInteger` keyed check like
+      `genericObjectsTotal`). Implemented as `shouldRefreshTopology()`.
+- [x] When skipped, don't report the "Syncing topology map…" step as work done - either skip the
+      step entirely (adjust the `totalSteps` computation at lines 184-187, which already
+      conditions on `topologyAvailable`) or complete it instantly; keep step math consistent.
+      Kept the step (reports "Topology unchanged, skipping…" instead) so `totalSteps` stays simple.
+- [x] Unit test the gate decision - `OfflineSyncGatingTest.kt`'s `shouldRefreshTopology` cases.
+- [x] Live verification (Mi Pad 4, 2026-08-09): confirmed the positive branch - an incremental
+      pass with a real device delta correctly re-fetched the topology export exactly once. The
+      negative branch (a pass with zero device/cable delta making no topology request at all) is
+      covered by `OfflineSyncGatingTest`'s unit tests rather than a live repeat, since the only
+      live "nothing changed" pass observed (Zenfone 10) was subsumed by NBC-427's short-circuit
+      before reaching this step, and deliberately editing a cable/device on the real
+      netbox.brkn.lol instance just to force a live negative-branch check wasn't done to avoid
+      mutating real inventory data for a test.
+
+Status: **done**, 2026-08-09; topology gate implemented, unit tested, and the positive (refetch)
+branch confirmed live on the Mi Pad 4.
+
+## NBC-432: rack elevations re-fetched in full for every rack, both faces, every sync pass - skip
+racks with no rack/device changes
+
+`sync/OfflineSyncRepository.kt:219-228` calls `rackElevationRepository.refresh(rack.id, FRONT)`
+and `refresh(rack.id, REAR)` for every cached rack unconditionally every pass.
+`RackElevationRepository.refresh()` (`RackElevationRepository.kt:29-40`) fetches up to
+`limit=1000` elevation slots with no staleness filter and always clears + re-inserts the Room
+rows. Confirmed live (Mi Pad 4, 2026-08-09): 2 elevation JSON fetches per pass - the test
+instance has only 1 rack, so this is small *there*, but the cost is 2 x N_racks requests (each a
+full slot list) on every 6h/startup sync and scales directly with install size. An elevation only
+changes when the rack itself changes or a device is (re)placed/removed - both of which bump
+`last_updated` on the rack or device row, which the incremental sync already fetches.
+
+- [x] Gate each rack's refresh: run it only when `isFullSyncPass`, OR the rack row changed this
+      pass, OR any cached device in that rack changed this pass. "Changed this pass" =
+      `syncedAt >= passStartedAt`: the incremental fetches only upsert rows the server reported
+      as changed, and both `NetBoxObjectEntity` (the rack, already in scope as `racks` from
+      `cachedObjects("api/dcim/racks/")`) and `DeviceEntity` carry `syncedAt`. The rack-elevation
+      step already runs after the device and model loops in the same pass, so the stamps are
+      up to date by then. Implemented as `shouldRefreshRackData()`, computed once per rack into a
+      `rackDataChanged` map shared with NBC-433's rack-face SVG loop.
+- [x] Add the missing DAO query for the device half: `DeviceDao.countChangedInRack(rackId: Int,
+      cutoff: Long): Int` (`SELECT COUNT(*) FROM devices WHERE rackId = :rackId AND syncedAt >=
+      :cutoff` - `DeviceEntity.rackId` exists, `data/db/DeviceEntity.kt:16`), exposed via
+      `DeviceRepository`.
+- [x] Also refresh when the rack has no cached elevation rows at all (first sync of a new rack) -
+      `RackElevationRepository.hasCached()` backed by a new `RackElevationDao.count()` query.
+- [x] Known acceptable imprecision, document in a code comment: the `last_updated__gte` watermark
+      is inclusive, so the most-recently-updated rack/device always re-appears as "changed" and
+      causes one redundant elevation refresh per pass. Server-side device deletions only
+      reconcile on full passes, which also refresh all elevations - consistent.
+- [x] Unit test the gate (pure function taking rack syncedAt, changed-device count, full-pass
+      flag) - `OfflineSyncGatingTest.kt`'s `shouldRefreshRackData` cases.
+- [x] Live verification (Mi Pad 4, 2026-08-09): confirmed the positive branch - an incremental
+      pass with a real device delta correctly refreshed rack 1's elevation (both faces). The
+      "unrelated rack stays untouched" negative branch is covered by `OfflineSyncGatingTest`'s unit
+      tests; the test instance only has 1 rack, so a live negative-branch comparison isn't
+      meaningfully distinguishable from NBC-427's full-pass skip observed on the Zenfone 10 - not
+      repeated separately to avoid mutating real NetBox inventory data for a test.
+
+Status: **done**, 2026-08-09; rack-elevation gate implemented, unit tested, and the positive
+(refetch-on-change) branch confirmed live on the Mi Pad 4.
+
+## NBC-433: rack and cable-trace SVG diagrams re-downloaded and rewritten every sync pass (60+
+requests) - only refresh diagrams whose owning object changed
+
+With "sync attachments to disk" enabled, `sync/OfflineSyncRepository.kt:233-262` re-fetches every
+rack face's `?render=svg` elevation and every traceable cable's `trace/?render=svg` on every
+pass - `SvgDiagramRepository.refresh()` (`SvgDiagramRepository.kt:32-39`) always makes the network
+call and overwrites the persisted file, with no dirty-check against the owning rack/cable's
+`last_updated`. Confirmed live (Mi Pad 4, 2026-08-09, zero server-side changes): **60 cable-trace
+SVG GETs + 2 rack-face SVG GETs per pass, on both passes of one app open** (120+ server-side SVG
+renders for nothing), and all 62 persisted `.svg` files in `files/offline-attachments/` carried
+fresh mtimes from the last pass. Each SVG is small (1-13 KB) - the cost is request count, server
+render time, and flash writes, not bytes.
+
+- [x] Rack-face SVGs: reuse NBC-432's per-rack "changed this pass" gate (rack `syncedAt >=
+      passStartedAt`, or a changed device in the rack, or `isFullSyncPass`) - the two loops
+      iterate the same `racks` list, so compute the per-rack decision once and share it. Shares
+      the `rackDataChanged` map computed in NBC-432's elevation loop.
+- [x] Cable-trace SVGs: skip when `!isFullSyncPass && cable.syncedAt < passStartedAt`. Cable rows
+      have `last_updated`, so the incremental model sync only re-upserts changed cables - an
+      unchanged cable keeps its old `syncedAt` and its trace cannot have changed unless the cable
+      (or its terminations, which also bump the cable's own row in NetBox) changed. The SVG loop
+      already runs after the model loop in the same pass. Implemented as `shouldRefreshCableTraceSvg()`.
+- [x] Always fetch when the persisted file is missing (`svgDiagramRepository.cachedContent(key) ==
+      null` or a cheaper file-existence check via `FileDownloadRepository.persistentFile`) - a
+      freshly-enabled "sync attachments to disk" or cleared cache must still populate. Added
+      `SvgDiagramRepository.isCached()` for this.
+- [x] Unit test the two gate decisions - `OfflineSyncGatingTest.kt`'s `shouldRefreshRackData`/
+      `shouldRefreshCableTraceSvg` cases (shared with NBC-432 for the rack half).
+- [x] Live verification (Mi Pad 4, attachments-to-disk on, 2026-08-09): confirmed the positive
+      branch for both - rack 1's front/rear elevation SVGs (`racks/1/elevation/?face=...&
+      render=svg`) and a cable-trace SVG (`api/dcim/power-outlets/33/trace/?render=svg`) both
+      re-fetched during an incremental pass with a real device/cable delta. The "unchanged
+      rack/cable stays untouched" negative branch is covered by `OfflineSyncGatingTest`'s unit
+      tests rather than a further live repeat, for the same reasons noted on NBC-432.
+
+Status: **done**, 2026-08-09; SVG gating implemented, unit tested, and the positive
+(refetch-on-change) branch confirmed live for both rack-face and cable-trace SVGs on the Mi Pad 4.
+
+## NBC-434: durable attachments are never revalidated once downloaded - an 820 MB offline cache
+that can go silently stale forever
+
+The opposite staleness failure from NBC-433: `FileDownloadRepository.downloadToPersistent()`
+(`FileDownloadRepository.kt:60-76`) early-returns whenever the target file already exists
+(`if (target.isFile && target.length() > 0L) return@runCatching target`, line 64), so an
+attachment downloaded once is **never re-checked against the server again** - not even on the 24h
+full-reconciliation pass. Files are keyed by a SHA-256 of the media URL, so a *renamed* upload
+self-heals (new URL = new hash), but NetBox overwriting media under the same filename (replacing
+a rack photo, re-uploading a corrected PDF under the same name) keeps the same URL and the app
+silently shows the old bytes forever, with no indication. The Mi Pad 4's
+`files/offline-attachments/` currently holds 697 files / ~820 MB (measured via `run-as`,
+2026-08-09), none of which any sync will ever revalidate.
+
+- [x] Add a `revalidate: Boolean = false` parameter to `downloadToPersistent`. When `revalidate`
+      is true and the target file exists, send the request with an `If-Modified-Since` header
+      built from `target.lastModified()` (RFC 1123 format); on HTTP 304, keep the file (and
+      `target.setLastModified(System.currentTimeMillis())` so the next check window moves
+      forward); on 200, download to `.part` and replace as today. `revalidate = false` keeps the
+      current instant skip. The mechanics were pulled into a `Context`-free top-level
+      `downloadOrRevalidate()` specifically so they're unit-testable against a real server.
+- [x] Thread `isFullSyncPass` into `syncAttachments(...)` (`sync/OfflineSyncRepository.kt:384`)
+      and pass `revalidate = isFullSyncPass` - incremental passes stay as cheap as they are now
+      (zero attachment requests for existing files); only the 24h/forced full pass pays one
+      conditional request per attachment, and those are ~zero-byte 304s when nothing changed.
+- [x] NetBox serves `/media/` via its web server (nginx/whitenoise), which answers
+      `If-Modified-Since` with 304 for static files - verify once against netbox.brkn.lol with
+      `curl -H "Authorization: Token …" -H "If-Modified-Since: <future date>" -sI <media url>`
+      before relying on it; if the deployment doesn't honor it, fall back to comparing
+      `Content-Length` from a HEAD request instead. **Verified live and it does NOT honor
+      `If-Modified-Since`**: a forced full sync on the Mi Pad 4 (2026-08-09) showed all 633
+      revalidation requests answered `200` with the full body (0 out of 633 were 304) - i.e. the
+      original conditional-GET-only implementation would have silently turned every full-sync pass
+      into a full re-download of all 697 cached attachments (~820 MB), a worse regression than the
+      bug this ticket set out to fix. Implemented the documented fallback:
+      `isUnchangedByHead()` sends a `HEAD` (no body transferred either way) carrying the same
+      `If-Modified-Since` header - a compliant server can still 304 there - and otherwise compares
+      the HEAD response's `Content-Length` against the cached file's size, skipping the GET
+      entirely when they match.
+- [x] Unit test the 304/200/no-file branches with a mock server -
+      `FileDownloadRevalidationTest.kt` (`okhttp-mockwebserver`, newly added as a test dependency).
+      Extended with cases for the HEAD/Content-Length fallback path and a HEAD-itself-fails
+      graceful-degradation case, once the live test above showed the fallback was load-bearing, not
+      optional.
+- [x] Live verification (Mi Pad 4): two forced full syncs via Settings "Sync now", 2026-08-09.
+      First pass (before the fallback): confirmed real attachment revalidation traffic (633
+      GET-based conditional requests) and no crashes, but 0 of 633 came back 304 - proving
+      `If-Modified-Since` alone doesn't work against this instance. Second pass (after the
+      HEAD/Content-Length fallback landed, same build redeployed): 634 `HEAD` requests, **zero**
+      `GET` media downloads, one clean `NYETBOX_E2E_SYNC_COMPLETE`, no crashes - confirming the
+      fallback correctly recognizes all 697 unchanged attachments without transferring their
+      bodies.
+
+Status: **done**, 2026-08-09; revalidation implemented with the HEAD/Content-Length fallback
+(confirmed necessary live, not just theoretical), unit tested against a mock server covering both
+paths, and confirmed end-to-end live on the Mi Pad 4 (634 HEAD requests, 0 redundant downloads).
+
+## NBC-435: sync UI shows a quick incremental check and a multi-minute full resync identically,
+and never says what actually changed
+
+Even once syncs are cheap, they won't *feel* cheap: `isFullSyncPass` is computed in
+`OfflineSyncRepository.syncAllLocked()` (`sync/OfflineSyncRepository.kt:123-125`) and then never
+surfaced anywhere - `SyncProgress` (`OfflineSyncRepository.kt:47-54`) carries no pass type, so
+`SyncStatusCard` (`ui/common/SyncStatusCard.kt:84-105`), `SyncStatusDetailsDialog`, and
+`SyncNotifier`'s notification render the exact same "Syncing devices… Step 4 of 10" for a
+seconds-long incremental check as for the 24h full reconciliation. After the fact, nothing tells
+the user what the pass did: `SyncNotifier.notifySyncSucceeded()` (`SyncNotifier.kt:162-167`)
+discards the `OfflineSyncSummary` counts (only reconciliation survives), and the details dialog
+shows only static cache totals. Observed live (Mi Pad 4, 2026-08-09): two visually identical
+"Syncing…" minutes with zero server-side changes - the user has no way to know the pass was (or
+should have been) a no-op. This is the perception half of the "sync feels heavy" complaint.
+
+- [x] Add `isFullSync: Boolean = false` to `SyncProgress`; set it from `isFullSyncPass` inside
+      `reportProgress` (and the model-loop `modelsProgress.copy(...)` updates inherit it).
+- [x] Prefix the pass type in `SyncProgress.notificationSubText()`
+      (`OfflineSyncRepository.kt:63-67`), e.g. "Quick sync · Step 4 of 10" vs "Full sync · Step 4
+      of 10" - that single helper feeds both the system notification and `SyncStatusCard`'s
+      subtext (NBC-370 plumbing), so both surfaces pick it up with one change.
+- [x] Record a compact last-pass summary next to `recordSuccessfulSync()`: pass type
+      (full/incremental), duration millis (`System.currentTimeMillis() - passStartedAt`), and the
+      `OfflineSyncSummary` counts (devices + genericObjects as "items refreshed",
+      durableAttachments) - a small JSON blob in a new server-scoped
+      `SettingsRepository.lastSyncSummary` pref, exposed as a `StateFlow`. Implemented as three
+      plain scalar prefs (bool/long/int) behind a `LastSyncSummary` data class rather than a literal
+      JSON blob - same effect, no serializer needed for three fields.
+- [x] Render it in `SyncStatusDetailsDialog` above the cache figures, e.g. "Last sync: quick
+      check · 58s · 3 items refreshed" / "Last sync: full sync · 4m · 512 items refreshed" - the
+      after-the-fact answer to "was that as cheap as it should have been?".
+- [x] Label caveat: `genericObjects` counts *fetched* rows, which for watermark-less endpoints
+      (see NBC-429) overstates "changed" - use the neutral word "refreshed", and note the number
+      gets truthful as NBC-428..431 land.
+- [x] Unit tests for the new pure helpers alongside the existing `SyncStatusCardTest.kt` pattern -
+      `SyncStatusDetailsDialogTest.kt` (`formatLastSyncSummary`) and updated `SyncProgressTest.kt`/
+      `SyncStatusCardTest.kt` assertions for the new "Quick sync"/"Full sync" prefix.
+- [x] Live verification (Mi Pad 4, 2026-08-09): screenshotted the sync status details dialog after
+      a routine incremental sync - it read exactly **"Last sync: quick check · 32s · 871 items
+      refreshed"**, rendered above the cache figures as designed. The "Full sync · …" wording for a
+      forced pass wasn't separately screenshotted (same code path, verified by the passing unit
+      tests plus the two live full-sync passes run for NBC-434), but the quick-check case
+      specifically named in this ticket's acceptance text is confirmed end-to-end.
+
+Status: **done**, 2026-08-09; pass-type surfacing and last-sync summary implemented, unit tested,
+and confirmed live on the Mi Pad 4 with a screenshot of the rendered summary text.
