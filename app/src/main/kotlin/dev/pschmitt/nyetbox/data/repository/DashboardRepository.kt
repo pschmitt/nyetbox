@@ -211,8 +211,7 @@ constructor(
         // SettingsRepository.statsOrder/hiddenStats and DashboardOrdering.orderedStats - so all of
         // them need a cached count ready to show the moment a user opts one in, not just the four
         // that used to be hardcoded as the only choices.
-        val STAT_ENDPOINTS =
-            NetBoxEndpointCatalog.coreModels.map { it.endpointPath to it.label }
+        val STAT_ENDPOINTS = NetBoxEndpointCatalog.coreModels.map { it.endpointPath to it.label }
     }
 }
 

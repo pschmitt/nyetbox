@@ -41,8 +41,9 @@ class DashboardOrderingTest {
                 NetBoxRef.SITES_ENDPOINT_PATH,
                 NetBoxRef.RACKS_ENDPOINT_PATH,
             ),
-            orderedStats(stats, savedOrder = emptyList(), hidden = emptySet())
-                .map { it.endpointPath },
+            orderedStats(stats, savedOrder = emptyList(), hidden = emptySet()).map {
+                it.endpointPath
+            },
         )
     }
 
@@ -59,7 +60,8 @@ class DashboardOrderingTest {
             listOf(NetBoxRef.RACKS_ENDPOINT_PATH, NetBoxRef.DEVICES_ENDPOINT_PATH),
             orderedStats(
                     stats,
-                    savedOrder = listOf(NetBoxRef.RACKS_ENDPOINT_PATH, NetBoxRef.DEVICES_ENDPOINT_PATH),
+                    savedOrder =
+                        listOf(NetBoxRef.RACKS_ENDPOINT_PATH, NetBoxRef.DEVICES_ENDPOINT_PATH),
                     hidden = setOf(NetBoxRef.SITES_ENDPOINT_PATH),
                 )
                 .map { it.endpointPath },
@@ -79,7 +81,8 @@ class DashboardOrderingTest {
         assertEquals(
             listOf(NetBoxRef.RACKS_ENDPOINT_PATH, NetBoxRef.DEVICES_ENDPOINT_PATH),
             orderedStatCandidates(
-                    savedOrder = listOf(NetBoxRef.RACKS_ENDPOINT_PATH, NetBoxRef.DEVICES_ENDPOINT_PATH)
+                    savedOrder =
+                        listOf(NetBoxRef.RACKS_ENDPOINT_PATH, NetBoxRef.DEVICES_ENDPOINT_PATH)
                 )
                 .take(2)
                 .map { it.endpointPath },

@@ -826,8 +826,8 @@ private fun InitialSyncOverlay(syncProgress: SyncProgress?) {
 }
 
 /**
- * NBC-437: which stat tiles show on the dashboard, and in what order. A vertical checklist
- * (drag handle to reorder, checkbox to show/hide) reusing [SectionReorderState] as-is - it already
+ * NBC-437: which stat tiles show on the dashboard, and in what order. A vertical checklist (drag
+ * handle to reorder, checkbox to show/hide) reusing [SectionReorderState] as-is - it already
  * operates on a plain scroll-axis offset/size, so the same helper built for the dashboard's
  * vertical section list works unchanged here, no horizontal-drag variant needed.
  */
@@ -1012,9 +1012,14 @@ private fun StatsRow(
         // fully fits (e.g. only 3 stats configured on a wide enough screen).
         if (hasMoreForward) {
             Box(
-                Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(32.dp).background(
-                    Brush.horizontalGradient(listOf(scrim.copy(alpha = 0f), scrim.copy(alpha = 0.28f)))
-                ),
+                Modifier.align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .width(32.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(scrim.copy(alpha = 0f), scrim.copy(alpha = 0.28f))
+                        )
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -1026,9 +1031,14 @@ private fun StatsRow(
         }
         if (hasMoreBackward) {
             Box(
-                Modifier.align(Alignment.CenterStart).fillMaxHeight().width(24.dp).background(
-                    Brush.horizontalGradient(listOf(scrim.copy(alpha = 0.28f), scrim.copy(alpha = 0f)))
-                )
+                Modifier.align(Alignment.CenterStart)
+                    .fillMaxHeight()
+                    .width(24.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(scrim.copy(alpha = 0.28f), scrim.copy(alpha = 0f))
+                        )
+                    )
             )
         }
     }
