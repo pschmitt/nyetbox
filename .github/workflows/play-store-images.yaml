@@ -63,7 +63,7 @@ jobs:
         run: |
           creds_file="$(mktemp)"
           printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > "$creds_file"
-          gpc auth login --credentials "$creds_file" --default-package dev.pschmitt.nyetbox
+          gpc auth login --name default --credentials "$creds_file" --default-package dev.pschmitt.nyetbox
           rm -f "$creds_file"
 
       - name: Upload screenshots
