@@ -8918,15 +8918,19 @@ override the same-named resource from `app/src/main/res/` for that variant only,
 build-script changes needed).
 
 - [x] `app/src/debug/res/values/strings.xml` overrides `app_name` to "Nyetbox (debug)".
-- [x] `app/src/debug/res/values/colors.xml` overrides `ic_launcher_background` to a dark red/maroon
-      (`#3A0A0A`) instead of release's dark navy - same adaptive-icon foreground vector/shape in
-      both, only the background tint differs, so the debug icon is still instantly recognizable as
-      "the same app" while being visually distinct.
+- [x] `app/src/debug/res/drawable/ic_launcher_foreground_vector.xml` overrides the glyph itself
+      (not the background, per direct feedback that a background-only tint wasn't drastic enough):
+      the accent teal (`#00E5D6`) becomes a saturated red (`#D50000`) and the near-white
+      (`#F4F7F8`) becomes a light red/coral (`#FF8A80`) across every stroke/fill that used them -
+      same shape, same navy background as release, but the logo itself now reads unmistakably red.
 - [x] Verified remotely: `aapt2 dump badging` on the built debug APK shows
       `application-label='Nyetbox (debug)'` across every locale; the release APK is unaffected
       (`application-label='Nyetbox'`), confirming the override is debug-only.
-- [x] Verified live on the Zenfone 10: reinstalled the debug build, screenshotted the running
-      task/app icon - shows the dark red tint instead of navy.
+- [x] Verified live on the Zenfone 10 (twice): first pass confirmed the background-tint approach
+      compiled/installed but wasn't visually distinct enough; second pass (after switching to the
+      foreground-color override) screenshotted the running task/app icon showing the whole
+      robot-face glyph in red/coral against the unchanged navy background.
 
 Status: **done**, 2026-08-09; verified via `aapt2 dump badging` (both variants) and live on a
-physical device.
+physical device, including a revision after direct feedback that the first approach (background
+tint) wasn't drastic enough.

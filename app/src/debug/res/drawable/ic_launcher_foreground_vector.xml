@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug-only override of app/src/main/res/drawable/ic_launcher_foreground_vector.xml - same
+     glyph/shape, but the accent teal (#00E5D6) and near-white (#F4F7F8) are both swapped for reds
+     so the logo itself, not just the background, reads unmistakably as a debug build. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M39,38 L69,38 A7,7 0 0 1 76,45 L76,63 A7,7 0 0 1 69,70 L39,70 A7,7 0 0 1 32,63 L32,45 A7,7 0 0 1 39,38 Z"
+        android:strokeColor="#D50000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="5" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M39,38 A7,7 0 0 0 32,45 L32,63 A7,7 0 0 0 39,70 L69,70"
+        android:strokeColor="#FF8A80"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="5" />
+
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M36,47 L47,47"
+        android:strokeColor="#FF8A80"
+        android:strokeLineCap="round"
+        android:strokeWidth="4" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M61,47 L71,42"
+        android:strokeColor="#D50000"
+        android:strokeLineCap="round"
+        android:strokeWidth="4" />
+
+    <path
+        android:fillColor="#FF8A80"
+        android:pathData="M42,57 m-6,0 a6,6 0,1 0,12 0 a6,6 0,1 0,-12 0" />
+    <path
+        android:fillColor="#011226"
+        android:pathData="M42,57 m-3,0 a3,3 0,1 0,6 0 a3,3 0,1 0,-6 0" />
+    <path
+        android:fillColor="#FF8A80"
+        android:pathData="M66,57 m-6,0 a6,6 0,1 0,12 0 a6,6 0,1 0,-12 0" />
+    <path
+        android:fillColor="#011226"
+        android:pathData="M66,57 m-3,0 a3,3 0,1 0,6 0 a3,3 0,1 0,-6 0" />
+
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M49,66 L59,66"
+        android:strokeColor="#FF8A80"
+        android:strokeLineCap="round"
+        android:strokeWidth="4" />
+</vector>
