@@ -463,6 +463,14 @@ screenshots-upload:
     for image_type in "${image_types[@]}"
     do
       image_glob=("$image_dir"/en-US/images/"$image_type"/*)
+      [[ ${#image_glob[@]} -gt 0 ]] || continue
+      # Delete existing images of this type first: gpc's upload only ever appends, so re-running
+      # this against a bucket that already has images (a prior manual upload, or just re-running
+      # after a fresh capture) silently piles up duplicates instead of replacing them - confirmed
+      # live, twice, once as literal duplicate screenshots and once by exceeding Play's 8-per-
+      # language screenshot cap outright. The locally generated set is always the authoritative
+      # "current" one, so start from empty every time instead.
+      gpc --package {{play_package}} images delete-all --locale en-US --type "$image_type" --confirm
       for image in "${image_glob[@]}"
       do
         printf 'Uploading %s\n' "$image"

@@ -95,9 +95,11 @@ just play-feature-graphic-upload
 
 The recipe uploads each Fastlane output to the **release** package `dev.pschmitt.nyetbox`; the
 screenshot test itself runs the separate debug package. It refuses to run when the generated
-phone-screenshot directory is empty and never deletes existing Play Console images automatically.
-It verifies the target package through `gpc apps list`; `gpc doctor` is not used as a publishing
-gate because its package/credential diagnostics can be misleading when the package is supplied via
+phone-screenshot directory is empty, and replaces each bucket's existing Play Console images with
+the local set rather than appending to it - confirmed live that appending silently produces
+duplicates, or outright exceeds Play's 8-screenshot-per-language cap. It verifies the target
+package through `gpc apps list`; `gpc doctor` is not used as a publishing gate because its
+package/credential diagnostics can be misleading when the package is supplied via
 flags or another working authentication context.
 Generated images are ignored by Git: this checkout currently has four older POC outputs, but no
 topology or tablet capture yet. The four phone images and the flattened icon have been uploaded;
