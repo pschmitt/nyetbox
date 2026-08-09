@@ -1,4 +1,4 @@
-name: Play Store
+name: Play Store Release
 
 # Runs on the same semantic-version tags release.yaml publishes GitHub releases from ("vX.Y.Z" or
 # "X.Y.Z"), always building a signed AAB for inspection. The publishing job additionally requires

@@ -1,4 +1,4 @@
-name: Play Store images
+name: Play Store Assets
 
 # Screenshot/icon uploads to the Play Console listing are content-triggered, not tag-triggered:
 # whenever a change to the committed screenshot images lands on main - i.e. the "Update
