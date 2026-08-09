@@ -70,6 +70,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -754,7 +755,7 @@ private fun DashboardSectionHeader(
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.weight(1f),
         )
-        if (onCustomize != null) {
+        if (reorderMode && onCustomize != null) {
             IconButton(onClick = onCustomize) {
                 Icon(Icons.Default.Tune, contentDescription = "Customize ${section.title}")
             }
@@ -967,6 +968,26 @@ private fun StatsRow(
 ) {
     val listState = rememberLazyListState()
     val scrim = MaterialTheme.colorScheme.scrim
+    // Precise "is there more this way" instead of LazyListState.canScrollForward/canScrollBackward
+    // directly: those report true the instant the content is even a fraction of a pixel wider than
+    // the viewport, which can flag "more to scroll" when every tile is already effectively fully on
+    // screen. Checking whether the actual first/last stat's visible bounds cover the viewport edge
+    // only shows the hint when a tile is genuinely, visibly cut off.
+    val hasMoreForward by remember {
+        derivedStateOf {
+            val info = listState.layoutInfo
+            val last = info.visibleItemsInfo.lastOrNull()
+            last == null ||
+                last.index != info.totalItemsCount - 1 ||
+                last.offset + last.size > info.viewportEndOffset
+        }
+    }
+    val hasMoreBackward by remember {
+        derivedStateOf {
+            val first = listState.layoutInfo.visibleItemsInfo.firstOrNull()
+            first == null || first.index != 0 || first.offset < listState.layoutInfo.viewportStartOffset
+        }
+    }
     Box {
         LazyRow(state = listState, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(stats, key = { it.endpointPath }) { stat ->
@@ -987,8 +1008,9 @@ private fun StatsRow(
         // fade-to-background-color edge is invisible wherever nothing happens to be cut off right
         // at the boundary. A scrim (visible against any backdrop, tile or bare card background)
         // plus a chevron reads unambiguously as "more this way" instead. Only shown on whichever
-        // side there's actually more content, not permanently.
-        if (listState.canScrollForward) {
+        // side there's actually more content, not permanently - and never when every tile already
+        // fully fits (e.g. only 3 stats configured on a wide enough screen).
+        if (hasMoreForward) {
             Box(
                 Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(32.dp).background(
                     Brush.horizontalGradient(listOf(scrim.copy(alpha = 0f), scrim.copy(alpha = 0.28f)))
@@ -998,11 +1020,11 @@ private fun StatsRow(
                 Icon(
                     Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "More stats - scroll right",
-                    tint = MaterialTheme.colorScheme.onSurface,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
-        if (listState.canScrollBackward) {
+        if (hasMoreBackward) {
             Box(
                 Modifier.align(Alignment.CenterStart).fillMaxHeight().width(24.dp).background(
                     Brush.horizontalGradient(listOf(scrim.copy(alpha = 0.28f), scrim.copy(alpha = 0f)))

@@ -81,6 +81,28 @@ object NetBoxEndpointCatalog {
                 "virtualization",
             ),
             NetBoxEndpointMetadata("api/tenancy/tenants/", "Tenants", "tenancy"),
+            // NBC-437: the dashboard's stat tiles are user-choosable (see
+            // SettingsRepository.statsOrder/hiddenStats), so this list is deliberately broader than
+            // just the handful that used to be the only hardcoded options - one entry per commonly
+            // browsed NetBox model across the apps this catalog already knows an icon for
+            // (AppIcons.BY_APP_KEY), not an exhaustive sweep of NetBox's full data model.
+            NetBoxEndpointMetadata("api/dcim/locations/", "Locations", "dcim"),
+            NetBoxEndpointMetadata("api/dcim/manufacturers/", "Manufacturers", "dcim"),
+            NetBoxEndpointMetadata("api/dcim/device-roles/", "Device Roles", "dcim"),
+            NetBoxEndpointMetadata(NetBoxRef.INTERFACES_ENDPOINT_PATH, "Interfaces", "dcim"),
+            NetBoxEndpointMetadata(NetBoxRef.CABLES_ENDPOINT_PATH, "Cables", "dcim"),
+            NetBoxEndpointMetadata("api/dcim/power-feeds/", "Power Feeds", "dcim"),
+            NetBoxEndpointMetadata("api/ipam/vlans/", "VLANs", "ipam"),
+            NetBoxEndpointMetadata("api/ipam/vrfs/", "VRFs", "ipam"),
+            NetBoxEndpointMetadata("api/ipam/asns/", "ASNs", "ipam"),
+            NetBoxEndpointMetadata(
+                "api/virtualization/clusters/",
+                "Clusters",
+                "virtualization",
+            ),
+            NetBoxEndpointMetadata("api/circuits/providers/", "Providers", "circuits"),
+            NetBoxEndpointMetadata("api/wireless/wireless-lans/", "Wireless LANs", "wireless"),
+            NetBoxEndpointMetadata("api/tenancy/contacts/", "Contacts", "tenancy"),
         )
 
     private val byPath = coreModels.associateBy { it.endpointPath }

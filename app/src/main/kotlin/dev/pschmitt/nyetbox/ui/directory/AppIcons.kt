@@ -49,6 +49,7 @@ object AppIcons {
             "api/dcim/rear-ports" to Icons.Default.Cable,
             "api/dcim/power-ports" to Icons.Default.Power,
             "api/dcim/power-outlets" to Icons.Default.Power,
+            "api/dcim/cables" to Icons.Default.Cable,
             "api/dcim/device-bays" to Icons.Default.Layers,
             "api/dcim/module-bays" to Icons.Default.Layers,
             "api/ipam/ip-addresses" to Icons.Default.Lan,
@@ -58,7 +59,15 @@ object AppIcons {
             "api/virtualization/clusters" to Icons.Default.Storage,
             "api/tenancy/tenants" to Icons.Default.Group,
             "api/wireless/wireless-links" to Icons.Default.Wifi,
+            "api/wireless/wireless-lans" to Icons.Default.Wifi,
             "api/vpn/tunnels" to Icons.Default.VpnLock,
+            "api/dcim/device-roles" to Icons.Default.Group,
+            "api/dcim/power-feeds" to Icons.Default.Power,
+            "api/ipam/vlans" to Icons.Default.Lan,
+            "api/ipam/vrfs" to Icons.Default.Lan,
+            "api/ipam/asns" to Icons.Default.Lan,
+            "api/circuits/providers" to Icons.Default.Cable,
+            "api/tenancy/contacts" to Icons.Default.Group,
         )
 
     fun forAppKey(appKey: String): ImageVector =
