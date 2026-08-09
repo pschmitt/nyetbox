@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Debug-only override of app/src/main/res/values/colors.xml's ic_launcher_background - a
+         distinct warm tint (vs. the release build's dark navy) so a debug install is visually
+         distinguishable on a home screen/launcher at a glance, not just by its appended name. -->
+    <color name="ic_launcher_background">#3A0A0A</color>
+</resources>

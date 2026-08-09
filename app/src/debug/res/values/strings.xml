@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Debug-only override of app/src/main/res/values/strings.xml's app_name, so a debug build
+         is never mistaken for the release install on a home screen/launcher (both can be
+         installed side by side - see applicationIdSuffix in app/build.gradle.kts). -->
+    <string name="app_name">Nyetbox (debug)</string>
+</resources>

@@ -8905,3 +8905,28 @@ should have been) a no-op. This is the perception half of the "sync feels heavy"
 
 Status: **done**, 2026-08-09; pass-type surfacing and last-sync summary implemented, unit tested,
 and confirmed live on the Mi Pad 4 with a screenshot of the rendered summary text.
+
+## NBC-436: debug builds are visually indistinguishable from release, both named/iconed "Nyetbox"
+
+Both variants can be installed side by side (`applicationIdSuffix = ".debug"`, see
+`app/build.gradle.kts`), but a debug install looked identical to release on a home screen/launcher
+- same name, same dark-navy adaptive icon (`app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`,
+`@color/ic_launcher_background` = `#011226`) - the only way to tell them apart was opening Settings
+and checking the version string. Following the same pattern as the `jollyfin` repo's debug/staging
+variant icons (Gradle build-variant resource overlay: files placed under `app/src/<variant>/res/`
+override the same-named resource from `app/src/main/res/` for that variant only, no manifest or
+build-script changes needed).
+
+- [x] `app/src/debug/res/values/strings.xml` overrides `app_name` to "Nyetbox (debug)".
+- [x] `app/src/debug/res/values/colors.xml` overrides `ic_launcher_background` to a dark red/maroon
+      (`#3A0A0A`) instead of release's dark navy - same adaptive-icon foreground vector/shape in
+      both, only the background tint differs, so the debug icon is still instantly recognizable as
+      "the same app" while being visually distinct.
+- [x] Verified remotely: `aapt2 dump badging` on the built debug APK shows
+      `application-label='Nyetbox (debug)'` across every locale; the release APK is unaffected
+      (`application-label='Nyetbox'`), confirming the override is debug-only.
+- [x] Verified live on the Zenfone 10: reinstalled the debug build, screenshotted the running
+      task/app icon - shows the dark red tint instead of navy.
+
+Status: **done**, 2026-08-09; verified via `aapt2 dump badging` (both variants) and live on a
+physical device.
