@@ -1061,7 +1061,12 @@ private fun StatTile(
         shape = RoundedCornerShape(20.dp),
         colors =
             CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        // Matching the parent Stats card's own elevation (1.dp) still rendered a visible outline
+        // around every tile - Material3's Card applies a tonal elevation overlay on top of
+        // containerColor, so a tile "at 1.dp" inside a surface already "at 1.dp" ends up more
+        // tinted than its parent despite requesting the identical nominal color, showing up as a
+        // seam (confirmed visible in the Play Store screenshots). 0.dp renders flush instead.
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(12.dp),
