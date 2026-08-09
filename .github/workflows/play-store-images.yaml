@@ -58,13 +58,16 @@ jobs:
           sudo install -m 755 /tmp/playconsole-cli /usr/local/bin/gpc
 
       - name: Authenticate gpc
+        # gpc's file-based credential type stores a *path reference* to this file, not a copy of
+        # its contents - confirmed live: deleting it right after `auth login` (as this step used
+        # to) left every later gpc call unable to read credentials at all. The runner is torn down
+        # at the end of the job regardless, so there's nothing to clean up here.
         env:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
           creds_file="$(mktemp)"
           printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > "$creds_file"
           gpc auth login --name default --credentials "$creds_file" --default-package dev.pschmitt.nyetbox
-          rm -f "$creds_file"
 
       - name: Upload screenshots
         run: just screenshots-upload
