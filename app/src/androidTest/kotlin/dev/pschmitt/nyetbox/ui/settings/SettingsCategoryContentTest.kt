@@ -6,6 +6,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.pschmitt.nyetbox.data.repository.*
 import dev.pschmitt.nyetbox.ui.theme.NyetboxTheme
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -78,8 +79,9 @@ class SettingsCategoryContentTest {
             gestureActions = emptyMap(),
             gestureTargets = emptyMap(),
             gestureModels = emptyList(),
-            gestureObjects = emptyList(),
+            objectChoices = { _, _ -> flowOf(emptyList()) },
             navBarItems = emptyList(),
+            shortcutItems = emptyList(),
             scannerLens = ScannerLens.Back,
             scannerRearLens = ScannerRearLens.Automatic,
             printSettings = PrintSettings(),
@@ -125,5 +127,11 @@ class SettingsCategoryContentTest {
             onRemoveNavBarItem = {},
             onMoveNavBarItem = { _, _ -> },
             onResetNavBarItems = {},
+            onAddShortcutItem = {},
+            onAddShortcutModelItem = { _, _ -> },
+            onAddShortcutObjectItem = { _, _ -> },
+            onRemoveShortcutItem = {},
+            onMoveShortcutItem = { _, _ -> },
+            onResetShortcutItems = {},
         )
 }
