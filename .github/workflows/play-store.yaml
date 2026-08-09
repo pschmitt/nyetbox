@@ -191,4 +191,3 @@ jobs:
           releaseFiles: play-artifact/app-release.aab
           tracks: internal
           status: completed
-          changesNotSentForReview: true
