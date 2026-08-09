@@ -1,0 +1,70 @@
+name: Play Store images
+
+# Screenshot/icon uploads to the Play Console listing are content-triggered, not tag-triggered:
+# whenever a change to the committed screenshot images lands on main - i.e. the "Update
+# screenshots" PR that screenshots.yaml opens gets merged - push exactly what's now in the repo to
+# the release package's Play Console listing. Requires the same PLAY_SERVICE_ACCOUNT_JSON secret as
+# play-store.yaml; until that's configured this fails loudly rather than silently no-op-ing.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'fastlane/metadata/android/en-US/images/**'
+  workflow_dispatch:
+
+concurrency:
+  group: play-store-images-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    name: Upload screenshots to Play Console
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Check publication credentials
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          test -n "$PLAY_SERVICE_ACCOUNT_JSON" || {
+            echo "PLAY_SERVICE_ACCOUNT_JSON is required to upload Play Console images." >&2
+            echo "Set it to the same Play Console service-account JSON key used by play-store.yaml." >&2
+            exit 1
+          }
+
+      - name: Install just
+        uses: extractions/setup-just@v3
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Install gpc (playconsole-cli)
+        # Pinned to the same version used locally (nixos-config's pkgs/playconsole-cli) so CI and
+        # local `just screenshots-upload` runs behave identically. Bump both together.
+        env:
+          GPC_VERSION: 0.5.15
+        run: |
+          curl -fsSL \
+            "https://github.com/AndroidPoet/playconsole-cli/releases/download/v${GPC_VERSION}/playconsole-cli_${GPC_VERSION}_linux_amd64.tar.gz" \
+            -o /tmp/gpc.tar.gz
+          tar -xzf /tmp/gpc.tar.gz -C /tmp playconsole-cli
+          sudo install -m 755 /tmp/playconsole-cli /usr/local/bin/gpc
+
+      - name: Authenticate gpc
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          creds_file="$(mktemp)"
+          printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > "$creds_file"
+          gpc auth login --credentials "$creds_file" --default-package dev.pschmitt.nyetbox
+          rm -f "$creds_file"
+
+      - name: Upload screenshots
+        run: just screenshots-upload

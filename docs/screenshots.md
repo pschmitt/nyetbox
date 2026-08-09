@@ -66,9 +66,17 @@ cannot overwrite phone screenshots.
 
 ## Uploading to Google Play
 
-Capturing screenshots never changes the Play Console listing. Once the generated images have been
-reviewed, authenticate `gpc` for the Play Console service account and run the explicit upload
-recipe:
+Capturing screenshots never changes the Play Console listing by itself. When a tagged release
+triggers `screenshots.yaml` with `open_pr=true` (see `release.yaml`), the refreshed images land as
+a PR with every image embedded inline in the PR body/comment for review - merging that PR is what
+publishes them: `play-store-images.yaml` triggers on any push to `main` touching
+`fastlane/metadata/android/en-US/images/**` and runs the same `just screenshots-upload` recipe
+below in CI, authenticating `gpc` from the `PLAY_SERVICE_ACCOUNT_JSON` repository secret (the same
+one `play-store.yaml` uses for bundle publishing). Nothing is uploaded until that PR is merged.
+
+To upload manually instead (e.g. outside the PR flow, or to re-push without a new commit),
+authenticate `gpc` for the Play Console service account and run the explicit upload recipe
+yourself:
 
 ```console
 gpc auth login

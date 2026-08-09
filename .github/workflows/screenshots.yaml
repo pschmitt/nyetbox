@@ -233,10 +233,9 @@ jobs:
 
       # A stable branch name (not keyed by run_id) plus a force-push means repeated dispatches
       # update the same PR in place instead of piling up a new one per run.
-      - name: Commit, force-push, and open/update the PR
+      - name: Commit and force-push
         if: ${{ steps.diff.outputs.changed == 'true' }}
-        env:
-          GH_TOKEN: ${{ secrets.WORKFLOW_PUSH_TOKEN || github.token }}
+        id: commit
         run: |
           branch="screenshots/update"
           git config user.name "github-actions[bot]"
@@ -244,9 +243,63 @@ jobs:
           git checkout -B "$branch"
           git commit -m "chore: update Play Store and README screenshots (phone, 7in, 10in tablet)"
           git push --force origin "$branch"
-          existing_pr="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      # The PR diff is just-renamed binary PNGs, next to unreviewable without opening every file -
+      # embed each one inline instead, addressed at this exact commit (not the branch, which gets
+      # force-pushed again on the next run) so a comment's images never silently change under a
+      # reviewer after the fact.
+      - name: Build inline image gallery
+        if: ${{ steps.diff.outputs.changed == 'true' }}
+        id: gallery
+        run: |
+          sha="${{ steps.commit.outputs.sha }}"
+          gallery_file="$(mktemp)"
+          for device_type in phone sevenInch tenInch; do
+            dir="fastlane/metadata/android/en-US/images/${device_type}Screenshots"
+            shopt -s nullglob
+            files=("$dir"/*.png)
+            [ ${#files[@]} -eq 0 ] && continue
+            {
+              echo "<details open>"
+              echo "<summary><strong>${device_type}</strong> (${#files[@]} images)</summary>"
+              echo
+              for f in "${files[@]}"; do
+                name="$(basename "$f")"
+                url="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${sha}/${f}"
+                printf '<img src="%s" width="200" alt="%s" title="%s">\n' "$url" "$name" "$name"
+              done
+              echo
+              echo "</details>"
+              echo
+            } >> "$gallery_file"
+          done
+          echo "path=$gallery_file" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update the PR
+        if: ${{ steps.diff.outputs.changed == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_PUSH_TOKEN || github.token }}
+          BRANCH: ${{ steps.commit.outputs.branch }}
+          GALLERY_FILE: ${{ steps.gallery.outputs.path }}
+        run: |
+          existing_pr="$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')"
+          body_file="$(mktemp)"
           if [ -n "$existing_pr" ]; then
-            gh pr comment "$existing_pr" --body "Updated with fresh screenshots from run ${{ github.run_id }}."
+            {
+              echo "Updated with fresh screenshots from run ${{ github.run_id }}."
+              echo
+              cat "$GALLERY_FILE"
+            } > "$body_file"
+            gh pr comment "$existing_pr" --body-file "$body_file"
           else
-            gh pr create --title "Update screenshots" --body "Automated screenshot refresh from the \`Screenshots\` workflow (run ${{ github.run_id }}), including README.md's gallery (phone bucket, light mode). Review the images before merging. Re-running this workflow with \`open_pr\` updates this same PR instead of opening a new one." --head "$branch" --base "${{ github.ref_name }}"
+            {
+              echo "Automated screenshot refresh from the \`Screenshots\` workflow (run ${{ github.run_id }}), including README.md's gallery (phone bucket, light mode). Review the images below before merging. Re-running this workflow with \`open_pr\` updates this same PR instead of opening a new one."
+              echo
+              echo "Merging this PR uploads the updated images to the Play Console listing automatically (see \`play-store-images.yaml\`)."
+              echo
+              cat "$GALLERY_FILE"
+            } > "$body_file"
+            gh pr create --title "Update screenshots" --body-file "$body_file" --head "$BRANCH" --base "${{ github.ref_name }}"
           fi
