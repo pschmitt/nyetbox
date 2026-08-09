@@ -98,8 +98,7 @@ class MainActivity : FragmentActivity() {
                     settingsRepository.gestureActions.collectAsStateWithLifecycle()
                 val gestureTargets by
                     settingsRepository.gestureTargets.collectAsStateWithLifecycle()
-                val shortcutItems by
-                    settingsRepository.shortcutItems.collectAsStateWithLifecycle()
+                val shortcutItems by settingsRepository.shortcutItems.collectAsStateWithLifecycle()
                 // Publishes launcher shortcuts on first composition (covering cold start) and
                 // republishes on every edit in Settings, so a reorder/add/remove takes effect
                 // without needing to relaunch the app. This is the only sync() call site.
@@ -224,7 +223,8 @@ class MainActivity : FragmentActivity() {
                     CompositionLocalProvider(LocalActivePointerCount provides activePointerCount) {
                         Box(
                             Modifier.fillMaxSize()
-                                // Exposes Compose testTags as UiAutomator/Espresso view resource-ids
+                                // Exposes Compose testTags as UiAutomator/Espresso view
+                                // resource-ids
                                 // (e.g. "e2e-search-card") - required for the :baselineprofile
                                 // module's macrobenchmark journey, which drives the app as a black
                                 // box with no Compose semantics access of its own (NBC-426). Purely

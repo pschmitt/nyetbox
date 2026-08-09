@@ -37,8 +37,8 @@ import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
 import androidx.glance.state.PreferencesGlanceStateDefinition
-import androidx.glance.text.TextStyle
 import androidx.glance.text.Text
+import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -180,7 +180,10 @@ constructor(
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         // Published immediately so an already-running composition session picks up the change
         // right away - see NyetboxGlanceWidget's class doc and RackViewConfigStore's doc.
-        rackViewConfigStore.publish(appWidgetId, RackViewInstanceConfig(rackId, rackLabel, face, compact))
+        rackViewConfigStore.publish(
+            appWidgetId,
+            RackViewInstanceConfig(rackId, rackLabel, face, compact),
+        )
         update(context, id)
         // Defensive fallback for the brand-new-widget-placement case - see
         // NyetboxGlanceWidget.saveConfig's identical comment and WidgetRefreshWorker.
@@ -199,7 +202,9 @@ constructor(
 
 private data class RackViewBlock(val deviceId: Int?, val slots: List<RackElevationEntity>)
 
-/** Merges contiguous same-device slots into one visual block - same logic as GenericDetailRack's. */
+/**
+ * Merges contiguous same-device slots into one visual block - same logic as GenericDetailRack's.
+ */
 private fun mergeRackViewSlots(slots: List<RackElevationEntity>): List<RackViewBlock> {
     val blocks = mutableListOf<RackViewBlock>()
     slots.forEach { slot ->
@@ -215,8 +220,14 @@ private fun mergeRackViewSlots(slots: List<RackElevationEntity>): List<RackViewB
 
 @Composable
 private fun EmptyState(text: String) {
-    Box(modifier = GlanceModifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-        Text(text = text, style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 14.sp))
+    Box(
+        modifier = GlanceModifier.fillMaxWidth().padding(16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 14.sp),
+        )
     }
 }
 
@@ -247,7 +258,8 @@ private fun RackViewRow(context: Context, block: RackViewBlock) {
             GlanceModifier.defaultWeight()
                 .height(blockHeight)
                 .background(
-                    if (deviceId != null) rackDeviceColor(deviceId) else GlanceTheme.colors.surfaceVariant
+                    if (deviceId != null) rackDeviceColor(deviceId)
+                    else GlanceTheme.colors.surfaceVariant
                 )
                 .cornerRadius(6.dp)
                 .padding(horizontal = 8.dp)

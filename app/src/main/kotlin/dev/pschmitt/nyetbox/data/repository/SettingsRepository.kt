@@ -164,12 +164,13 @@ enum class GestureAction(val storageKey: String, val label: String) {
             entries.firstOrNull { it.storageKey == value } ?: fallback
 
         /**
-         * Like [fromStorage], but an absent/unrecognized [value] means "nothing to dispatch"
-         * rather than silently falling back to [GlobalSearch] - used for intent extras (launcher
+         * Like [fromStorage], but an absent/unrecognized [value] means "nothing to dispatch" rather
+         * than silently falling back to [GlobalSearch] - used for intent extras (launcher
          * shortcuts, widget taps) where a missing extra genuinely means no gesture was intended.
          */
-        fun fromStorageOrNull(value: String?): GestureAction? =
-            entries.firstOrNull { it.storageKey == value }
+        fun fromStorageOrNull(value: String?): GestureAction? = entries.firstOrNull {
+            it.storageKey == value
+        }
 
         /**
          * Actions that always resolve to a [dev.pschmitt.nyetbox.ui.navigation.Route] via
@@ -937,7 +938,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
             _currentUser.value = loadCurrentUser()
             _syncIssue.value = loadSyncIssue()
             _lastSuccessfulSyncAt.value = loadLastSuccessfulSyncAt()
-        _lastSyncSummary.value = loadLastSyncSummary()
+            _lastSyncSummary.value = loadLastSyncSummary()
         }
         return removed
     }

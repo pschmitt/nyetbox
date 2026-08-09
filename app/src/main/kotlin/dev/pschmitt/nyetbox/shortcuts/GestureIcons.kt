@@ -5,11 +5,11 @@ import dev.pschmitt.nyetbox.R
 import dev.pschmitt.nyetbox.data.repository.GestureAction
 
 /**
- * A real drawable resource per [GestureAction], for surfaces that can't use a Compose
- * `ImageVector` the way in-app UI does (`iconForGestureAction`) - launcher shortcuts need a
- * self-contained icon (their own circular background baked in, since the launcher provides no
- * chrome of its own). See [drawableResForGestureActionGlyph] for the flat variant the widget's
- * `CircleIconButton`s use instead (which supplies its own background).
+ * A real drawable resource per [GestureAction], for surfaces that can't use a Compose `ImageVector`
+ * the way in-app UI does (`iconForGestureAction`) - launcher shortcuts need a self-contained icon
+ * (their own circular background baked in, since the launcher provides no chrome of its own). See
+ * [drawableResForGestureActionGlyph] for the flat variant the widget's `CircleIconButton`s use
+ * instead (which supplies its own background).
  */
 @DrawableRes
 fun drawableResForGestureAction(action: GestureAction): Int =

@@ -49,7 +49,8 @@ class WidgetConfigStore @Inject constructor() {
         publish(
             appWidgetId,
             WidgetInstanceConfig(
-                content = WidgetContent.fromStorageOrNull(prefs[KEY_CONTENT]) ?: WidgetContent.Stats,
+                content =
+                    WidgetContent.fromStorageOrNull(prefs[KEY_CONTENT]) ?: WidgetContent.Stats,
                 actions = decodeWidgetActions(prefs[KEY_ACTIONS]),
                 compact = prefs[KEY_COMPACT] ?: false,
                 showActionLabels = prefs[KEY_SHOW_ACTION_LABELS] ?: true,

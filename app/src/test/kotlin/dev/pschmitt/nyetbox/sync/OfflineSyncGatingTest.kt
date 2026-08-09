@@ -92,10 +92,34 @@ class OfflineSyncGatingTest {
     // NBC-431
     @Test
     fun `refreshes topology only on a full pass or a device or cable delta`() {
-        assertTrue(shouldRefreshTopology(isFullSyncPass = true, changedDeviceCount = 0, changedCableCount = 0))
-        assertTrue(shouldRefreshTopology(isFullSyncPass = false, changedDeviceCount = 1, changedCableCount = 0))
-        assertTrue(shouldRefreshTopology(isFullSyncPass = false, changedDeviceCount = 0, changedCableCount = 1))
-        assertFalse(shouldRefreshTopology(isFullSyncPass = false, changedDeviceCount = 0, changedCableCount = 0))
+        assertTrue(
+            shouldRefreshTopology(
+                isFullSyncPass = true,
+                changedDeviceCount = 0,
+                changedCableCount = 0,
+            )
+        )
+        assertTrue(
+            shouldRefreshTopology(
+                isFullSyncPass = false,
+                changedDeviceCount = 1,
+                changedCableCount = 0,
+            )
+        )
+        assertTrue(
+            shouldRefreshTopology(
+                isFullSyncPass = false,
+                changedDeviceCount = 0,
+                changedCableCount = 1,
+            )
+        )
+        assertFalse(
+            shouldRefreshTopology(
+                isFullSyncPass = false,
+                changedDeviceCount = 0,
+                changedCableCount = 0,
+            )
+        )
     }
 
     // NBC-432/433 (rack)
@@ -142,16 +166,30 @@ class OfflineSyncGatingTest {
     // NBC-433 (cable)
     @Test
     fun `refreshes a cable trace svg on a full pass or a changed cable row`() {
-        assertTrue(shouldRefreshCableTraceSvg(isFullSyncPass = true, cableSyncedAt = 0L, passStartedAt = 1_000L))
         assertTrue(
-            shouldRefreshCableTraceSvg(isFullSyncPass = false, cableSyncedAt = 1_000L, passStartedAt = 1_000L)
+            shouldRefreshCableTraceSvg(
+                isFullSyncPass = true,
+                cableSyncedAt = 0L,
+                passStartedAt = 1_000L,
+            )
+        )
+        assertTrue(
+            shouldRefreshCableTraceSvg(
+                isFullSyncPass = false,
+                cableSyncedAt = 1_000L,
+                passStartedAt = 1_000L,
+            )
         )
     }
 
     @Test
     fun `skips an unchanged cable's trace svg on an incremental pass`() {
         assertFalse(
-            shouldRefreshCableTraceSvg(isFullSyncPass = false, cableSyncedAt = 0L, passStartedAt = 1_000L)
+            shouldRefreshCableTraceSvg(
+                isFullSyncPass = false,
+                cableSyncedAt = 0L,
+                passStartedAt = 1_000L,
+            )
         )
     }
 }

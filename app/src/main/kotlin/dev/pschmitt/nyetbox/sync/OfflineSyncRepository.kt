@@ -95,9 +95,9 @@ private val FULL_SYNC_INTERVAL_MILLIS = TimeUnit.HOURS.toMillis(24)
 /**
  * How recently a sync pass must have completed successfully for a *new* pass to short-circuit as a
  * no-op (NBC-427) - guards against the missed-periodic-work-plus-startup-work race (WorkManager
- * starting an overdue `PeriodicWorkRequest` the moment the process comes up, then NBC-370's
- * delayed startup work firing 10s later) and against a plain rapid reopen, both of which otherwise
- * run the entire ~600-request pass again for data that cannot have changed in the interim.
+ * starting an overdue `PeriodicWorkRequest` the moment the process comes up, then NBC-370's delayed
+ * startup work firing 10s later) and against a plain rapid reopen, both of which otherwise run the
+ * entire ~600-request pass again for data that cannot have changed in the interim.
  */
 private val SYNC_FRESHNESS_WINDOW_MILLIS = TimeUnit.MINUTES.toMillis(5)
 
@@ -105,12 +105,12 @@ private val SYNC_FRESHNESS_WINDOW_MILLIS = TimeUnit.MINUTES.toMillis(5)
  * Generic-model endpoints excluded from the per-model sync loop even though
  * [dev.pschmitt.nyetbox.data.repository.DirectoryRepository] discovers them as ordinary paginated
  * collections (NBC-429). `api/core/object-changes/` has no `last_updated` field (it has `time`), so
- * [dev.pschmitt.nyetbox.data.repository.GenericObjectRepository.lastUpdatedWatermark] is permanently
- * null for it and every pass falls back to a full, unfiltered refetch of the entire changelog - the
- * fattest rows NetBox serves, and already redundant with [DashboardRepository.refreshChangelog]'s
- * own 25-most-recent fetch. `api/extras/tagged-objects/` has the same no-`last_updated` shape and the
- * same full-refetch cost, but is deliberately left alone here: its rows back tag screens and were
- * not confirmed safe to drop from this sync pass.
+ * [dev.pschmitt.nyetbox.data.repository.GenericObjectRepository.lastUpdatedWatermark] is
+ * permanently null for it and every pass falls back to a full, unfiltered refetch of the entire
+ * changelog - the fattest rows NetBox serves, and already redundant with
+ * [DashboardRepository.refreshChangelog]'s own 25-most-recent fetch. `api/extras/tagged-objects/`
+ * has the same no-`last_updated` shape and the same full-refetch cost, but is deliberately left
+ * alone here: its rows back tag screens and were not confirmed safe to drop from this sync pass.
  */
 private val SYNC_EXCLUDED_ENDPOINTS = setOf("api/core/object-changes/")
 
@@ -125,7 +125,9 @@ internal fun shouldSkipSyncPass(
         now - (lastSuccessfulSyncAt ?: 0L) < SYNC_FRESHNESS_WINDOW_MILLIS &&
         !hasQueuedMutations
 
-/** NBC-429: whether [endpointPath] can never be synced incrementally, see [SYNC_EXCLUDED_ENDPOINTS]. */
+/**
+ * NBC-429: whether [endpointPath] can never be synced incrementally, see [SYNC_EXCLUDED_ENDPOINTS].
+ */
 internal fun isSyncExcluded(endpointPath: String): Boolean = endpointPath in SYNC_EXCLUDED_ENDPOINTS
 
 /** NBC-430: whether the model directory needs a real re-discovery this pass. */
@@ -149,8 +151,7 @@ internal fun shouldRefreshRackData(
     rackSyncedAt: Long,
     passStartedAt: Long,
     changedDeviceCountInRack: Int,
-): Boolean =
-    isFullSyncPass || rackSyncedAt >= passStartedAt || changedDeviceCountInRack > 0
+): Boolean = isFullSyncPass || rackSyncedAt >= passStartedAt || changedDeviceCountInRack > 0
 
 /** NBC-433: whether a cable's trace SVG needs refreshing this pass. */
 internal fun shouldRefreshCableTraceSvg(
@@ -354,17 +355,16 @@ constructor(
             // (re)placed/removed - both bump last_updated, which the incremental fetches above
             // already picked up (syncedAt >= passStartedAt). Computed once and shared with the
             // rack-face SVG loop below (NBC-433), which needs the exact same decision.
-            val rackDataChanged =
-                racks.associate { rack ->
-                    rack.id to
-                        shouldRefreshRackData(
-                            isFullSyncPass = isFullSyncPass,
-                            rackSyncedAt = rack.syncedAt,
-                            passStartedAt = passStartedAt,
-                            changedDeviceCountInRack =
-                                deviceRepository.countChangedInRack(rack.id, passStartedAt),
-                        )
-                }
+            val rackDataChanged = racks.associate { rack ->
+                rack.id to
+                    shouldRefreshRackData(
+                        isFullSyncPass = isFullSyncPass,
+                        rackSyncedAt = rack.syncedAt,
+                        passStartedAt = passStartedAt,
+                        changedDeviceCountInRack =
+                            deviceRepository.countChangedInRack(rack.id, passStartedAt),
+                    )
+            }
             racks.syncConcurrently(concurrency) { rack ->
                 val needsRefresh =
                     rackDataChanged.getValue(rack.id) || !rackElevationRepository.hasCached(rack.id)
@@ -389,7 +389,8 @@ constructor(
                         // plus always fetching a diagram this rack has no persisted copy of yet
                         // (a freshly-enabled "sync attachments to disk", or a cleared cache).
                         val needsRefresh =
-                            rackDataChanged.getValue(rack.id) || !svgDiagramRepository.isCached(cacheKey)
+                            rackDataChanged.getValue(rack.id) ||
+                                !svgDiagramRepository.isCached(cacheKey)
                         if (!needsRefresh) continue
                         svgDiagramRepository
                             .refresh(
@@ -412,8 +413,11 @@ constructor(
                         // NBC-433: an unchanged cable (and its terminations, which bump the
                         // cable's own row in NetBox) cannot have a changed trace.
                         val needsRefresh =
-                            shouldRefreshCableTraceSvg(isFullSyncPass, cable.syncedAt, passStartedAt) ||
-                                !svgDiagramRepository.isCached(cacheKey)
+                            shouldRefreshCableTraceSvg(
+                                isFullSyncPass,
+                                cable.syncedAt,
+                                passStartedAt,
+                            ) || !svgDiagramRepository.isCached(cacheKey)
                         if (!needsRefresh) return@syncConcurrently
                         svgDiagramRepository
                             .refresh("$endpointPath$id/trace/?render=svg", cacheKey)
@@ -494,7 +498,8 @@ constructor(
                     LastSyncSummary(
                         isFullSync = isFullSyncPass,
                         durationMillis = System.currentTimeMillis() - passStartedAt,
-                        itemsRefreshed = result.getOrNull()?.let { it.devices + it.genericObjects } ?: 0,
+                        itemsRefreshed =
+                            result.getOrNull()?.let { it.devices + it.genericObjects } ?: 0,
                     )
                 )
             }
@@ -603,7 +608,11 @@ constructor(
             // attachment to catch NetBox-side replacements under the same URL, most of which come
             // back a near-zero-byte 304.
             fileDownloadRepository
-                .downloadToPersistent(attachment.url, attachment.filename, revalidate = isFullSyncPass)
+                .downloadToPersistent(
+                    attachment.url,
+                    attachment.filename,
+                    revalidate = isFullSyncPass,
+                )
                 .onSuccess { onProgress(downloaded.incrementAndGet(), attachments.size) }
                 .onFailure { error ->
                     Timber.w(error, "Couldn't persist offline attachment %s", attachment.url)

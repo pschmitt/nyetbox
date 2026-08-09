@@ -189,8 +189,9 @@ private class FakeDeviceDao(private val devices: List<DeviceEntity>) : DeviceDao
 
     override suspend fun pruneStale(cutoff: Long) = error("unused")
 
-    override suspend fun countChangedInRack(rackId: Int, cutoff: Long): Int =
-        devices.count { it.rackId == rackId && it.syncedAt >= cutoff }
+    override suspend fun countChangedInRack(rackId: Int, cutoff: Long): Int = devices.count {
+        it.rackId == rackId && it.syncedAt >= cutoff
+    }
 }
 
 private class FakeNetBoxApi : NetBoxApi {

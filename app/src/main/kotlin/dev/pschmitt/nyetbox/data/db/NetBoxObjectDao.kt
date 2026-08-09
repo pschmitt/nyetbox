@@ -15,6 +15,7 @@ interface NetBoxObjectDao {
         "SELECT id, frontImageUrl FROM netbox_objects WHERE endpointPath = :endpointPath AND frontImageUrl IS NOT NULL"
     )
     fun observeThumbnails(endpointPath: String): Flow<List<ObjectThumbnail>>
+
     @Query(
         "SELECT * FROM netbox_objects WHERE endpointPath = :endpointPath ORDER BY display COLLATE NOCASE"
     )

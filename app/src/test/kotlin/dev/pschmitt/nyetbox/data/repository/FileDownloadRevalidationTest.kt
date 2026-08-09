@@ -78,7 +78,9 @@ class FileDownloadRevalidationTest {
     @Test
     fun `revalidate skips the download when a non-304 HEAD still reports an unchanged Content-Length`() {
         val target = File(tempDir, "target").apply { writeText("cached") }
-        server.enqueue(MockResponse().setResponseCode(200).setHeader("Content-Length", target.length()))
+        server.enqueue(
+            MockResponse().setResponseCode(200).setHeader("Content-Length", target.length())
+        )
 
         val result =
             downloadOrRevalidate(client, server.url("/file").toString(), target, revalidate = true)

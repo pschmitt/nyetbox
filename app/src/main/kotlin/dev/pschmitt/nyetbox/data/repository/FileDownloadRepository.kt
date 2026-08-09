@@ -19,8 +19,8 @@ import okhttp3.Request
  * The actual download-or-revalidate mechanics behind [FileDownloadRepository.downloadToPersistent]
  * (NBC-434), pulled out as a plain, `Context`-free function so it can be unit tested directly
  * against a [okhttp3.mockwebserver.MockWebServer] instead of needing an Android `Context` (this
- * project has no Robolectric) to reach a real cache directory. Must run on a background dispatcher -
- * callers are responsible for that, same as before this was extracted.
+ * project has no Robolectric) to reach a real cache directory. Must run on a background
+ * dispatcher - callers are responsible for that, same as before this was extracted.
  *
  * Verified live against a real deployment (netbox.brkn.lol): its media server ignores
  * `If-Modified-Since` entirely and always answers 200 with the full body, even when the file is
@@ -61,31 +61,33 @@ internal fun downloadOrRevalidate(
  * 304 directly; otherwise falls back to comparing the HEAD response's `Content-Length` against the
  * cached file's size, which is the only signal a non-compliant server (confirmed live: NetBox's own
  * `/media/` static-file serving) gives us for free. A HEAD that fails outright (network error, 405
- * Method Not Allowed, no `Content-Length` header) is treated as "can't tell, redownload" rather than
- * risking silently keeping stale content.
+ * Method Not Allowed, no `Content-Length` header) is treated as "can't tell, redownload" rather
+ * than risking silently keeping stale content.
  */
 private fun isUnchangedByHead(okHttpClient: OkHttpClient, url: String, target: File): Boolean =
     runCatching {
-            val request =
-                Request.Builder()
-                    .url(url)
-                    .head()
-                    .header("If-Modified-Since", httpDate(target.lastModified()))
-                    .build()
-            okHttpClient.newCall(request).execute().use { response ->
-                when {
-                    response.code == 304 -> true
-                    response.isSuccessful ->
-                        response.header("Content-Length")?.toLongOrNull() == target.length()
-                    else -> false
-                }
+        val request =
+            Request.Builder()
+                .url(url)
+                .head()
+                .header("If-Modified-Since", httpDate(target.lastModified()))
+                .build()
+        okHttpClient.newCall(request).execute().use { response ->
+            when {
+                response.code == 304 -> true
+                response.isSuccessful ->
+                    response.header("Content-Length")?.toLongOrNull() == target.length()
+                else -> false
             }
         }
-        .getOrDefault(false)
+    }
+    .getOrDefault(false)
 
 /** RFC 1123 (`If-Modified-Since`-compatible) rendering of an epoch-millis timestamp. */
 internal fun httpDate(epochMillis: Long): String =
-    DateTimeFormatter.RFC_1123_DATE_TIME.format(Instant.ofEpochMilli(epochMillis).atZone(ZoneOffset.UTC))
+    DateTimeFormatter.RFC_1123_DATE_TIME.format(
+        Instant.ofEpochMilli(epochMillis).atZone(ZoneOffset.UTC)
+    )
 
 /**
  * Downloads a NetBox attachment (document, image, ...) to the app's cache dir, ready to be opened
@@ -150,7 +152,9 @@ constructor(
         revalidate: Boolean = false,
     ): Result<File> =
         withContext(Dispatchers.IO) {
-            runCatching { downloadOrRevalidate(okHttpClient, url, persistentPath(url, filename), revalidate) }
+            runCatching {
+                downloadOrRevalidate(okHttpClient, url, persistentPath(url, filename), revalidate)
+            }
         }
 
     /** Stores a generated or API-exported artifact alongside durable attachments. */

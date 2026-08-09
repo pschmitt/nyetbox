@@ -130,7 +130,8 @@ internal fun ActionTargetPickerDialog(
     }
     val filteredObjects by
         remember(detailModel?.endpointPath, targetQuery) {
-                detailModel?.let { objectChoices(it.endpointPath, targetQuery) } ?: flowOf(emptyList())
+                detailModel?.let { objectChoices(it.endpointPath, targetQuery) }
+                    ?: flowOf(emptyList())
             }
             .collectAsState(initial = emptyList())
     AlertDialog(

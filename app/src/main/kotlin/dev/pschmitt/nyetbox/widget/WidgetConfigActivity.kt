@@ -22,9 +22,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -100,7 +100,9 @@ constructor(
     val models: StateFlow<List<NetBoxModelEntity>> =
         directoryRepository
             .observeAll()
-            .map { models -> models.distinctBy { it.endpointPath }.sortedBy { it.modelLabel.lowercase() } }
+            .map { models ->
+                models.distinctBy { it.endpointPath }.sortedBy { it.modelLabel.lowercase() }
+            }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /** See [GenericObjectRepository.observeObjectChoices] - backs [ActionTargetPickerDialog]. */
@@ -119,10 +121,14 @@ constructor(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val deviceCount: StateFlow<Int> =
-        deviceRepository.observeCount().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+        deviceRepository
+            .observeCount()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val statusText: StateFlow<String> =
-        combine(settingsRepository.syncIssue, settingsRepository.lastSuccessfulSyncAt) { issue, lastSync ->
+        combine(settingsRepository.syncIssue, settingsRepository.lastSuccessfulSyncAt) {
+                issue,
+                lastSync ->
                 issue?.message ?: formatRelativeSyncTime(lastSync, System.currentTimeMillis())
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
@@ -179,7 +185,8 @@ class WidgetConfigActivity : ComponentActivity() {
                             PreferencesGlanceStateDefinition,
                             glanceId,
                         )
-                    content = WidgetContent.fromStorageOrNull(prefs[KEY_CONTENT]) ?: WidgetContent.Stats
+                    content =
+                        WidgetContent.fromStorageOrNull(prefs[KEY_CONTENT]) ?: WidgetContent.Stats
                     actions = decodeWidgetActions(prefs[KEY_ACTIONS])
                     compact = prefs[KEY_COMPACT] ?: false
                     showActionLabels = prefs[KEY_SHOW_ACTION_LABELS] ?: true
@@ -211,7 +218,8 @@ class WidgetConfigActivity : ComponentActivity() {
                                 )
                                 setResult(
                                     RESULT_OK,
-                                    Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId),
+                                    Intent()
+                                        .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId),
                                 )
                                 finish()
                             }
@@ -277,7 +285,10 @@ private fun WidgetConfigScreen(
                 ListItem(
                     modifier = Modifier.clickable { onContentChange(option) },
                     leadingContent = {
-                        RadioButton(selected = content == option, onClick = { onContentChange(option) })
+                        RadioButton(
+                            selected = content == option,
+                            onClick = { onContentChange(option) },
+                        )
                     },
                     headlineContent = { Text(option.label) },
                 )
@@ -301,11 +312,15 @@ private fun WidgetConfigScreen(
             if (actions.isNotEmpty()) {
                 item {
                     ListItem(
-                        modifier = Modifier.clickable { onShowActionLabelsChange(!showActionLabels) },
+                        modifier =
+                            Modifier.clickable { onShowActionLabelsChange(!showActionLabels) },
                         headlineContent = { Text("Show labels") },
                         supportingContent = { Text("Show each action's name under its button") },
                         trailingContent = {
-                            Switch(checked = showActionLabels, onCheckedChange = onShowActionLabelsChange)
+                            Switch(
+                                checked = showActionLabels,
+                                onCheckedChange = onShowActionLabelsChange,
+                            )
                         },
                     )
                 }
@@ -343,7 +358,10 @@ private fun WidgetConfigScreen(
                                 DropdownMenuItem(
                                     text = { Text(candidate.label) },
                                     leadingIcon = {
-                                        Icon(iconForGestureAction(candidate), contentDescription = null)
+                                        Icon(
+                                            iconForGestureAction(candidate),
+                                            contentDescription = null,
+                                        )
                                     },
                                     onClick = {
                                         addMenuExpanded = false
@@ -373,7 +391,10 @@ private fun WidgetConfigScreen(
                     actions +
                         NavBarItem(
                             action,
-                            GestureTarget(endpointPath = model.endpointPath, label = model.modelLabel),
+                            GestureTarget(
+                                endpointPath = model.endpointPath,
+                                label = model.modelLabel,
+                            ),
                         )
                 )
                 pickerAction = null
@@ -445,7 +466,11 @@ private fun WidgetPreviewCard(
             }
             when (content) {
                 WidgetContent.Stats ->
-                    PreviewStatsRow(offlineMode = offlineMode, statusText = statusText, deviceCount = deviceCount)
+                    PreviewStatsRow(
+                        offlineMode = offlineMode,
+                        statusText = statusText,
+                        deviceCount = deviceCount,
+                    )
                 WidgetContent.Bookmarks ->
                     PreviewObjectRows(
                         rows =
@@ -503,7 +528,10 @@ private fun WidgetPreviewCard(
 private fun PreviewStatsRow(offlineMode: Boolean, statusText: String, deviceCount: Int) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = if (offlineMode) "Offline" else "Synced", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = if (offlineMode) "Offline" else "Synced",
+                style = MaterialTheme.typography.bodyLarge,
+            )
             Text(text = statusText, style = MaterialTheme.typography.bodySmall)
         }
         Spacer(modifier = Modifier.width(12.dp))
@@ -542,7 +570,9 @@ private fun PreviewObjectRows(rows: List<PreviewRow>, emptyText: String) {
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        imageVector = row.endpointPath?.let { AppIcons.forEndpointPath(it) } ?: Icons.AutoMirrored.Filled.List,
+                        imageVector =
+                            row.endpointPath?.let { AppIcons.forEndpointPath(it) }
+                                ?: Icons.AutoMirrored.Filled.List,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSecondaryContainer,
                         modifier = Modifier.size(16.dp),
@@ -550,8 +580,16 @@ private fun PreviewObjectRows(rows: List<PreviewRow>, emptyText: String) {
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(text = row.primary, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
-                    Text(text = row.secondary, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                    Text(
+                        text = row.primary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = row.secondary,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                    )
                 }
             }
         }

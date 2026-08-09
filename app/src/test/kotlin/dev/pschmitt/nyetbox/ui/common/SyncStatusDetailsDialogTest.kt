@@ -16,7 +16,10 @@ class SyncStatusDetailsDialogTest {
                 itemsRefreshed = 3,
             )
 
-        assertEquals("Last sync: quick check · 58s · 3 items refreshed", formatLastSyncSummary(summary))
+        assertEquals(
+            "Last sync: quick check · 58s · 3 items refreshed",
+            formatLastSyncSummary(summary),
+        )
     }
 
     @Test
@@ -28,13 +31,20 @@ class SyncStatusDetailsDialogTest {
                 itemsRefreshed = 512,
             )
 
-        assertEquals("Last sync: full sync · 4m · 512 items refreshed", formatLastSyncSummary(summary))
+        assertEquals(
+            "Last sync: full sync · 4m · 512 items refreshed",
+            formatLastSyncSummary(summary),
+        )
     }
 
     @Test
     fun `uses singular item wording for exactly one refreshed item`() {
-        val summary = LastSyncSummary(isFullSync = false, durationMillis = 1_000L, itemsRefreshed = 1)
+        val summary =
+            LastSyncSummary(isFullSync = false, durationMillis = 1_000L, itemsRefreshed = 1)
 
-        assertEquals("Last sync: quick check · 1s · 1 item refreshed", formatLastSyncSummary(summary))
+        assertEquals(
+            "Last sync: quick check · 1s · 1 item refreshed",
+            formatLastSyncSummary(summary),
+        )
     }
 }

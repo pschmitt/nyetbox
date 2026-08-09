@@ -157,7 +157,10 @@ class GenericObjectRepositoryTest {
 
         repository.cacheLocalObject(
             NetBoxRef.DEVICE_TYPES_ENDPOINT_PATH,
-            deviceTypeObject(id = 1, frontImage = "https://netbox.example/media/devicetype-images/x.jpg"),
+            deviceTypeObject(
+                id = 1,
+                frontImage = "https://netbox.example/media/devicetype-images/x.jpg",
+            ),
         )
 
         assertEquals(

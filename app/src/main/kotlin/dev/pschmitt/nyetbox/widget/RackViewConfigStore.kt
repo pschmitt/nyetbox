@@ -21,10 +21,10 @@ data class RackViewInstanceConfig(
 
 /**
  * In-memory overlay on top of each rack-view widget instance's persisted config, keyed by the
- * platform app widget id - the same pattern as [WidgetConfigStore], for the same reason: a
- * one-shot `getAppWidgetState` read in `provideGlance` is invisible to a composition session
- * that's already running, since `update()`/`updateAll()` don't restart `provideGlance` for a live
- * session. See [WidgetConfigStore]'s doc for the full explanation.
+ * platform app widget id - the same pattern as [WidgetConfigStore], for the same reason: a one-shot
+ * `getAppWidgetState` read in `provideGlance` is invisible to a composition session that's already
+ * running, since `update()`/`updateAll()` don't restart `provideGlance` for a live session. See
+ * [WidgetConfigStore]'s doc for the full explanation.
  */
 @Singleton
 class RackViewConfigStore @Inject constructor() {
@@ -49,7 +49,9 @@ class RackViewConfigStore @Inject constructor() {
             RackViewInstanceConfig(
                 rackId = prefs[KEY_RACK_ID],
                 rackLabel = prefs[KEY_RACK_LABEL] ?: "",
-                face = if (prefs[KEY_RACK_FACE] == RackFace.REAR.apiValue) RackFace.REAR else RackFace.FRONT,
+                face =
+                    if (prefs[KEY_RACK_FACE] == RackFace.REAR.apiValue) RackFace.REAR
+                    else RackFace.FRONT,
                 compact = prefs[KEY_RACK_COMPACT] ?: false,
             ),
         )

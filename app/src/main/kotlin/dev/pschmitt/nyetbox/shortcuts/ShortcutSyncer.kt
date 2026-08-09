@@ -18,8 +18,8 @@ import kotlinx.coroutines.withContext
 /**
  * Publishes [SettingsRepository.shortcutItems] as launcher long-press shortcuts, using
  * [ShortcutManagerCompat.setDynamicShortcuts] so the whole list is replaced atomically every time
- * it changes - reordering, adding, or removing a shortcut in Settings takes effect without the
- * user needing to relaunch the app.
+ * it changes - reordering, adding, or removing a shortcut in Settings takes effect without the user
+ * needing to relaunch the app.
  */
 @Singleton
 class ShortcutSyncer
@@ -47,7 +47,9 @@ constructor(
         return ShortcutInfoCompat.Builder(context, "shortcut_$index")
             .setShortLabel(label)
             .setLongLabel(label)
-            .setIcon(IconCompat.createWithResource(context, drawableResForGestureAction(item.action)))
+            .setIcon(
+                IconCompat.createWithResource(context, drawableResForGestureAction(item.action))
+            )
             .setIntent(intent)
             .setRank(index)
             .build()

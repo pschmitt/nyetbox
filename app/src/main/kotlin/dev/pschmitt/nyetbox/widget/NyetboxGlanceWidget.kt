@@ -97,8 +97,9 @@ enum class WidgetContent(val storageKey: String, val label: String) {
     RecentChanges("recent_changes", "Recent changes");
 
     companion object {
-        fun fromStorageOrNull(value: String?): WidgetContent? =
-            entries.firstOrNull { it.storageKey == value }
+        fun fromStorageOrNull(value: String?): WidgetContent? = entries.firstOrNull {
+            it.storageKey == value
+        }
     }
 }
 
@@ -108,8 +109,8 @@ internal fun encodeWidgetActions(actions: List<NavBarItem>): String =
 internal fun decodeWidgetActions(value: String?): List<NavBarItem> {
     if (value.isNullOrBlank()) return emptyList()
     return runCatching {
-            Json.decodeFromString(ListSerializer(NavBarItem.serializer()), value)
-        }
+        Json.decodeFromString(ListSerializer(NavBarItem.serializer()), value)
+    }
         .getOrNull() ?: emptyList()
 }
 
@@ -167,25 +168,25 @@ constructor(
                 // remember: .map builds a new Flow instance on every call, so it must be memoized
                 // rather than created inline in the composition - otherwise collectAsState would
                 // restart its collection from a fresh Flow on every recomposition.
-                val bookmarksFlow =
-                    remember {
-                        dashboardRepository
-                            .observeBookmarks()
-                            .map { it.take(MAX_FETCHED_ROWS) }
-                            .distinctUntilChanged()
-                            .debounce(500)
-                    }
+                val bookmarksFlow = remember {
+                    dashboardRepository
+                        .observeBookmarks()
+                        .map { it.take(MAX_FETCHED_ROWS) }
+                        .distinctUntilChanged()
+                        .debounce(500)
+                }
                 val bookmarks by bookmarksFlow.collectAsState(initial = emptyList())
-                val changesFlow =
-                    remember {
-                        dashboardRepository
-                            .observeChangelog()
-                            .map { it.take(MAX_FETCHED_ROWS) }
-                            .distinctUntilChanged()
-                            .debounce(500)
-                    }
+                val changesFlow = remember {
+                    dashboardRepository
+                        .observeChangelog()
+                        .map { it.take(MAX_FETCHED_ROWS) }
+                        .distinctUntilChanged()
+                        .debounce(500)
+                }
                 val changes by changesFlow.collectAsState(initial = emptyList())
-                val deviceCountFlow = remember { deviceRepository.observeCount().distinctUntilChanged() }
+                val deviceCountFlow = remember {
+                    deviceRepository.observeCount().distinctUntilChanged()
+                }
                 val deviceCount by deviceCountFlow.collectAsState(initial = 0)
                 val syncIssue by settingsRepository.syncIssue.collectAsState()
                 val lastSuccessfulSyncAt by settingsRepository.lastSuccessfulSyncAt.collectAsState()
@@ -241,7 +242,8 @@ constructor(
                                 .clickable(actionStartActivity(dashboardIntent))
                     ) {
                         when (config.content) {
-                            WidgetContent.Stats -> StatsContent(size, offlineMode, syncStatusText, deviceCount)
+                            WidgetContent.Stats ->
+                                StatsContent(size, offlineMode, syncStatusText, deviceCount)
                             WidgetContent.Bookmarks ->
                                 BookmarksContent(context, bookmarks, size, headerReserve)
                             WidgetContent.RecentChanges ->
@@ -254,7 +256,8 @@ constructor(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 visibleActions.forEachIndexed { index, item ->
-                                    if (index > 0) Spacer(modifier = GlanceModifier.width(ACTION_BUTTON_GAP))
+                                    if (index > 0)
+                                        Spacer(modifier = GlanceModifier.width(ACTION_BUTTON_GAP))
                                     ActionButton(context, item, buttonSize, config.showActionLabels)
                                 }
                             }
@@ -295,7 +298,8 @@ constructor(
         // which point placement has completed and a real update takes effect. See
         // WidgetRefreshWorker. Also confirmed: for a widget this fresh,
         // GlanceAppWidgetManager.getGlanceIds() (which the fallback relies on to find it) may not
-        // enumerate it yet even a few seconds in, so this schedules two attempts rather than one, to
+        // enumerate it yet even a few seconds in, so this schedules two attempts rather than one,
+        // to
         // cover both a quick settle and a slower one.
         workManager.enqueue(
             OneTimeWorkRequestBuilder<WidgetRefreshWorker>()
@@ -389,7 +393,10 @@ private fun StatsContent(
             chip()
         }
     } else {
-        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Box(modifier = GlanceModifier.defaultWeight()) { statusBlock() }
             Spacer(modifier = GlanceModifier.width(12.dp))
             chip()
@@ -534,7 +541,9 @@ private fun ObjectRow(
 @Composable
 private fun ActionButton(context: Context, item: NavBarItem, buttonSize: Dp, showLabel: Boolean) {
     val intent =
-        Intent(context, MainActivity::class.java).apply { putGestureExtras(item.action, item.target) }
+        Intent(context, MainActivity::class.java).apply {
+            putGestureExtras(item.action, item.target)
+        }
     val label = item.target?.label ?: item.action.label
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,

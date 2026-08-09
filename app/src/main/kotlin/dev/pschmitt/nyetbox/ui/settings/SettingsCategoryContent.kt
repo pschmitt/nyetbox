@@ -950,7 +950,10 @@ private fun NavBarSettingsContent(state: SettingsCategoryState, actions: Setting
 }
 
 @Composable
-private fun ShortcutSettingsContent(state: SettingsCategoryState, actions: SettingsCategoryActions) {
+private fun ShortcutSettingsContent(
+    state: SettingsCategoryState,
+    actions: SettingsCategoryActions,
+) {
     var pickerAction by remember { mutableStateOf<GestureAction?>(null) }
     var addMenuExpanded by remember { mutableStateOf(false) }
     val items = state.shortcutItems

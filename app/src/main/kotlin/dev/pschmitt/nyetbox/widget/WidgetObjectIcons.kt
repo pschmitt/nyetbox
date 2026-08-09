@@ -5,9 +5,9 @@ import dev.pschmitt.nyetbox.R
 
 /**
  * [dev.pschmitt.nyetbox.ui.directory.AppIcons]'s exact same per-app-namespace/endpoint mapping,
- * mirrored here as drawable resource ids instead of Compose `ImageVector`s - Glance's `Image`
- * can't render an `ImageVector` directly, so the widget's bookmark/change rows need a real
- * resource to match what the app itself would show for that object type.
+ * mirrored here as drawable resource ids instead of Compose `ImageVector`s - Glance's `Image` can't
+ * render an `ImageVector` directly, so the widget's bookmark/change rows need a real resource to
+ * match what the app itself would show for that object type.
  */
 internal object WidgetObjectIcons {
     private val BY_APP_KEY: Map<String, Int> =

@@ -140,7 +140,8 @@ class RackViewWidgetConfigActivity : ComponentActivity() {
 
                 LaunchedEffect(Unit) {
                     val glanceId =
-                        GlanceAppWidgetManager(this@RackViewWidgetConfigActivity).getGlanceIdBy(appWidgetId)
+                        GlanceAppWidgetManager(this@RackViewWidgetConfigActivity)
+                            .getGlanceIdBy(appWidgetId)
                     val prefs =
                         getAppWidgetState(
                             this@RackViewWidgetConfigActivity,
@@ -149,7 +150,9 @@ class RackViewWidgetConfigActivity : ComponentActivity() {
                         )
                     rackId = prefs[KEY_RACK_ID]
                     rackLabel = prefs[KEY_RACK_LABEL] ?: ""
-                    face = if (prefs[KEY_RACK_FACE] == RackFace.REAR.apiValue) RackFace.REAR else RackFace.FRONT
+                    face =
+                        if (prefs[KEY_RACK_FACE] == RackFace.REAR.apiValue) RackFace.REAR
+                        else RackFace.FRONT
                     compact = prefs[KEY_RACK_COMPACT] ?: false
                     loaded = true
                 }
@@ -158,7 +161,10 @@ class RackViewWidgetConfigActivity : ComponentActivity() {
                     RackViewConfigScreen(
                         rackId = rackId,
                         rackLabel = rackLabel,
-                        onRackSelected = { id, label -> rackId = id; rackLabel = label },
+                        onRackSelected = { id, label ->
+                            rackId = id
+                            rackLabel = label
+                        },
                         face = face,
                         onFaceChange = { face = it },
                         compact = compact,
@@ -179,7 +185,8 @@ class RackViewWidgetConfigActivity : ComponentActivity() {
                                 )
                                 setResult(
                                     RESULT_OK,
-                                    Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId),
+                                    Intent()
+                                        .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId),
                                 )
                                 finish()
                             }
@@ -254,7 +261,9 @@ private fun RackViewConfigScreen(
                     modifier = Modifier.clickable { onCompactChange(!compact) },
                     headlineContent = { Text("Compact mode") },
                     supportingContent = { Text("Hide the title bar to fit more content") },
-                    trailingContent = { Switch(checked = compact, onCheckedChange = onCompactChange) },
+                    trailingContent = {
+                        Switch(checked = compact, onCheckedChange = onCompactChange)
+                    },
                 )
             }
         }
@@ -279,12 +288,11 @@ private fun RackPickerDialog(
     onRackSelected: (NetBoxObjectEntity) -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
-    val filtered =
-        racks.filter { rack ->
-            query.isBlank() ||
-                rack.display.contains(query, ignoreCase = true) ||
-                rack.secondaryLine.orEmpty().contains(query, ignoreCase = true)
-        }
+    val filtered = racks.filter { rack ->
+        query.isBlank() ||
+            rack.display.contains(query, ignoreCase = true) ||
+            rack.secondaryLine.orEmpty().contains(query, ignoreCase = true)
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Choose a rack") },
@@ -309,7 +317,9 @@ private fun RackPickerDialog(
                     items(filtered) { rack ->
                         ListItem(
                             modifier = Modifier.clickable { onRackSelected(rack) },
-                            leadingContent = { Icon(Icons.Default.Storage, contentDescription = null) },
+                            leadingContent = {
+                                Icon(Icons.Default.Storage, contentDescription = null)
+                            },
                             headlineContent = { Text(rack.display) },
                             supportingContent = { rack.secondaryLine?.let { Text(it) } },
                         )
@@ -359,7 +369,10 @@ private fun RackViewPreviewCard(
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(rackLabel.ifBlank { "Rack view" }, style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        rackLabel.ifBlank { "Rack view" },
+                        style = MaterialTheme.typography.titleSmall,
+                    )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
             }

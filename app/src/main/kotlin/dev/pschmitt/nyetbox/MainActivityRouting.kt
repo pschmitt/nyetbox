@@ -79,10 +79,10 @@ const val EXTRA_GESTURE_ACTION = "dev.pschmitt.nyetbox.extra.GESTURE_ACTION"
 const val EXTRA_GESTURE_TARGET = "dev.pschmitt.nyetbox.extra.GESTURE_TARGET"
 
 /**
- * Encodes a [GestureAction] (+ optional [GestureTarget]) as intent extras so launcher shortcuts
- * and widget taps - both of which must hand Android a plain [Intent] rather than call into
- * Compose directly - resolve through the exact same [routeForGesture] as an in-app gesture
- * shortcut, instead of each inventing its own routing.
+ * Encodes a [GestureAction] (+ optional [GestureTarget]) as intent extras so launcher shortcuts and
+ * widget taps - both of which must hand Android a plain [Intent] rather than call into Compose
+ * directly - resolve through the exact same [routeForGesture] as an in-app gesture shortcut,
+ * instead of each inventing its own routing.
  */
 fun Intent.putGestureExtras(action: GestureAction, target: GestureTarget?): Intent = apply {
     this.action = ACTION_GESTURE

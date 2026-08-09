@@ -24,9 +24,10 @@ const val BENCHMARK_SEED_ACTION = "dev.pschmitt.nyetbox.benchmark.SEED"
 
 /**
  * Logcat marker emitted once [BenchmarkSeedReceiver] finishes - the `:baselineprofile` module's
- * generator polls logcat for this the same way [dev.pschmitt.nyetbox.data.repository.E2E_SYNC_COMPLETE_MARKER]
- * is polled by the instrumented E2E journeys (`NetBoxJourneyTest.waitForLogcatMarker`), since a
- * plain `BroadcastReceiver` has no result channel a shell-invoked `am broadcast` can wait on.
+ * generator polls logcat for this the same way
+ * [dev.pschmitt.nyetbox.data.repository.E2E_SYNC_COMPLETE_MARKER] is polled by the instrumented E2E
+ * journeys (`NetBoxJourneyTest.waitForLogcatMarker`), since a plain `BroadcastReceiver` has no
+ * result channel a shell-invoked `am broadcast` can wait on.
  */
 const val BENCHMARK_SEED_COMPLETE_MARKER = "NYETBOX_BENCHMARK_SEED_COMPLETE"
 
@@ -36,29 +37,28 @@ private const val FIXTURE_TOKEN = "benchmark-fixture-token"
 
 /**
  * The androidx.baselineprofile plugin's build types this receiver may legitimately act on -
- * `benchmarkRelease` (the real profile-collection run) and `nonMinifiedRelease` (a correctness
- * pass `generateBaselineProfile` also runs against, on a debuggable-adjacent variant closer to
- * Studio's own profiler). Compiled into `main` (all build types, including real `release`) since
- * Gradle source sets can't easily target two specific non-default build types without
- * duplicating this file - see the runtime guard below instead.
+ * `benchmarkRelease` (the real profile-collection run) and `nonMinifiedRelease` (a correctness pass
+ * `generateBaselineProfile` also runs against, on a debuggable-adjacent variant closer to Studio's
+ * own profiler). Compiled into `main` (all build types, including real `release`) since Gradle
+ * source sets can't easily target two specific non-default build types without duplicating this
+ * file - see the runtime guard below instead.
  */
 private val BENCHMARK_BUILD_TYPES = setOf("benchmarkRelease", "nonMinifiedRelease")
 
 /**
  * A no-op on the real `debug`/`release` builds shipped to users (see [BENCHMARK_BUILD_TYPES]) -
  * lets the `:baselineprofile` module's [androidx.benchmark.macro.junit4.BaselineProfileRule]
- * journey start from an already-configured, already-synced Dashboard instead of driving
- * onboarding through a live NetBox instance every generation run. `BaselineProfileRule` drives
- * the target app as a black box via UiAutomator with no Compose semantics access of its own, and
- * this app's onboarding has no non-UI shortcut otherwise (credentials persist through
- * [SettingsRepository]'s `EncryptedSharedPreferences`, which can't be pre-seeded from outside the
- * app's own process) - so the generator's setup step instead force-stops the app, `am broadcast`s
- * this receiver to configure a fixture server profile and seed a few cache rows directly via the
- * real repository/DAO write paths, then relaunches for the actual profiled cold start. See
- * NBC-426.
+ * journey start from an already-configured, already-synced Dashboard instead of driving onboarding
+ * through a live NetBox instance every generation run. `BaselineProfileRule` drives the target app
+ * as a black box via UiAutomator with no Compose semantics access of its own, and this app's
+ * onboarding has no non-UI shortcut otherwise (credentials persist through [SettingsRepository]'s
+ * `EncryptedSharedPreferences`, which can't be pre-seeded from outside the app's own process) - so
+ * the generator's setup step instead force-stops the app, `am broadcast`s this receiver to
+ * configure a fixture server profile and seed a few cache rows directly via the real repository/DAO
+ * write paths, then relaunches for the actual profiled cold start. See NBC-426.
  *
- * Logs via [android.util.Log], not Timber: [dev.pschmitt.nyetbox.NyetboxApp.onCreate] only plants
- * a Timber tree for `BuildConfig.DEBUG` builds, and this receiver only ever does anything on the
+ * Logs via [android.util.Log], not Timber: [dev.pschmitt.nyetbox.NyetboxApp.onCreate] only plants a
+ * Timber tree for `BuildConfig.DEBUG` builds, and this receiver only ever does anything on the
  * non-debuggable `benchmarkRelease`/`nonMinifiedRelease` build types, where Timber would be a
  * silent no-op.
  */
