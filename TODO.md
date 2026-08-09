@@ -8934,3 +8934,60 @@ build-script changes needed).
 Status: **done**, 2026-08-09; verified via `aapt2 dump badging` (both variants) and live on a
 physical device, including a revision after direct feedback that the first approach (background
 tint) wasn't drastic enough.
+
+## NBC-437: sync progress wording shortened; dashboard Stats row got a scroll hint and became
+user-customizable
+
+Three related follow-ups requested directly:
+
+1. `SyncProgress.notificationSubText()` said "Step X of Y" in both the system notification and the
+   dashboard sync card (they share this one function, NBC-370 plumbing) - shortened to "X/Y".
+2. The dashboard's Stats row (`StatsRow` in `DashboardScreen.kt`) is a `LazyRow` of fixed-size
+   tiles that can land on a screen width fitting exactly N of them with nothing peeking past the
+   edge - it read as "that's all the stats" even though more were a swipe away, and a tile's own
+   card background is the same color as the surrounding section card, so a naive fade-to-background
+   edge was invisible wherever nothing happened to be cut off right at the boundary (confirmed live
+   - direct feedback that a first attempt wasn't visible enough).
+3. Only 4 of the 9 shared core-model stat candidates (`NetBoxEndpointCatalog.coreModels`) were ever
+   fetched/shown, hardcoded, with no way to change that.
+
+- [x] Notification/card wording: `notificationSubText()` now emits `"${step}/${totalSteps}"`
+      instead of `"Step $step of $totalSteps"`. Updated `SyncStatusCardTest`/`SyncProgressTest`
+      assertions to match.
+- [x] Scroll hint: `StatsRow` now wraps its `LazyRow` in a `Box` and, when
+      `LazyListState.canScrollForward`/`canScrollBackward`, overlays a `MaterialTheme.colorScheme
+      .scrim`-based gradient (visible against any backdrop, not just a half-cut tile) plus a small
+      `KeyboardArrowRight` chevron on the trailing edge - shown/hidden live as the row actually
+      scrolls, not a static decoration.
+- [x] `DashboardRepository.STAT_ENDPOINTS` now covers every `NetBoxEndpointCatalog.coreModels`
+      entry (9, was 4) so a count is ready in cache the moment a user opts one in, not just the
+      four that used to be the only choices.
+- [x] `SettingsRepository.statsOrder`/`hiddenStats` (mirrors `dashboardSectionOrder`/
+      `hiddenDashboardSections` exactly: `loadOrder`/`updateStringSet`, `setStatsOrder`/
+      `setStatHidden`, included in `resetToDefaults()`, `SettingsBackup` export/import, and the
+      portable settings backup format). `DEFAULT_HIDDEN_STATS` = every core model past index 4, so
+      an existing install's dashboard doesn't suddenly sprout five new tiles unasked.
+- [x] `DashboardOrdering.kt` gained `orderedStats()` (mirrors `orderedDashboardSections`, ties break
+      on the registry's own order) and `orderedStatCandidates()` (every candidate, hidden or not,
+      for the picker). `DashboardScreen` applies `orderedStats(stats, statsSavedOrder, hiddenStats)`
+      before passing the list to `StatsRow`, same pattern as the existing dashboard-section
+      ordering.
+- [x] "Customize stats" entry point: a `Tune` icon button on the Stats section header (always
+      visible, not gated behind the existing whole-dashboard reorder mode) opens
+      `StatsCustomizeDialog` - a vertical checklist (drag handle + checkbox + label per candidate)
+      reusing `SectionReorderState`/`sectionReorderGesture`/`sectionDragOffset` verbatim, since that
+      helper already operates on a plain scroll-axis offset/size and needed no horizontal variant
+      for this vertical list.
+- [x] Unit tests: `DashboardOrderingTest` gained cases for `orderedStats`/`orderedStatCandidates`
+      (no-saved-order fallback to registry order, saved order wins, hidden stays omitted, picker
+      includes hidden candidates).
+- [x] Verified remotely: `:app:compileDebugKotlin` and the full `:app:testDebugUnitTest` suite pass.
+- [x] Verified live on the Zenfone 10: "X/Y" wording confirmed in a real sync's dashboard card;
+      chevron+scrim hint appears exactly when `canScrollForward` is true and disappears at the true
+      end of the row (confirmed by scrolling incrementally); "Customize stats" dialog opens, toggling
+      "IP Addresses" on immediately surfaced a real cached count (130) after scrolling to it, and
+      "Done" closes the dialog.
+
+Status: **done**, 2026-08-09; implemented, unit tested, and confirmed live on a physical device for
+all three parts, including a revision of the scroll hint after direct feedback that the first
+(fade-only) version wasn't visible enough.

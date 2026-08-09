@@ -64,6 +64,8 @@ data class SettingsBackupSettings(
     val hiddenSidebarApps: Set<String> = emptySet(),
     val dashboardSectionOrder: List<String> = emptyList(),
     val hiddenDashboardSections: Set<String> = emptySet(),
+    val statsOrder: List<String> = emptyList(),
+    val hiddenStats: Set<String> = emptySet(),
     val showTopologyDeviceTypeImages: Boolean = true,
     val topologyNodePositions: Map<String, TopologyPosition> = emptyMap(),
     val scheduledBackupEnabled: Boolean = false,
@@ -213,6 +215,8 @@ constructor(
                     hiddenSidebarApps = settingsRepository.hiddenSidebarApps.value,
                     dashboardSectionOrder = settingsRepository.dashboardSectionOrder.value,
                     hiddenDashboardSections = settingsRepository.hiddenDashboardSections.value,
+                    statsOrder = settingsRepository.statsOrder.value,
+                    hiddenStats = settingsRepository.hiddenStats.value,
                     showTopologyDeviceTypeImages =
                         settingsRepository.showTopologyDeviceTypeImages.value,
                     topologyNodePositions = settingsRepository.topologyNodePositions.value,

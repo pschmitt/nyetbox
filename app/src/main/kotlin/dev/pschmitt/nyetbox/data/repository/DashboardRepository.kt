@@ -205,11 +205,14 @@ constructor(
         // with the list serializer's summary-only representation.
         const val OBJECT_CHANGE_CACHE_PATH = "__cache/object-changes/"
 
-        // Kept small and cheap (`?limit=1`, only `count` is read, no full sync) - "a handful of
-        // key models," not an exhaustive sweep of NetBox's data model. Picked models this app
-        // already deals with elsewhere (typed Device/DeviceType caches from NBC-1/NBC-3).
+        // Kept small and cheap (`?limit=1`, only `count` is read, no full sync) - every entry in
+        // the shared core-model registry, not an exhaustive sweep of NetBox's data model. Which of
+        // these actually show on the dashboard (and in what order) is a user choice - see
+        // SettingsRepository.statsOrder/hiddenStats and DashboardOrdering.orderedStats - so all of
+        // them need a cached count ready to show the moment a user opts one in, not just the four
+        // that used to be hardcoded as the only choices.
         val STAT_ENDPOINTS =
-            NetBoxEndpointCatalog.coreModels.take(4).map { it.endpointPath to it.label }
+            NetBoxEndpointCatalog.coreModels.map { it.endpointPath to it.label }
     }
 }
 

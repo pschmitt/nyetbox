@@ -5,6 +5,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.pschmitt.nyetbox.data.backup.SettingsBackupSettings
+import dev.pschmitt.nyetbox.data.schema.NetBoxEndpointCatalog
 import dev.pschmitt.nyetbox.data.schema.NetBoxRef
 import dev.pschmitt.nyetbox.data.topology.TopologyPosition
 import java.util.UUID
@@ -423,6 +424,15 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
     private val _hiddenDashboardSections = MutableStateFlow(loadHiddenDashboardSections())
     val hiddenDashboardSections: StateFlow<Set<String>> = _hiddenDashboardSections.asStateFlow()
 
+    private val _statsOrder = MutableStateFlow(loadOrder(KEY_STATS_ORDER))
+    val statsOrder: StateFlow<List<String>> = _statsOrder.asStateFlow()
+
+    // Preserves existing behavior for installs from before the dashboard's stat tiles became
+    // user-choosable (NBC-437): only the four that used to be hardcoded stay visible by default,
+    // the rest opt-in.
+    private val _hiddenStats = MutableStateFlow(loadHiddenStats())
+    val hiddenStats: StateFlow<Set<String>> = _hiddenStats.asStateFlow()
+
     private val _showTopologyDeviceTypeImages =
         MutableStateFlow(prefs.getBoolean(KEY_SHOW_TOPOLOGY_DEVICE_TYPE_IMAGES, true))
     val showTopologyDeviceTypeImages: StateFlow<Boolean> =
@@ -742,6 +752,18 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         _hiddenDashboardSections.value = updated
     }
 
+    fun setStatsOrder(order: List<String>) {
+        val normalized = order.distinct().filter(String::isNotBlank)
+        prefs.edit().putString(KEY_STATS_ORDER, normalized.joinToString(ORDER_SEPARATOR)).apply()
+        _statsOrder.value = normalized
+    }
+
+    fun setStatHidden(endpointPath: String, hidden: Boolean) {
+        val updated = updateStringSet(_hiddenStats.value, endpointPath, hidden)
+        prefs.edit().putStringSet(KEY_HIDDEN_STATS, updated).apply()
+        _hiddenStats.value = updated
+    }
+
     fun setShowTopologyDeviceTypeImages(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_SHOW_TOPOLOGY_DEVICE_TYPE_IMAGES, enabled).apply()
         _showTopologyDeviceTypeImages.value = enabled
@@ -996,6 +1018,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         _sidebarModelOrders.value = emptyMap()
         _dashboardSectionOrder.value = emptyList()
         _hiddenDashboardSections.value = DEFAULT_HIDDEN_DASHBOARD_SECTIONS
+        _statsOrder.value = emptyList()
+        _hiddenStats.value = DEFAULT_HIDDEN_STATS
         _showTopologyDeviceTypeImages.value = true
         _topologyNodePositions.value = emptyMap()
         _changeNotificationsEnabled.value = false
@@ -1067,6 +1091,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         settings.hiddenSidebarApps.forEach { setSidebarAppHidden(it, true) }
         setDashboardSectionOrder(settings.dashboardSectionOrder)
         settings.hiddenDashboardSections.forEach { setDashboardSectionHidden(it, true) }
+        setStatsOrder(settings.statsOrder)
+        settings.hiddenStats.forEach { setStatHidden(it, true) }
         setShowTopologyDeviceTypeImages(settings.showTopologyDeviceTypeImages)
         settings.topologyNodePositions.forEach { (nodeId, position) ->
             setTopologyNodePosition(nodeId, position)
@@ -1437,6 +1463,9 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         prefs.getStringSet(KEY_HIDDEN_DASHBOARD_SECTIONS, null)?.toSet()
             ?: DEFAULT_HIDDEN_DASHBOARD_SECTIONS
 
+    private fun loadHiddenStats(): Set<String> =
+        prefs.getStringSet(KEY_HIDDEN_STATS, null)?.toSet() ?: DEFAULT_HIDDEN_STATS
+
     private fun loadTopologyNodePositions(): Map<String, TopologyPosition> =
         prefs
             .getString(KEY_TOPOLOGY_NODE_POSITIONS, null)
@@ -1533,6 +1562,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         const val KEY_HIDDEN_SIDEBAR_APPS = "hidden_sidebar_apps"
         const val KEY_DASHBOARD_SECTION_ORDER = "dashboard_section_order"
         const val KEY_HIDDEN_DASHBOARD_SECTIONS = "hidden_dashboard_sections"
+        const val KEY_STATS_ORDER = "stats_order"
+        const val KEY_HIDDEN_STATS = "hidden_stats"
         const val KEY_SHOW_TOPOLOGY_DEVICE_TYPE_IMAGES = "show_topology_device_type_images"
         const val KEY_TOPOLOGY_NODE_POSITIONS = "topology_node_positions"
         const val KEY_SCHEDULED_BACKUP_ENABLED = "scheduled_backup_enabled"
@@ -1542,6 +1573,12 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         const val KEY_LAST_BACKUP_AT = "last_backup_at"
         const val KEY_BACKUP_ERROR = "backup_error"
         val DEFAULT_HIDDEN_DASHBOARD_SECTIONS = setOf("news")
+        // Only the four stat tiles that used to be the entire, hardcoded set (Devices, Device
+        // Types, Sites, Racks) stay visible by default (NBC-437) - the rest of the shared
+        // core-model registry is opt-in, so an existing install's dashboard doesn't suddenly
+        // sprout five new tiles it never asked for.
+        val DEFAULT_HIDDEN_STATS =
+            NetBoxEndpointCatalog.coreModels.drop(4).map { it.endpointPath }.toSet()
         const val ORDER_SEPARATOR = "\u001F"
         const val ITEM_SEPARATOR = "\u001E"
         const val MODEL_ENTRY_SEPARATOR = "\u001D"

@@ -15,9 +15,11 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,6 +29,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.BarChart
@@ -36,6 +39,7 @@ import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Difference
 import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -43,6 +47,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
@@ -72,6 +77,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -161,6 +167,8 @@ fun DashboardScreen(
     val activeServer by viewModel.activeServer.collectAsStateWithLifecycle()
     val dashboardSavedOrder by viewModel.dashboardSectionOrder.collectAsStateWithLifecycle()
     val hiddenDashboardSections by viewModel.hiddenDashboardSections.collectAsStateWithLifecycle()
+    val statsSavedOrder by viewModel.statsOrder.collectAsStateWithLifecycle()
+    val hiddenStats by viewModel.hiddenStats.collectAsStateWithLifecycle()
     val objectTypeAccents by viewModel.objectTypeAccents.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -170,10 +178,12 @@ fun DashboardScreen(
             hidden = hiddenDashboardSections,
         )
     val dashboardOrder = dashboardSections.map { it.key }
+    val orderedStatsList = orderedStats(stats, statsSavedOrder, hiddenStats)
     val dashboardListState = rememberLazyListState()
     val dashboardReorderState = rememberSectionReorderState()
     var dashboardReorderMode by remember { mutableStateOf(false) }
     var showDashboardVisibilityDialog by remember { mutableStateOf(false) }
+    var showStatsCustomizeDialog by remember { mutableStateOf(false) }
     var recentVisitsExpanded by remember { mutableStateOf(false) }
     var recentChangesExpanded by remember { mutableStateOf(false) }
     var syncIssueDetails by remember { mutableStateOf<SyncIssue?>(null) }
@@ -400,16 +410,20 @@ fun DashboardScreen(
                                 dashboardReorderMode = true
                             },
                             onOrderChanged = viewModel::setDashboardSectionOrder,
+                            onCustomize =
+                                if (section == DashboardSection.Stats) {
+                                    { showStatsCustomizeDialog = true }
+                                } else null,
                         ) {
                             when (section) {
                                 DashboardSection.Stats -> {
-                                    if (stats.isEmpty()) {
+                                    if (orderedStatsList.isEmpty()) {
                                         EmptyHint(
                                             isRefreshing,
                                             "No stats cached yet - pull to sync",
                                         )
                                     } else {
-                                        StatsRow(stats, objectTypeAccents, onStatClick)
+                                        StatsRow(orderedStatsList, objectTypeAccents, onStatClick)
                                     }
                                 }
                                 DashboardSection.Search ->
@@ -614,6 +628,16 @@ fun DashboardScreen(
         )
     }
 
+    if (showStatsCustomizeDialog) {
+        StatsCustomizeDialog(
+            order = statsSavedOrder,
+            hidden = hiddenStats,
+            onOrderChanged = viewModel::setStatsOrder,
+            onToggleHidden = { key, hidden -> viewModel.setStatHidden(key, hidden) },
+            onDismiss = { showStatsCustomizeDialog = false },
+        )
+    }
+
     syncIssueDetails?.let { issue ->
         SyncIssueDetailsDialog(
             issue = issue,
@@ -653,6 +677,7 @@ private fun DashboardSectionContainer(
     onEnterReorder: () -> Unit,
     onHide: () -> Unit,
     onOrderChanged: (List<String>) -> Unit,
+    onCustomize: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
@@ -682,6 +707,7 @@ private fun DashboardSectionContainer(
                     reorderMode = reorderMode,
                     onLongPress = onEnterReorder,
                     onHide = onHide,
+                    onCustomize = onCustomize,
                 )
                 Column(Modifier.padding(horizontal = 8.dp)) { content() }
             }
@@ -697,6 +723,7 @@ private fun DashboardSectionHeader(
     reorderMode: Boolean,
     onLongPress: () -> Unit,
     onHide: () -> Unit,
+    onCustomize: (() -> Unit)? = null,
 ) {
     val wiggle = rememberReorderWiggle(reorderMode)
     Row(
@@ -727,6 +754,11 @@ private fun DashboardSectionHeader(
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.weight(1f),
         )
+        if (onCustomize != null) {
+            IconButton(onClick = onCustomize) {
+                Icon(Icons.Default.Tune, contentDescription = "Customize ${section.title}")
+            }
+        }
         if (reorderMode) {
             IconButton(onClick = onHide) {
                 Icon(Icons.Default.VisibilityOff, contentDescription = "Hide ${section.title}")
@@ -790,6 +822,67 @@ private fun InitialSyncOverlay(syncProgress: SyncProgress?) {
             }
         }
     }
+}
+
+/**
+ * NBC-437: which stat tiles show on the dashboard, and in what order. A vertical checklist
+ * (drag handle to reorder, checkbox to show/hide) reusing [SectionReorderState] as-is - it already
+ * operates on a plain scroll-axis offset/size, so the same helper built for the dashboard's
+ * vertical section list works unchanged here, no horizontal-drag variant needed.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun StatsCustomizeDialog(
+    order: List<String>,
+    hidden: Set<String>,
+    onOrderChanged: (List<String>) -> Unit,
+    onToggleHidden: (String, Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val candidates = orderedStatCandidates(order)
+    val keys = candidates.map { it.endpointPath }
+    val listState = rememberLazyListState()
+    val reorderState = rememberSectionReorderState()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Default.Tune, contentDescription = null) },
+        title = { Text("Customize stats") },
+        text = {
+            LazyColumn(state = listState, modifier = Modifier.heightIn(max = 400.dp)) {
+                items(candidates, key = { it.endpointPath }) { candidate ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .sectionDragOffset(candidate.endpointPath, reorderState),
+                    ) {
+                        Icon(
+                            Icons.Default.DragHandle,
+                            contentDescription = "Drag to reorder ${candidate.label}",
+                            modifier =
+                                Modifier.padding(end = 12.dp)
+                                    .sectionReorderGesture(
+                                        key = candidate.endpointPath,
+                                        order = keys,
+                                        listState = listState,
+                                        state = reorderState,
+                                        onOrderChanged = onOrderChanged,
+                                    ),
+                        )
+                        Checkbox(
+                            checked = candidate.endpointPath !in hidden,
+                            onCheckedChange = { visible ->
+                                onToggleHidden(candidate.endpointPath, !visible)
+                            },
+                        )
+                        Text(candidate.label)
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } },
+    )
 }
 
 @Composable
@@ -872,16 +965,48 @@ private fun StatsRow(
     objectTypeAccents: Map<String, dev.pschmitt.nyetbox.data.repository.ThemeAccent>,
     onStatClick: (String, String) -> Unit,
 ) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        items(stats, key = { it.endpointPath }) { stat ->
-            StatTile(
-                stat,
-                typeColor =
-                    MaterialTheme.colorScheme.detailAccentFor(
-                        stat.endpointPath,
-                        objectTypeAccents[stat.endpointPath.trim('/')],
-                    ),
-                onClick = { onStatClick(stat.endpointPath, stat.label) },
+    val listState = rememberLazyListState()
+    val scrim = MaterialTheme.colorScheme.scrim
+    Box {
+        LazyRow(state = listState, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(stats, key = { it.endpointPath }) { stat ->
+                StatTile(
+                    stat,
+                    typeColor =
+                        MaterialTheme.colorScheme.detailAccentFor(
+                            stat.endpointPath,
+                            objectTypeAccents[stat.endpointPath.trim('/')],
+                        ),
+                    onClick = { onStatClick(stat.endpointPath, stat.label) },
+                )
+            }
+        }
+        // Fixed-width tiles can land on a screen width that fits exactly N of them with nothing
+        // peeking past the edge, so the row reads as "that's all of them" even though it scrolls -
+        // and a tile's own card background is the same color as the surrounding section card, so a
+        // fade-to-background-color edge is invisible wherever nothing happens to be cut off right
+        // at the boundary. A scrim (visible against any backdrop, tile or bare card background)
+        // plus a chevron reads unambiguously as "more this way" instead. Only shown on whichever
+        // side there's actually more content, not permanently.
+        if (listState.canScrollForward) {
+            Box(
+                Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(32.dp).background(
+                    Brush.horizontalGradient(listOf(scrim.copy(alpha = 0f), scrim.copy(alpha = 0.28f)))
+                ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = "More stats - scroll right",
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+        if (listState.canScrollBackward) {
+            Box(
+                Modifier.align(Alignment.CenterStart).fillMaxHeight().width(24.dp).background(
+                    Brush.horizontalGradient(listOf(scrim.copy(alpha = 0.28f), scrim.copy(alpha = 0f)))
+                )
             )
         }
     }

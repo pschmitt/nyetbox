@@ -83,6 +83,8 @@ constructor(
     val lastSyncSummary = settingsRepository.lastSyncSummary
     val dashboardSectionOrder = settingsRepository.dashboardSectionOrder
     val hiddenDashboardSections = settingsRepository.hiddenDashboardSections
+    val statsOrder = settingsRepository.statsOrder
+    val hiddenStats = settingsRepository.hiddenStats
     val objectTypeAccents = settingsRepository.objectTypeAccents
 
     val modelsByEndpointPath: StateFlow<Map<String, NetBoxModelEntity>> =
@@ -218,6 +220,14 @@ constructor(
 
     fun setDashboardSectionHidden(sectionKey: String, hidden: Boolean) {
         settingsRepository.setDashboardSectionHidden(sectionKey, hidden)
+    }
+
+    fun setStatsOrder(order: List<String>) {
+        settingsRepository.setStatsOrder(order)
+    }
+
+    fun setStatHidden(endpointPath: String, hidden: Boolean) {
+        settingsRepository.setStatHidden(endpointPath, hidden)
     }
 
     fun thumbnailFor(
