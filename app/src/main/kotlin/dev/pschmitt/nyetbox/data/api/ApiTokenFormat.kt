@@ -34,6 +34,6 @@ fun parseNamedApiToken(token: String): NamedApiToken? {
     )
 }
 
-const val NAMED_API_TOKEN_PREFIX = "nbp_"
+const val NAMED_API_TOKEN_PREFIX = "nbt_"
 
 private val NAMED_API_TOKEN_REGEX = Regex("^(nbp_|nbt_)([^.\\s]+)\\.([^.\\s]+)$")

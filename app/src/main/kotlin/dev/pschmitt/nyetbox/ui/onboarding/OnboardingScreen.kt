@@ -95,7 +95,6 @@ fun OnboardingScreen(
             mutableStateOf(
                 when (parsedInitialToken?.prefix) {
                     NAMED_API_TOKEN_PREFIX -> parsedInitialToken.value
-                    "nbt_" -> initialSetup?.token.orEmpty()
                     else -> initialSetup?.token.orEmpty()
                 }
             )
@@ -297,7 +296,7 @@ fun OnboardingScreen(
             Text(
                 if (tokenMode == TokenEntryMode.Split) {
                     "Recommended: enter the token name and secret separately. We’ll send " +
-                        "nbp_<name>.<token>."
+                        "nbt_<name>.<token>."
                 } else {
                     "Paste a complete token for an existing connection or an older NetBox instance."
                 },
@@ -346,7 +345,7 @@ fun OnboardingScreen(
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "Uses: nbp_${tokenName.ifBlank { "<name>" }}.${if (tokenValue.isBlank()) "<token>" else "••••••••"}",
+                    "Uses: nbt_${tokenName.ifBlank { "<name>" }}.${if (tokenValue.isBlank()) "<token>" else "••••••••"}",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -355,7 +354,7 @@ fun OnboardingScreen(
                     value = tokenValue,
                     onValueChange = { tokenValue = it },
                     label = { Text("Full API token") },
-                    placeholder = { Text("nbp_token-name.secret") },
+                    placeholder = { Text("nbt_token-name.secret") },
                     leadingIcon = { Icon(Icons.Default.Key, contentDescription = null) },
                     singleLine = true,
                     visualTransformation =

@@ -80,6 +80,27 @@ listing actually looks like.
 You need your own NetBox instance and an API token (NetBox profile → API Tokens). Enter the
 instance URL and token on first launch.
 
+For headless provisioning, generate a login QR code from a checkout (or directly from the flake).
+Pass a complete token as `--token`:
+
+```console
+nix run .#nyetbox-setup -- --url https://netbox.example.com --token 'nbt_...'
+```
+
+NetBox also exposes new tokens as separate name and secret fields. The CLI accepts that form too
+and composes the current `nbt_<name>.<secret>` token format:
+
+```console
+nix run .#nyetbox-setup -- \
+  --url https://netbox.example.com \
+  --token-name home-phone \
+  --token 'secret-value'
+```
+
+The QR is rendered in the terminal. Use `--output setup.png` to write an image instead. The QR
+contains the API token, so treat the terminal output or image as a secret and scan it only on a
+trusted device.
+
 ## Releases
 
 APK releases are published through GitHub Releases. A separate, manual Play Store workflow can

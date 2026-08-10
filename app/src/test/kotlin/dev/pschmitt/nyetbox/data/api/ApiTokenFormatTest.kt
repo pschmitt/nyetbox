@@ -8,7 +8,7 @@ class ApiTokenFormatTest {
     @Test
     fun `composes the current named token format`() {
         assertEquals(
-            "nbp_home-phone.secret-value",
+            "nbt_home-phone.secret-value",
             composeNamedApiToken(" home-phone ", " secret-value "),
         )
     }
@@ -16,12 +16,12 @@ class ApiTokenFormatTest {
     @Test
     fun `parses both current and legacy named token prefixes`() {
         assertEquals(
-            NamedApiToken("nbp_", "home-phone", "secret-value"),
-            parseNamedApiToken(" nbp_home-phone.secret-value "),
+            NamedApiToken("nbt_", "home-phone", "secret-value"),
+            parseNamedApiToken(" nbt_home-phone.secret-value "),
         )
         assertEquals(
-            NamedApiToken("nbt_", "legacy", "secret"),
-            parseNamedApiToken("nbt_legacy.secret"),
+            NamedApiToken("nbp_", "legacy", "secret"),
+            parseNamedApiToken("nbp_legacy.secret"),
         )
     }
 

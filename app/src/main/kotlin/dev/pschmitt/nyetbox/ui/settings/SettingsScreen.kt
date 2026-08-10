@@ -44,6 +44,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -66,6 +67,7 @@ fun SettingsScreen(
 ) {
     val offlineMode by viewModel.settingsRepository.offlineMode.collectAsStateWithLifecycle()
     Scaffold(
+        modifier = Modifier.testTag("e2e-settings-screen"),
         topBar = {
             TopAppBar(
                 title = { Text("Settings") },
@@ -75,7 +77,7 @@ fun SettingsScreen(
                     }
                 },
             )
-        }
+        },
     ) { padding ->
         Column(
             Modifier.fillMaxSize()

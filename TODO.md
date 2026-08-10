@@ -9006,3 +9006,38 @@ all three parts, including three rounds of revision after direct feedback: the s
 (fade-only) version wasn't visible enough, then its `canScrollForward`/`canScrollBackward` trigger
 was imprecise and its tint too bright, and the catalog was widened further with the customize icon
 moved behind reorder mode.
+
+## NBC-438: provide a CLI for generating Nyetbox login QR codes
+
+Add a small `nyetbox-setup` command for administrators who want to provision the app from a
+terminal instead of opening an already-configured Nyetbox installation. It accepts a NetBox URL
+and API token, emits the same `nyetbox://setup` payload understood by the app, and renders it as a
+terminal QR code (with an optional image output for printing or sharing).
+
+- [x] Add the `nyetbox-setup` command and its flake package.
+- [x] Document local and `nix run` usage, including the token-in-QR security warning.
+- [x] Support both complete-token and split name/secret input forms.
+- [x] Verify argument validation, payload compatibility, and QR rendering.
+
+Status: **done**, 2026-08-10; verified with Bash/ShellCheck, a remote Nix package build producing a
+terminal QR and PNG, payload decode checks, and the existing remote Android unit suite.
+
+## NBC-439: split-token onboarding used the obsolete `nbp_` prefix
+
+The Pixel 5 reproduced a real onboarding failure: the split token form displayed and submitted
+`nbp_<name>.<secret>`, while the current NetBox token format is `nbt_<name>.<secret>`. The parser
+already accepted both prefixes, but the composer and its UI documentation still treated `nbp_` as
+current, so a newly entered token was rejected by NetBox.
+
+- [x] Make `nbt_` the current composed prefix while retaining `nbp_` parsing for legacy tokens.
+- [x] Update onboarding guidance/placeholders and unit-test expectations.
+- [x] Verify remotely and deploy a debug build to the Pixel 5 without clearing app data.
+
+Status: **done**, 2026-08-10; verified with remote compile/unit tests/ktfmt check and installed the
+debug variant alongside the release app on PX5 (no uninstall or data wipe).
+## NBC-440: Fix PR E2E settings navigation assertion
+
+- [x] Target the drawer's icon-only Settings action by a dedicated test tag.
+- [x] Wait for the Settings screen itself instead of relying on its app-bar text.
+
+Status: in progress (2026-08-10; awaiting GitHub PR CI)

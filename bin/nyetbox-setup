@@ -1,0 +1,166 @@
+#!/usr/bin/env bash
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") --url NETBOX_URL --token TOKEN [--token-name NAME] [--output FILE]
+
+Generate a Nyetbox login QR code containing the NetBox URL and API token.
+
+Options:
+  --url URL       NetBox base URL, including http:// or https://
+  --token TOKEN   Complete API token, or secret when --token-name is supplied
+  --token-name NAME
+                  Token name for split input; composes nbt_NAME.TOKEN
+  -o, --output FILE
+                  Write a QR image to FILE instead of the terminal
+  -h, --help      Show this help
+
+The token is included in the QR code. Only display or share it with trusted people.
+EOF
+}
+
+error() {
+  printf 'nyetbox-setup: %s\n' "$1" >&2
+  usage >&2
+}
+
+build_payload() {
+  local url=$1
+  local token=$2
+  local token_name=$3
+
+  python3 - "$url" "$token" "$token_name" <<'PY'
+import base64
+import json
+import sys
+import time
+from urllib.parse import urlparse
+
+url = sys.argv[1].strip()
+token = sys.argv[2].strip()
+token_name = sys.argv[3].strip()
+parsed = urlparse(url)
+
+if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+    raise SystemExit("the URL must include an http:// or https:// scheme and a host")
+if not token:
+    raise SystemExit("the token must not be empty")
+if token_name:
+    token_name = token_name.removeprefix("nbt_")
+    if (
+        not token_name
+        or any(char.isspace() or char == "." for char in token_name)
+        or any(char.isspace() or char == "." for char in token)
+    ):
+        raise SystemExit("split token name and secret must not contain whitespace or dots")
+    token = f"nbt_{token_name}.{token}"
+
+# Keep this object in the same field order and compact JSON shape as the Android codec. The
+# current Kotlin serializer omits `version` because it has its default value; the decoder fills it
+# back in as version 1. Including it would also decode, but matching the app keeps the QR payload
+# stable and as small as possible.
+envelope = {
+    "createdAt": int(time.time() * 1000),
+    "baseUrl": url,
+    "token": token,
+}
+encoded = json.dumps(envelope, ensure_ascii=False, separators=(",", ":")).encode()
+payload = base64.urlsafe_b64encode(encoded).rstrip(b"=").decode("ascii")
+print(f"nyetbox://setup?p={payload}")
+PY
+}
+
+main() {
+  local url=
+  local token=
+  local token_name=
+  local output=
+
+  while [[ $# -gt 0 ]]
+  do
+    case "$1" in
+      -h|--help)
+        usage
+        return 0
+        ;;
+      --url)
+        if [[ $# -lt 2 || -z "$2" ]]
+        then
+          error "--url requires a value"
+          return 2
+        fi
+        url=$2
+        shift 2
+        ;;
+      --token)
+        if [[ $# -lt 2 || -z "$2" ]]
+        then
+          error "--token requires a value"
+          return 2
+        fi
+        token=$2
+        shift 2
+        ;;
+      --token-name)
+        if [[ $# -lt 2 || -z "$2" ]]
+        then
+          error "--token-name requires a value"
+          return 2
+        fi
+        token_name=$2
+        shift 2
+        ;;
+      -o|--output)
+        if [[ $# -lt 2 || -z "$2" ]]
+        then
+          error "--output requires a file path"
+          return 2
+        fi
+        output=$2
+        shift 2
+        ;;
+      *)
+        error "unknown argument: $1"
+        return 2
+        ;;
+    esac
+  done
+
+  if [[ -z "$url" ]]
+  then
+    error "--url is required"
+    return 2
+  fi
+  if [[ -z "$token" ]]
+  then
+    error "--token is required"
+    return 2
+  fi
+  if [[ -n "$token_name" && "$token" == *.* ]]
+  then
+    error "--token must be the secret when --token-name is supplied"
+    return 2
+  fi
+
+  local payload
+  if ! payload=$(build_payload "$url" "$token" "$token_name")
+  then
+    error "could not create setup payload"
+    return 2
+  fi
+
+  if [[ -n "$output" ]]
+  then
+    qrencode -o "$output" "$payload"
+    printf 'Wrote Nyetbox setup QR code to %s\n' "$output" >&2
+  else
+    qrencode -t ANSIUTF8 "$payload"
+  fi
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]
+then
+  main "$@"
+fi
+
+# vim: set ft=sh et ts=2 sw=2 :

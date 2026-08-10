@@ -571,7 +571,10 @@ private fun SidebarFooter(
                 )
             }
         }
-        IconButton(onClick = onSettingsClick) {
+        IconButton(
+            modifier = Modifier.testTag("e2e-settings-action"),
+            onClick = onSettingsClick,
+        ) {
             Icon(Icons.Default.Settings, contentDescription = "Settings")
         }
     }
