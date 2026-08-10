@@ -9037,6 +9037,7 @@ Status: **done**, 2026-08-10; verified with remote compile/unit tests/ktfmt chec
 debug variant alongside the release app on PX5 (no uninstall or data wipe).
 ## NBC-440: Fix PR E2E settings navigation assertion
 
-- [x] Target the drawer's icon-only Settings action by its accessibility label.
+- [x] Target the drawer's icon-only Settings action by a dedicated test tag.
+- [x] Wait for the Settings screen itself instead of relying on its app-bar text.
 
 Status: in progress (2026-08-10; awaiting GitHub PR CI)
