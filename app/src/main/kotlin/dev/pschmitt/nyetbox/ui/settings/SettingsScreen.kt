@@ -77,7 +77,7 @@ fun SettingsScreen(
                     }
                 },
             )
-        }
+        },
     ) { padding ->
         Column(
             Modifier.fillMaxSize()
