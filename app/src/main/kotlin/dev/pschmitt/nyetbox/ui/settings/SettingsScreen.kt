@@ -126,8 +126,9 @@ fun SettingsScreen(
 private fun SettingsCategoryRow(category: SettingsCategory, onClick: (SettingsCategory) -> Unit) {
     SettingsListItem(
         modifier =
-            Modifier.testTag("e2e-settings-category-${category.name.lowercase()}")
-                .clickable { onClick(category) },
+            Modifier.testTag("e2e-settings-category-${category.name.lowercase()}").clickable {
+                onClick(category)
+            },
         leadingContent = { Icon(category.icon, contentDescription = null) },
         headlineContent = { Text(category.title) },
         supportingContent = { Text(category.subtitle) },
