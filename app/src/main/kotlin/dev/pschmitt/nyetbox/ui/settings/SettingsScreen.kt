@@ -125,7 +125,9 @@ fun SettingsScreen(
 @Composable
 private fun SettingsCategoryRow(category: SettingsCategory, onClick: (SettingsCategory) -> Unit) {
     SettingsListItem(
-        modifier = Modifier.clickable { onClick(category) },
+        modifier =
+            Modifier.testTag("e2e-settings-category-${category.name.lowercase()}")
+                .clickable { onClick(category) },
         leadingContent = { Icon(category.icon, contentDescription = null) },
         headlineContent = { Text(category.title) },
         supportingContent = { Text(category.subtitle) },
@@ -459,6 +461,7 @@ fun SettingsCategoryScreen(
     }
 
     Scaffold(
+        modifier = Modifier.testTag("e2e-settings-category-screen"),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(

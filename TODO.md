@@ -9039,5 +9039,6 @@ debug variant alongside the release app on PX5 (no uninstall or data wipe).
 
 - [x] Target the drawer's icon-only Settings action by a dedicated test tag.
 - [x] Wait for the Settings screen itself instead of relying on its app-bar text.
+- [x] Target the About category and category screen by dedicated test tags.
 
 Status: in progress (2026-08-10; awaiting GitHub PR CI)

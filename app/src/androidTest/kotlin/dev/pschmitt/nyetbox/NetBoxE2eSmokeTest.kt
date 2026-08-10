@@ -32,7 +32,8 @@ class NetBoxE2eSmokeTest : NetBoxJourneyTest() {
         composeRule.onNodeWithContentDescription("Open navigation").performClick()
         composeRule.onNodeWithTag("e2e-settings-action").performClick()
         waitForTag("e2e-settings-screen", 30_000)
-        composeRule.onNodeWithText("About").performClick()
+        composeRule.onNodeWithTag("e2e-settings-category-about").performClick()
+        waitForTag("e2e-settings-category-screen", 30_000)
         waitForText("Build", 30_000)
         captureE2eScreenshot("smoke-03-about")
     }
