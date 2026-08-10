@@ -10,12 +10,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Cable
-import androidx.compose.material.icons.filled.Inventory2
-import androidx.compose.material.icons.filled.Lan
-import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material.icons.filled.Power
-import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,6 +23,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import dev.pschmitt.nyetbox.ui.common.NyetboxCard
 import dev.pschmitt.nyetbox.ui.common.NyetboxListItem
+import dev.pschmitt.nyetbox.ui.directory.AppIcons
 
 /** NetBox component models that can be attached to a device. */
 data class DeviceComponentKind(
@@ -39,20 +34,19 @@ data class DeviceComponentKind(
 
 val deviceComponentKinds =
     listOf(
-        DeviceComponentKind("Interface", "api/dcim/interfaces/", Icons.Default.Lan),
-        DeviceComponentKind("Front port", "api/dcim/front-ports/", Icons.Default.Cable),
-        DeviceComponentKind("Rear port", "api/dcim/rear-ports/", Icons.Default.Cable),
-        DeviceComponentKind("Console port", "api/dcim/console-ports/", Icons.Default.Cable),
-        DeviceComponentKind("Power port", "api/dcim/power-ports/", Icons.Default.Power),
-        DeviceComponentKind("Power outlet", "api/dcim/power-outlets/", Icons.Default.Power),
-        DeviceComponentKind("Module bay", "api/dcim/module-bays/", Icons.Default.Memory),
-        DeviceComponentKind("Device bay", "api/dcim/device-bays/", Icons.Default.Storage),
-        DeviceComponentKind(
-            "Inventory item",
-            "api/dcim/inventory-items/",
-            Icons.Default.Inventory2,
-        ),
+        component("Interface", "api/dcim/interfaces/"),
+        component("Front port", "api/dcim/front-ports/"),
+        component("Rear port", "api/dcim/rear-ports/"),
+        component("Console port", "api/dcim/console-ports/"),
+        component("Power port", "api/dcim/power-ports/"),
+        component("Power outlet", "api/dcim/power-outlets/"),
+        component("Module bay", "api/dcim/module-bays/"),
+        component("Device bay", "api/dcim/device-bays/"),
+        component("Inventory item", "api/dcim/inventory-items/"),
     )
+
+private fun component(label: String, endpointPath: String) =
+    DeviceComponentKind(label, endpointPath, AppIcons.forEndpointPath(endpointPath))
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)

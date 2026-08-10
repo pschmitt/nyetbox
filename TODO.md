@@ -9041,3 +9041,14 @@ debug variant alongside the release app on PX5 (no uninstall or data wipe).
 - [x] Wait for the Settings screen itself instead of relying on its app-bar text.
 
 Status: **done** (2026-08-10; verified by GitHub PR CI)
+
+## NBC-441: Give NetBox object types dedicated icons
+
+Replace the broad app/endpoint icon collisions with a more specific vocabulary for core NetBox
+models, and keep widget object icons aligned with the in-app registry.
+
+- [x] Add dedicated endpoint mappings for core object types.
+- [x] Add or update widget icon resources/mappings for the same object types.
+- [x] Verify the app and widget compile with the expanded icon registry.
+
+Status: **done** (2026-08-10; verified with remote compile, unit tests, and Android-test compilation)
