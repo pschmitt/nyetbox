@@ -9035,3 +9035,8 @@ current, so a newly entered token was rejected by NetBox.
 
 Status: **done**, 2026-08-10; verified with remote compile/unit tests/ktfmt check and installed the
 debug variant alongside the release app on PX5 (no uninstall or data wipe).
+## NBC-440: Fix PR E2E settings navigation assertion
+
+- [x] Target the drawer's icon-only Settings action by its accessibility label.
+
+Status: in progress (2026-08-10; awaiting GitHub PR CI)

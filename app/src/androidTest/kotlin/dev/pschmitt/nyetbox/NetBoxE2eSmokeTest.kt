@@ -30,7 +30,7 @@ class NetBoxE2eSmokeTest : NetBoxJourneyTest() {
 
         composeRule.onNodeWithContentDescription("Back").performClick()
         composeRule.onNodeWithContentDescription("Open navigation").performClick()
-        composeRule.onNodeWithText("Settings").performClick()
+        composeRule.onNodeWithContentDescription("Settings").performClick()
         waitForText("Settings", 30_000)
         composeRule.onNodeWithText("About").performClick()
         waitForText("Build", 30_000)
