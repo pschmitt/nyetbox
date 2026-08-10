@@ -82,9 +82,24 @@
         };
       };
 
+      nyetboxSetup = pkgs.writeShellApplication {
+        name = "nyetbox-setup";
+        runtimeInputs = [
+          pkgs.python3
+          pkgs.qrencode
+        ];
+        text = builtins.readFile ./bin/nyetbox-setup;
+      };
+
     in
     {
       checks.${system}.pre-commit-check = pre-commit-check;
+
+      packages.${system}.nyetbox-setup = nyetboxSetup;
+      apps.${system}.nyetbox-setup = {
+        type = "app";
+        program = "${nyetboxSetup}/bin/nyetbox-setup";
+      };
 
       devShells.${system} = {
         screenshots = pkgs.mkShell {
@@ -109,12 +124,15 @@
         };
 
         default = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            jdk21
-            android-composition
-            just
-            ktfmt
-          ];
+          buildInputs =
+            with pkgs;
+            [
+              jdk21
+              android-composition
+              just
+              ktfmt
+            ]
+            ++ [ nyetboxSetup ];
 
           shellHook = pre-commit-check.shellHook + ''
             echo "🥂 Nyetbox development environment"
