@@ -26,6 +26,12 @@ import timber.log.Timber
  */
 const val E2E_SYNC_COMPLETE_MARKER = "NYETBOX_E2E_SYNC_COMPLETE"
 
+/** Durable media is part of the offline cache by default; users may explicitly opt out. */
+internal const val DEFAULT_SYNC_ATTACHMENTS_TO_DISK = true
+
+internal fun resolveSyncAttachmentsToDisk(stored: Boolean?): Boolean =
+    stored ?: DEFAULT_SYNC_ATTACHMENTS_TO_DISK
+
 data class NetBoxCredentials(val baseUrl: String, val token: String) {
     val isValid: Boolean
         get() = baseUrl.isNotBlank() && token.isNotBlank()
@@ -302,11 +308,17 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
     private val _pinnedModelPaths = MutableStateFlow(loadPinnedModelPaths())
     val pinnedModelPaths: StateFlow<Set<String>> = _pinnedModelPaths.asStateFlow()
 
-    // Off by default: downloading every cached object's attachments is a meaningful amount of
-    // storage/bandwidth the user should opt into, not something that happens the first time they
-    // sync.
+    // Keep the binary media cache enabled by default so Room metadata does not misleadingly imply
+    // offline availability when the actual thumbnail/document bytes were never downloaded. The
+    // setting remains user-configurable for installs that need to conserve storage or bandwidth.
     private val _syncAttachmentsToDisk =
-        MutableStateFlow(prefs.getBoolean(KEY_SYNC_ATTACHMENTS, false))
+        MutableStateFlow(
+            resolveSyncAttachmentsToDisk(
+                if (prefs.contains(KEY_SYNC_ATTACHMENTS))
+                    prefs.getBoolean(KEY_SYNC_ATTACHMENTS, false)
+                else null
+            )
+        )
     val syncAttachmentsToDisk: StateFlow<Boolean> = _syncAttachmentsToDisk.asStateFlow()
 
     // Preserve the existing connected-network behavior by default; users can opt into the safer
@@ -1024,7 +1036,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         _topologyNodePositions.value = emptyMap()
         _changeNotificationsEnabled.value = false
         _changeNotificationFilters.value = setOf(ChangeNotificationFilter.All.storageKey)
-        _syncAttachmentsToDisk.value = false
+        _syncAttachmentsToDisk.value = DEFAULT_SYNC_ATTACHMENTS_TO_DISK
         _syncOnlyOnWifi.value = false
         _syncWhileRoaming.value = true
         _syncOnAppLaunch.value = true

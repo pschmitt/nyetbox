@@ -1,9 +1,18 @@
 package dev.pschmitt.nyetbox.data.repository
 
+import dev.pschmitt.nyetbox.data.backup.SettingsBackupSettings
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class SettingsPreferenceTest {
+    @Test
+    fun `durable media cache is enabled by default while remaining opt-out capable`() {
+        assertEquals(true, resolveSyncAttachmentsToDisk(null))
+        assertEquals(true, resolveSyncAttachmentsToDisk(true))
+        assertEquals(false, resolveSyncAttachmentsToDisk(false))
+        assertEquals(true, SettingsBackupSettings().syncAttachmentsToDisk)
+    }
+
     @Test
     fun `scanner lens preference defaults safely to the back camera`() {
         assertEquals(ScannerLens.Back, ScannerLens.fromStorage(null))

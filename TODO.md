@@ -9052,3 +9052,31 @@ models, and keep widget object icons aligned with the in-app registry.
 - [x] Verify the app and widget compile with the expanded icon registry.
 
 Status: **done** (2026-08-10; verified with remote compile, unit tests, and Android-test compilation)
+
+## NBC-442: make synced media available offline by default
+
+The app already has a durable `filesDir` attachment store and a Coil fetcher that resolves cached
+NetBox media URLs locally, but `SettingsRepository` defaults `sync_attachments_to_disk` to `false`.
+That means a fresh profile (and any profile that never explicitly enabled the setting) caches Room
+metadata and remote URLs while downloading no thumbnails, device-type photos, image attachments,
+documents, or other `/media/` fields. A cold start with no connectivity therefore has nothing for
+Coil to resolve. The wired Zenfone cold-start check on 2026-08-13 confirmed the offline launch
+path and restored Wi-Fi afterward; its existing configured profile was used without clearing app
+data.
+
+- [x] Make durable media synchronization enabled by default for unset settings and reset-to-defaults,
+      while preserving an explicit stored `false` opt-out.
+- [x] Keep the existing best-effort, authenticated downloads and durable `filesDir`/Coil local
+      resolution covering device-type photos, image attachments, documents, and generic media URLs.
+- [x] Add regression coverage for the default and opt-out preference behavior, including older
+      settings backups whose media-cache field is absent.
+- [x] Verify actual media cache files are used on an offline cold start without clearing the user's
+      app data. On the wired Zenfone, connected sync produced 634 durable attachments (697 files,
+      818 MiB); the D-Link device detail showed its thumbnail and cached `D-Link-Bill.pdf`, and
+      the same media rendered after disabling Wi-Fi and cold-starting the app. Wi-Fi was restored
+      and verified connected afterward.
+- [x] Verify remotely with the Android unit suite and `ktfmtCheck`, build the debug APK, install it
+      with `-r` on the wired Zenfone and attached Mi Pad, and restore Zenfone Wi-Fi after testing.
+
+Status: **done**, 2026-08-13; verified with remote compile/unit tests/ktfmtCheck and a configured
+wired Zenfone connected/offline media-rendering test without clearing app data.

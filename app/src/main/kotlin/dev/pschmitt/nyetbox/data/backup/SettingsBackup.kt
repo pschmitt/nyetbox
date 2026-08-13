@@ -6,6 +6,7 @@ import androidx.annotation.Keep
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.pschmitt.nyetbox.BuildConfig
 import dev.pschmitt.nyetbox.data.repository.BackupFrequency
+import dev.pschmitt.nyetbox.data.repository.DEFAULT_SYNC_ATTACHMENTS_TO_DISK
 import dev.pschmitt.nyetbox.data.repository.GestureTarget
 import dev.pschmitt.nyetbox.data.repository.NavBarItem
 import dev.pschmitt.nyetbox.data.repository.PrintSettings
@@ -40,7 +41,7 @@ const val SETTINGS_BACKUP_FORMAT_VERSION = 1
 data class SettingsBackupSettings(
     val serverProfiles: List<ServerProfile> = emptyList(),
     val activeServerId: String? = null,
-    val syncAttachmentsToDisk: Boolean = false,
+    val syncAttachmentsToDisk: Boolean = DEFAULT_SYNC_ATTACHMENTS_TO_DISK,
     val syncOnlyOnWifi: Boolean = false,
     val syncWhileRoaming: Boolean = true,
     val syncOnAppLaunch: Boolean = true,
