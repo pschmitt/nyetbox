@@ -89,6 +89,7 @@ import dev.pschmitt.nyetbox.ui.common.PrintLabelDialog
 import dev.pschmitt.nyetbox.ui.common.PrintLabelRequest
 import dev.pschmitt.nyetbox.ui.common.SuppressiblePullToRefreshBox
 import dev.pschmitt.nyetbox.ui.common.SvgDiagramView
+import dev.pschmitt.nyetbox.ui.common.SyncPulseIcon
 import dev.pschmitt.nyetbox.ui.common.detailAccentFor
 import dev.pschmitt.nyetbox.ui.common.displayName
 import dev.pschmitt.nyetbox.ui.common.fileViewIntent
@@ -400,10 +401,10 @@ fun GenericDetailScreen(
                 onCancelEditing = viewModel::cancelEditing,
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
+                        SyncPulseIcon(
                             AppIcons.forEndpointPath(viewModel.route.endpointPath),
-                            contentDescription = null,
                             tint = detailAccent,
+                            syncing = isRefreshing,
                         )
                         Column(modifier = Modifier.padding(start = 8.dp)) {
                             Text(

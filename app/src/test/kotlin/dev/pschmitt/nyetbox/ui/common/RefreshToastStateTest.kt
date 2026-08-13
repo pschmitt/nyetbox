@@ -1,25 +1,30 @@
 package dev.pschmitt.nyetbox.ui.common
 
-import androidx.work.WorkInfo
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 
 class RefreshToastStateTest {
     @Test
-    fun `running refresh has no terminal toast`() {
-        assertNull(refreshCompletionToast(WorkInfo.State.RUNNING))
+    fun `failed primary fetch reports failure regardless of linked-object failures`() {
+        assertEquals("Sync failed", targetedSyncToast(primarySucceeded = false, failureCount = 0))
+        assertEquals("Sync failed", targetedSyncToast(primarySucceeded = false, failureCount = 3))
     }
 
     @Test
-    fun `successful refresh reports completion`() {
-        assertEquals("Sync complete", refreshCompletionToast(WorkInfo.State.SUCCEEDED))
+    fun `successful primary fetch with no linked failures reports completion`() {
+        assertEquals("Sync complete", targetedSyncToast(primarySucceeded = true, failureCount = 0))
     }
 
     @Test
-    fun `failed refresh reports failure`() {
-        assertEquals("Sync failed", refreshCompletionToast(WorkInfo.State.FAILED))
-        assertEquals("Sync failed", refreshCompletionToast(WorkInfo.State.CANCELLED))
+    fun `successful primary fetch with linked failures reports the issue count`() {
+        assertEquals(
+            "Synced with 1 issue",
+            targetedSyncToast(primarySucceeded = true, failureCount = 1),
+        )
+        assertEquals(
+            "Synced with 3 issues",
+            targetedSyncToast(primarySucceeded = true, failureCount = 3),
+        )
     }
 
     @Test

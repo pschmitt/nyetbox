@@ -43,8 +43,8 @@ import dev.pschmitt.nyetbox.data.schema.assetTagState
 import dev.pschmitt.nyetbox.sync.SyncScheduler
 import dev.pschmitt.nyetbox.sync.SyncStatusRepository
 import dev.pschmitt.nyetbox.ui.common.REFRESH_QUEUED_TOAST
-import dev.pschmitt.nyetbox.ui.common.refreshCompletionToast
 import dev.pschmitt.nyetbox.ui.common.shouldShowRefreshQueuedToast
+import dev.pschmitt.nyetbox.ui.common.targetedSyncToast
 import dev.pschmitt.nyetbox.ui.navigation.Route
 import java.io.File
 import javax.inject.Inject
@@ -54,7 +54,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -126,17 +125,31 @@ constructor(
     // Not every NetBox model accepts image attachments/documents (e.g. users.permission) - default
     // to true (shown) until the one-shot OPTIONS-derived answer lands, so the widgets don't flash
     // in and out for the common case where they are supported.
-    val supportsImageAttachments: StateFlow<Boolean> = flow {
-        emit(mediaUploadRepository.supportsImageAttachments(route.endpointPath))
-    }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val supportsImageAttachments: StateFlow<Boolean> =
+        flow {
+                emit(mediaUploadRepository.supportsImageAttachments(route.endpointPath))
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
-    val supportsDocuments: StateFlow<Boolean> = flow {
-        emit(mediaUploadRepository.supportsDocuments(route.endpointPath))
-    }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val supportsDocuments: StateFlow<Boolean> =
+        flow {
+                emit(mediaUploadRepository.supportsDocuments(route.endpointPath))
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
-    val isRefreshing: StateFlow<Boolean> =
+    private val _isRefreshing = MutableStateFlow(false)
+
+    /**
+     * This object's own targeted refresh, not unrelated background sync activity - see [refresh].
+     */
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    /**
+     * Unlike [isRefreshing], reflects background sync activity generally - backs the "view related
+     * items" bottom sheet's spinner, which shows a different endpoint's list populated by the
+     * periodic/full sync rather than anything [refresh] itself fetches.
+     */
+    private val isSyncingGlobally: StateFlow<Boolean> =
         syncStatusRepository.isSyncing.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
@@ -187,7 +200,6 @@ constructor(
 
     private val _refreshToastMessage = MutableStateFlow<String?>(null)
     val refreshToastMessage: StateFlow<String?> = _refreshToastMessage.asStateFlow()
-    private var awaitingRefreshCompletion = false
 
     private val _isDownloading = MutableStateFlow(false)
     val isDownloading: StateFlow<Boolean> = _isDownloading.asStateFlow()
@@ -231,10 +243,11 @@ constructor(
             .observeFor(route.endpointPath, route.id)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val imageAttachmentObjectType: String? = runCatching {
-        MediaUploadRepository.contentTypeForEndpoint(route.endpointPath)
-    }
-        .getOrNull()
+    private val imageAttachmentObjectType: String? =
+        runCatching {
+                MediaUploadRepository.contentTypeForEndpoint(route.endpointPath)
+            }
+            .getOrNull()
 
     val imageAttachments: StateFlow<List<ImageAttachmentEntity>> =
         imageAttachmentObjectType
@@ -324,7 +337,7 @@ constructor(
     private val _relatedTarget = MutableStateFlow<CountTarget?>(null)
     val relatedTarget: StateFlow<CountTarget?> = _relatedTarget.asStateFlow()
 
-    val isRelatedRefreshing: StateFlow<Boolean> = isRefreshing
+    val isRelatedRefreshing: StateFlow<Boolean> = isSyncingGlobally
 
     val relatedObjects: StateFlow<List<NetBoxObjectEntity>> =
         _relatedTarget
@@ -500,14 +513,6 @@ constructor(
         viewModelScope.launch {
             objectFlow.filterNotNull().take(1).collect { recentVisitRepository.record(it) }
         }
-        viewModelScope.launch {
-            syncStatusRepository.manualSyncState.drop(1).distinctUntilChanged().collect { state ->
-                if (awaitingRefreshCompletion && state?.isFinished == true) {
-                    awaitingRefreshCompletion = false
-                    _refreshToastMessage.value = refreshCompletionToast(state)
-                }
-            }
-        }
         viewModelScope.launch { loadJournalEntries() }
         viewModelScope.launch { loadImageAttachments() }
         viewModelScope.launch {
@@ -517,16 +522,30 @@ constructor(
         }
     }
 
+    /**
+     * Targeted refresh of this object alone - see
+     * [dev.pschmitt.nyetbox.ui.devicedetail.DeviceDetailViewModel.refresh] for the multi-object
+     * fan-out shape this mirrors for a single object with no linked items of its own to sync.
+     */
     fun refresh(showConfirmation: Boolean = false) {
-        if (!settingsRepository.offlineMode.value) {
+        if (settingsRepository.offlineMode.value) return
+        viewModelScope.launch {
             if (shouldShowRefreshQueuedToast(showConfirmation, offlineMode = false)) {
-                awaitingRefreshCompletion = true
                 _refreshToastMessage.value = REFRESH_QUEUED_TOAST
             }
-            syncScheduler.syncNow()
+            _isRefreshing.value = true
+            val result = repository.refreshObject(route.endpointPath, route.id)
+            if (showConfirmation) {
+                _refreshToastMessage.value =
+                    targetedSyncToast(primarySucceeded = result.isSuccess, failureCount = 0)
+            }
+            result.onFailure {
+                _errorMessage.value = it.message ?: "Couldn't refresh - showing cached data"
+            }
             loadJournalEntries()
             loadCableTrace()
             loadImageAttachments()
+            _isRefreshing.value = false
         }
     }
 
@@ -790,26 +809,28 @@ constructor(
             .forEach { field ->
                 val endpoint = field.referenceEndpointPath ?: return@forEach
                 val cached = repository.cachedObjects(endpoint)
-                val options = buildList {
-                    field.currentDisplay?.let { add(EditOption(field.value, it)) }
-                    addAll(
-                        cached.map { entity ->
-                            val objectJson = decode(entity.json)
-                            EditOption(
-                                value = entity.id.toString(),
-                                label = entity.display,
-                                frontImageUrl =
-                                    (objectJson?.get("front_image") as? JsonPrimitive)
-                                        ?.contentOrNull,
-                                rearImageUrl =
-                                    (objectJson?.get("rear_image") as? JsonPrimitive)
-                                        ?.contentOrNull,
-                                searchFields = objectJson?.createChoiceSearchFields().orEmpty(),
+                val options =
+                    buildList {
+                            field.currentDisplay?.let { add(EditOption(field.value, it)) }
+                            addAll(
+                                cached.map { entity ->
+                                    val objectJson = decode(entity.json)
+                                    EditOption(
+                                        value = entity.id.toString(),
+                                        label = entity.display,
+                                        frontImageUrl =
+                                            (objectJson?.get("front_image") as? JsonPrimitive)
+                                                ?.contentOrNull,
+                                        rearImageUrl =
+                                            (objectJson?.get("rear_image") as? JsonPrimitive)
+                                                ?.contentOrNull,
+                                        searchFields =
+                                            objectJson?.createChoiceSearchFields().orEmpty(),
+                                    )
+                                }
                             )
                         }
-                    )
-                }
-                    .distinctBy { it.value }
+                        .distinctBy { it.value }
                 references[field.key] = options
             }
         _referenceOptions.value = references
@@ -898,10 +919,11 @@ constructor(
         return deviceTypeId?.let { deviceTypeImages[it] }
     }
 
-    private fun decode(rawJson: String): JsonObject? = runCatching {
-        json.decodeFromString(JsonObject.serializer(), rawJson)
-    }
-        .getOrNull()
+    private fun decode(rawJson: String): JsonObject? =
+        runCatching {
+                json.decodeFromString(JsonObject.serializer(), rawJson)
+            }
+            .getOrNull()
 
     private fun customFieldAdminChoiceOptions(): Map<String, List<EditOption>> =
         mapOf(

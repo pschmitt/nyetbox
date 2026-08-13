@@ -9080,3 +9080,38 @@ data.
 
 Status: **done**, 2026-08-13; verified with remote compile/unit tests/ktfmtCheck and a configured
 wired Zenfone connected/offline media-rendering test without clearing app data.
+
+## NBC-443: targeted pull-to-refresh sync + toast + ripple indicator
+
+Pull-to-refresh on device detail only refetched the device row, its journal, and its image
+attachments - device type, interfaces, ports, module bays, and IP addresses stayed as stale as
+the last full background sync. Pull-to-refresh on generic item detail (interfaces, IP addresses,
+sites, racks, ...) wasn't targeted at all - it enqueued a full app-wide `SyncWorker` pass just to
+refresh one screen. Neither screen reliably distinguished "everything refreshed" from "partial
+failure" in its toast, and there was no in-progress visual feedback beyond the (suppressed) pull
+indicator.
+
+- [x] `DeviceDetailViewModel.refresh()`: after the device itself refreshes successfully, fan out
+      concurrently to its device type, every device-scoped component endpoint (interfaces,
+      front/rear/power/console ports, power outlets, module bays), IP addresses (via a `device_id`
+      filter), and image attachments - all scoped to this device, not a full unscoped sync.
+- [x] `GenericDetailViewModel.refresh()`: replace the app-wide `syncScheduler.syncNow()` call with
+      a single targeted `GenericObjectRepository.refreshObject()` for just this object; decouple
+      its `isRefreshing` from global background-sync state (kept only for the separate "related
+      items" bottom sheet spinner via a new `isRelatedRefreshing`/`isSyncingGlobally` split).
+- [x] Add `targetedSyncToast()` (replacing the WorkManager-shaped `refreshCompletionToast()`) to
+      report "Sync complete" / "Synced with N issues" / "Sync failed" based on the primary fetch
+      and linked-object failure count, reusing the existing `refreshToastMessage`/`Toast` plumbing.
+- [x] Add `SyncPulseIcon`, a pulsing-ripple wrapper around the header object-type icon on both
+      detail screens, active while `isRefreshing` is true - the in-progress signal for a feature
+      that intentionally suppresses the large pull-to-refresh spinner over its content.
+- [x] Verify remotely (rofl-13): `:app:compileDebugKotlin` and the touched unit test suites
+      (`RefreshToastStateTest`, device-detail/generic-detail packages) both pass.
+- [ ] Manually verify on a physical device: pull-to-refresh a device with interfaces/ports/IP
+      addresses assigned after editing one directly in NetBox, confirm the related tab picks up
+      the change, the header icon pulses during the sync, and the toast reports the right outcome;
+      repeat on a generic item detail screen and confirm it no longer triggers the app-wide sync
+      notification/progress bar.
+
+Status: in progress, 2026-08-13; implementation done and verified with remote compile/unit tests,
+still needs on-device manual verification.

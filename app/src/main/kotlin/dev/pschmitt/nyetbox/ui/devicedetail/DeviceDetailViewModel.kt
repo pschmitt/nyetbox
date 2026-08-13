@@ -33,8 +33,8 @@ import dev.pschmitt.nyetbox.data.repository.isTopologyPluginModel
 import dev.pschmitt.nyetbox.data.schema.NetBoxRef
 import dev.pschmitt.nyetbox.data.topology.TopologyGraph
 import dev.pschmitt.nyetbox.ui.common.REFRESH_QUEUED_TOAST
-import dev.pschmitt.nyetbox.ui.common.refreshCompletionToast
 import dev.pschmitt.nyetbox.ui.common.shouldShowRefreshQueuedToast
+import dev.pschmitt.nyetbox.ui.common.targetedSyncToast
 import dev.pschmitt.nyetbox.ui.generic.FieldRow
 import dev.pschmitt.nyetbox.ui.generic.JournalEntryUi
 import dev.pschmitt.nyetbox.ui.generic.JournalMutationUiState
@@ -44,6 +44,8 @@ import dev.pschmitt.nyetbox.ui.navigation.Route
 import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -122,8 +124,8 @@ internal fun parseInterfaceIpAddress(
 ): ParsedInterfaceIpAddress? {
     val objectJson =
         runCatching {
-            ipAddressJson.decodeFromString(JsonObject.serializer(), rawJson)
-        }
+                ipAddressJson.decodeFromString(JsonObject.serializer(), rawJson)
+            }
             .getOrNull() ?: return null
     if (objectJson["assigned_object_type"]?.jsonPrimitive?.contentOrNull != "dcim.interface") {
         return null
@@ -139,8 +141,8 @@ internal fun parseInterfaceIpAddress(
 internal fun parseManufacturerId(rawJson: String): Int? {
     val objectJson =
         runCatching {
-            ipAddressJson.decodeFromString(JsonObject.serializer(), rawJson)
-        }
+                ipAddressJson.decodeFromString(JsonObject.serializer(), rawJson)
+            }
             .getOrNull() ?: return null
     return (objectJson["manufacturer"] as? JsonObject)?.get("id")?.jsonPrimitive?.intOrNull
 }
@@ -157,6 +159,18 @@ val DEVICE_RELATED_TABS =
         DeviceRelatedTab("Power outlets", "api/dcim/power-outlets/"),
         DeviceRelatedTab("Module bays", "api/dcim/module-bays/"),
     )
+
+/**
+ * Endpoints a device-scoped pull-to-refresh fans out to, beyond the device row itself - every real
+ * (non-pseudo) [DEVICE_RELATED_TABS] endpoint plus IP addresses, which aren't a tab of their own
+ * but back [DeviceDetailViewModel.interfaceIpAddresses]. Each is synced filtered to just this
+ * device via a `device_id` query param, not a full unscoped pass.
+ */
+private val DEVICE_SCOPED_SYNC_ENDPOINTS: List<String> =
+    DEVICE_RELATED_TABS.map { it.endpointPath }
+        .filterNot {
+            it == JOURNAL_TAB_ENDPOINT_PATH || it == CONNECTED_DEVICES_TAB_ENDPOINT_PATH
+        } + IP_ADDRESSES_ENDPOINT_PATH
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -410,14 +424,14 @@ constructor(
             .observeObjects(IP_ADDRESSES_ENDPOINT_PATH, "")
             .map { objects ->
                 buildMap {
-                    objects.forEach { objectEntity ->
-                        parseInterfaceIpAddress(objectEntity.id, objectEntity.json)?.let {
-                            assignment ->
-                            getOrPut(assignment.interfaceId) { mutableListOf() }
-                                .add(assignment.ipAddress)
+                        objects.forEach { objectEntity ->
+                            parseInterfaceIpAddress(objectEntity.id, objectEntity.json)?.let {
+                                assignment ->
+                                getOrPut(assignment.interfaceId) { mutableListOf() }
+                                    .add(assignment.ipAddress)
+                            }
                         }
                     }
-                }
                     .mapValues { (_, addresses) -> addresses.distinctBy { it.id } }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
@@ -435,6 +449,12 @@ constructor(
         }
     }
 
+    /**
+     * Targeted device sync: the device row itself, then (only if that succeeds - nothing else is
+     * meaningfully scoped without it) its device type, every device-scoped component endpoint
+     * (interfaces, ports, module bays), IP addresses, and image attachments, all fanned out
+     * concurrently and filtered to just this device rather than a full unscoped sync pass.
+     */
     fun refresh(showConfirmation: Boolean = false) {
         if (settingsRepository.offlineMode.value) return
         viewModelScope.launch {
@@ -442,25 +462,49 @@ constructor(
                 _refreshToastMessage.value = REFRESH_QUEUED_TOAST
             }
             _isRefreshing.value = true
-            deviceRepository
-                .refreshDevice(deviceId)
-                .onSuccess {
-                    if (showConfirmation) {
-                        _refreshToastMessage.value =
-                            refreshCompletionToast(androidx.work.WorkInfo.State.SUCCEEDED)
+            val deviceResult = deviceRepository.refreshDevice(deviceId)
+            var failureCount = 0
+            deviceResult
+                .onSuccess { refreshedDevice ->
+                    coroutineScope {
+                        val linkedSyncs = buildList {
+                            refreshedDevice.deviceTypeId?.let { typeId ->
+                                add(async { deviceTypeRepository.refresh(typeId).isFailure })
+                            }
+                            DEVICE_SCOPED_SYNC_ENDPOINTS.forEach { endpointPath ->
+                                add(
+                                    async {
+                                        genericObjectRepository
+                                            .syncAll(
+                                                endpointPath,
+                                                filters = mapOf("device_id" to deviceId.toString()),
+                                            )
+                                            .isFailure
+                                    }
+                                )
+                            }
+                            add(
+                                async {
+                                    imageAttachmentRepository
+                                        .refresh(DEVICE_OBJECT_TYPE, deviceId)
+                                        .isFailure
+                                }
+                            )
+                        }
+                        failureCount = linkedSyncs.count { it.await() }
                     }
                 }
                 .onFailure {
-                    if (showConfirmation) {
-                        _refreshToastMessage.value =
-                            refreshCompletionToast(androidx.work.WorkInfo.State.FAILED)
-                    }
                     _errorMessage.value = it.message ?: "Couldn't refresh - showing cached data"
                 }
-            refreshJournal()
-            imageAttachmentRepository.refresh(DEVICE_OBJECT_TYPE, deviceId).onFailure {
-                Timber.w(it, "Couldn't refresh image attachments for device %d", deviceId)
+            if (showConfirmation) {
+                _refreshToastMessage.value =
+                    targetedSyncToast(
+                        primarySucceeded = deviceResult.isSuccess,
+                        failureCount = failureCount,
+                    )
             }
+            refreshJournal()
             _isRefreshing.value = false
         }
     }

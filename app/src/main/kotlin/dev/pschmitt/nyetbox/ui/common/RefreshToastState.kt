@@ -1,7 +1,5 @@
 package dev.pschmitt.nyetbox.ui.common
 
-import androidx.work.WorkInfo
-
 internal const val REFRESH_QUEUED_TOAST = "Sync queued"
 
 internal fun shouldShowRefreshQueuedToast(
@@ -9,10 +7,16 @@ internal fun shouldShowRefreshQueuedToast(
     offlineMode: Boolean,
 ): Boolean = showConfirmation && !offlineMode
 
-/** Returns the terminal toast for a sync job, or null while it is still running. */
-internal fun refreshCompletionToast(state: WorkInfo.State): String? =
+/**
+ * Terminal toast for a targeted refresh - [primarySucceeded] is the main object's own fetch,
+ * [failureCount] the number of linked-object syncs (device type, interfaces, IP addresses, ...)
+ * that failed alongside it. A failed primary fetch always wins, since nothing else was meaningfully
+ * scoped without it.
+ */
+internal fun targetedSyncToast(primarySucceeded: Boolean, failureCount: Int): String =
     when {
-        !state.isFinished -> null
-        state == WorkInfo.State.SUCCEEDED -> "Sync complete"
-        else -> "Sync failed"
+        !primarySucceeded -> "Sync failed"
+        failureCount == 0 -> "Sync complete"
+        failureCount == 1 -> "Synced with 1 issue"
+        else -> "Synced with $failureCount issues"
     }
