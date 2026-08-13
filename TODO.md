@@ -9115,3 +9115,31 @@ indicator.
 
 Status: in progress, 2026-08-13; implementation done and verified with remote compile/unit tests,
 still needs on-device manual verification.
+
+## NBC-444: sync interval and charging-only settings
+
+Periodic background sync ran on a hardcoded 6-hour `PeriodicWorkRequestBuilder` interval with no
+user-facing control, and `SyncScheduler`'s constraints never required charging - only
+`requiresBatteryNotLow`. Asked for while reviewing sync behavior: an interval setting, plus a
+"only sync while charging" toggle mirroring the existing "sync only on Wi-Fi" one.
+
+- [x] Add `SettingsRepository.syncIntervalHours` (default 6h, clamped 1-24, prefs-backed) and
+      `syncOnlyWhenCharging` (default off, prefs-backed), following the existing
+      `syncConcurrency`/`syncOnlyOnWifi` patterns exactly.
+- [x] `SyncScheduler.schedulePeriodic()` now builds its `PeriodicWorkRequestBuilder` from
+      `syncIntervalHours` instead of a hardcoded `6`; `syncConstraints()` adds
+      `.setRequiresCharging(syncOnlyWhenCharging.value)`, applying to periodic, startup, and manual
+      sync alike (same as the existing Wi-Fi-only constraint).
+- [x] `SettingsViewModel.setSyncOnlyWhenCharging`/`setSyncIntervalHours` re-invoke
+      `syncScheduler.schedulePeriodic()` after saving, so a change takes effect on the
+      already-enqueued periodic work immediately, matching `setSyncOnlyOnWifi`.
+- [x] Add both fields to `SettingsBackupSettings` (backup/restore) with backward-compatible
+      defaults for older backup files that predate them.
+- [x] Add Settings UI: a "Sync only while charging" toggle and a "Background sync interval"
+      dropdown (1/3/6/12/24h presets), in the existing Sync policy group.
+- [x] Verify remotely (rofl-13): full `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass.
+- [ ] Manually verify in Settings: toggling "sync only while charging" and changing the interval
+      persist across app restart and are reflected in a backup export/import round-trip.
+
+Status: in progress, 2026-08-14; implementation done and verified with remote compile/unit tests,
+still needs on-device manual verification of the new settings' persistence and backup round-trip.

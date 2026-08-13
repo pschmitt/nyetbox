@@ -361,6 +361,16 @@ constructor(
         syncScheduler.schedulePeriodic()
     }
 
+    fun setSyncOnlyWhenCharging(enabled: Boolean) {
+        settingsRepository.setSyncOnlyWhenCharging(enabled)
+        syncScheduler.schedulePeriodic()
+    }
+
+    fun setSyncIntervalHours(hours: Int) {
+        settingsRepository.setSyncIntervalHours(hours)
+        syncScheduler.schedulePeriodic()
+    }
+
     fun setSyncOnAppLaunch(enabled: Boolean) {
         settingsRepository.setSyncOnAppLaunch(enabled)
         if (!enabled) syncScheduler.cancelStartup()

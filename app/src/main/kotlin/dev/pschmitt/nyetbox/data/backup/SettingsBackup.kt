@@ -7,6 +7,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.pschmitt.nyetbox.BuildConfig
 import dev.pschmitt.nyetbox.data.repository.BackupFrequency
 import dev.pschmitt.nyetbox.data.repository.DEFAULT_SYNC_ATTACHMENTS_TO_DISK
+import dev.pschmitt.nyetbox.data.repository.DEFAULT_SYNC_INTERVAL_HOURS
 import dev.pschmitt.nyetbox.data.repository.GestureTarget
 import dev.pschmitt.nyetbox.data.repository.NavBarItem
 import dev.pschmitt.nyetbox.data.repository.PrintSettings
@@ -46,6 +47,8 @@ data class SettingsBackupSettings(
     val syncWhileRoaming: Boolean = true,
     val syncOnAppLaunch: Boolean = true,
     val syncConcurrency: Int = 3,
+    val syncOnlyWhenCharging: Boolean = false,
+    val syncIntervalHours: Int = DEFAULT_SYNC_INTERVAL_HOURS,
     val changeNotificationsEnabled: Boolean = false,
     val changeNotificationFilters: Set<String> = emptySet(),
     val gestureActions: Map<String, String> = emptyMap(),
@@ -189,6 +192,8 @@ constructor(
                     syncWhileRoaming = settingsRepository.syncWhileRoaming.value,
                     syncOnAppLaunch = settingsRepository.syncOnAppLaunch.value,
                     syncConcurrency = settingsRepository.syncConcurrency.value,
+                    syncOnlyWhenCharging = settingsRepository.syncOnlyWhenCharging.value,
+                    syncIntervalHours = settingsRepository.syncIntervalHours.value,
                     changeNotificationsEnabled =
                         settingsRepository.changeNotificationsEnabled.value,
                     changeNotificationFilters = settingsRepository.changeNotificationFilters.value,

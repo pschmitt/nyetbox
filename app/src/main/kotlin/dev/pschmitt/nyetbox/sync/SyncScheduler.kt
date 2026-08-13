@@ -24,7 +24,10 @@ constructor(
 
     fun schedulePeriodic() {
         val request =
-            PeriodicWorkRequestBuilder<SyncWorker>(6, TimeUnit.HOURS)
+            PeriodicWorkRequestBuilder<SyncWorker>(
+                    settingsRepository.syncIntervalHours.value.toLong(),
+                    TimeUnit.HOURS,
+                )
                 .setConstraints(syncConstraints())
                 .setSyncBackoffCriteria()
                 .build()
@@ -104,6 +107,7 @@ constructor(
             // Battery Saver is stricter than Android's low-battery threshold and is checked by
             // SyncWorker as well, since WorkManager has no native power-save-mode constraint.
             .setRequiresBatteryNotLow(true)
+            .setRequiresCharging(settingsRepository.syncOnlyWhenCharging.value)
             .build()
 
     companion object {

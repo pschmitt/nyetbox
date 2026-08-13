@@ -32,6 +32,9 @@ internal const val DEFAULT_SYNC_ATTACHMENTS_TO_DISK = true
 internal fun resolveSyncAttachmentsToDisk(stored: Boolean?): Boolean =
     stored ?: DEFAULT_SYNC_ATTACHMENTS_TO_DISK
 
+/** Matches the interval periodic sync used before it became user-configurable. */
+internal const val DEFAULT_SYNC_INTERVAL_HOURS = 6
+
 data class NetBoxCredentials(val baseUrl: String, val token: String) {
     val isValid: Boolean
         get() = baseUrl.isNotBlank() && token.isNotBlank()
@@ -341,6 +344,17 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         MutableStateFlow(prefs.getInt(KEY_SYNC_CONCURRENCY, DEFAULT_SYNC_CONCURRENCY))
     val syncConcurrency: StateFlow<Int> = _syncConcurrency.asStateFlow()
 
+    // Off by default, preserving existing behavior - background/manual sync already respects
+    // requiresBatteryNotLow; restricting it to only while charging is an extra opt-in for
+    // battery-sensitive devices.
+    private val _syncOnlyWhenCharging =
+        MutableStateFlow(prefs.getBoolean(KEY_SYNC_ONLY_WHEN_CHARGING, false))
+    val syncOnlyWhenCharging: StateFlow<Boolean> = _syncOnlyWhenCharging.asStateFlow()
+
+    private val _syncIntervalHours =
+        MutableStateFlow(prefs.getInt(KEY_SYNC_INTERVAL_HOURS, DEFAULT_SYNC_INTERVAL_HOURS))
+    val syncIntervalHours: StateFlow<Int> = _syncIntervalHours.asStateFlow()
+
     private val _changeNotificationsEnabled =
         MutableStateFlow(prefs.getBoolean(KEY_CHANGE_NOTIFICATIONS_ENABLED, false))
     val changeNotificationsEnabled: StateFlow<Boolean> = _changeNotificationsEnabled.asStateFlow()
@@ -506,6 +520,17 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         val clamped = concurrency.coerceIn(1, 8)
         prefs.edit().putInt(KEY_SYNC_CONCURRENCY, clamped).apply()
         _syncConcurrency.value = clamped
+    }
+
+    fun setSyncOnlyWhenCharging(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_SYNC_ONLY_WHEN_CHARGING, enabled).apply()
+        _syncOnlyWhenCharging.value = enabled
+    }
+
+    fun setSyncIntervalHours(hours: Int) {
+        val clamped = hours.coerceIn(1, 24)
+        prefs.edit().putInt(KEY_SYNC_INTERVAL_HOURS, clamped).apply()
+        _syncIntervalHours.value = clamped
     }
 
     fun setChangeNotificationsEnabled(enabled: Boolean) {
@@ -1041,6 +1066,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         _syncWhileRoaming.value = true
         _syncOnAppLaunch.value = true
         _syncConcurrency.value = DEFAULT_SYNC_CONCURRENCY
+        _syncOnlyWhenCharging.value = false
+        _syncIntervalHours.value = DEFAULT_SYNC_INTERVAL_HOURS
         _scheduledBackupEnabled.value = false
         _scheduledBackupFrequency.value = BackupFrequency.Weekly
         _scheduledBackupFolderUri.value = null
@@ -1070,6 +1097,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         setSyncWhileRoaming(settings.syncWhileRoaming)
         setSyncOnAppLaunch(settings.syncOnAppLaunch)
         setSyncConcurrency(settings.syncConcurrency)
+        setSyncOnlyWhenCharging(settings.syncOnlyWhenCharging)
+        setSyncIntervalHours(settings.syncIntervalHours)
         setChangeNotificationsEnabled(settings.changeNotificationsEnabled)
         settings.changeNotificationFilters.forEach { key ->
             ChangeNotificationFilter.fromStorage(key)?.let { setChangeNotificationFilter(it, true) }
@@ -1540,6 +1569,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         const val KEY_SYNC_ON_APP_LAUNCH = "sync_on_app_launch"
         const val KEY_SYNC_CONCURRENCY = "sync_concurrency"
         const val DEFAULT_SYNC_CONCURRENCY = 3
+        const val KEY_SYNC_ONLY_WHEN_CHARGING = "sync_only_when_charging"
+        const val KEY_SYNC_INTERVAL_HOURS = "sync_interval_hours"
         const val KEY_LAST_FULL_SYNC_AT = "last_full_sync_at"
         const val KEY_CHANGE_NOTIFICATIONS_ENABLED = "change_notifications_enabled"
         const val KEY_CHANGE_NOTIFICATION_FILTERS = "change_notification_filters"

@@ -70,6 +70,8 @@ internal data class SettingsCategoryState(
     val syncWhileRoaming: Boolean,
     val syncOnAppLaunch: Boolean,
     val syncConcurrency: Int = 3,
+    val syncOnlyWhenCharging: Boolean = false,
+    val syncIntervalHours: Int = 6,
     val changeNotificationsEnabled: Boolean,
     val changeNotificationFilters: Set<String>,
     val gestureActions: Map<GestureShortcut, GestureAction>,
@@ -113,6 +115,8 @@ internal data class SettingsCategoryActions(
     val onSetSyncWhileRoaming: (Boolean) -> Unit,
     val onSetSyncOnAppLaunch: (Boolean) -> Unit,
     val onSetSyncConcurrency: (Int) -> Unit = {},
+    val onSetSyncOnlyWhenCharging: (Boolean) -> Unit = {},
+    val onSetSyncIntervalHours: (Int) -> Unit = {},
     val onSetThemeMode: (ThemeMode) -> Unit,
     val onSetThemeAccent: (ThemeAccent) -> Unit,
     val onShowObjectTypeColors: () -> Unit,
@@ -458,6 +462,7 @@ private fun ConnectionSettingsContent(
 }
 
 private val SYNC_CONCURRENCY_PRESETS = listOf(1, 2, 3, 4, 6, 8)
+private val SYNC_INTERVAL_HOUR_PRESETS = listOf(1, 3, 6, 12, 24)
 
 @Composable
 private fun SyncSettingsContent(
@@ -465,6 +470,7 @@ private fun SyncSettingsContent(
     actions: SettingsCategoryActions,
 ) {
     var concurrencyMenuExpanded by remember { mutableStateOf(false) }
+    var intervalMenuExpanded by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         state.syncIssue?.let { issue ->
             SyncIssueCard(
@@ -517,6 +523,47 @@ private fun SyncSettingsContent(
                 headlineContent = { Text("Sync on app launch") },
                 supportingContent = {
                     Text("Refresh NetBox in the background when the app starts")
+                },
+            )
+            SettingsToggleItem(
+                checked = state.syncOnlyWhenCharging,
+                onCheckedChange = actions.onSetSyncOnlyWhenCharging,
+                leadingContent = {
+                    Icon(Icons.Default.BatteryChargingFull, contentDescription = null)
+                },
+                headlineContent = { Text("Sync only while charging") },
+                supportingContent = {
+                    Text("Restrict background and manual sync to while the device is charging")
+                },
+            )
+            SettingsListItem(
+                modifier = Modifier.clickable { intervalMenuExpanded = true },
+                leadingContent = { Icon(Icons.Default.Schedule, contentDescription = null) },
+                headlineContent = { Text("Background sync interval") },
+                supportingContent = {
+                    Text("Check for changes every ${state.syncIntervalHours} hour(s)")
+                },
+                trailingContent = {
+                    Box {
+                        Icon(Icons.Default.ExpandMore, contentDescription = null)
+                        DropdownMenu(
+                            expanded = intervalMenuExpanded,
+                            onDismissRequest = { intervalMenuExpanded = false },
+                        ) {
+                            SYNC_INTERVAL_HOUR_PRESETS.forEach { hours ->
+                                DropdownMenuItem(
+                                    text = { Text("$hours hour(s)") },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Schedule, contentDescription = null)
+                                    },
+                                    onClick = {
+                                        actions.onSetSyncIntervalHours(hours)
+                                        intervalMenuExpanded = false
+                                    },
+                                )
+                            }
+                        }
+                    }
                 },
             )
             SettingsListItem(
