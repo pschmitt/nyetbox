@@ -9210,20 +9210,27 @@ type with a boolean field positioned mid-list hits the same fragmentation.
 - [x] First pass: only the first native-field run per screen is titled "Details"; a later run
       (after being split by a breaking row) renders as a plain, untitled card instead of repeating
       the title - fixes the duplicate *title* but still leaves 3 separate card surfaces on screen.
-- [x] Follow-up (what was actually wanted - "merge the 3 cards properly"): `isKeyDetailsField()`
-      now includes `FieldRow.BooleanValue`, so a boolean field no longer breaks the native run at
-      all - it renders inline, in its original position, inside the single "Details" card via
-      `ClusteredFieldRow`'s existing boolean-surface branch (already used for booleans inside a
-      real custom-field group, so no new rendering code). Other still-fragmenting native types
-      (`Image`, `ReferenceList`, `TagList`, `ChipList`, `ExternalLink`, `FileAttachment`) keep the
-      first-pass "only the first run is titled" behavior as a backstop.
+- [x] Follow-up ("merge the 3 cards properly"): `isKeyDetailsField()` now includes
+      `FieldRow.BooleanValue`, so a boolean field no longer breaks the native run at all - it
+      renders inline, in its original position, inside the single "Details" card. Other
+      still-fragmenting native types (`Image`, `ReferenceList`, `TagList`, `ChipList`,
+      `ExternalLink`, `FileAttachment`) keep the first-pass "only the first run is titled"
+      behavior as a backstop.
+- [x] Second follow-up ("looks a bit weird ... this one row/card tinted differently"): merging the
+      boolean inline initially reused `BooleanValueSurfaceContent`'s standalone tinted-Surface
+      look, which reads as an unrelated highlighted callout sitting among otherwise-plain rows in
+      the same card. Added `BooleanPlainContent` - same plain label/value row shape as
+      `PlainTextContent`, just with a small check/x icon instead of the full colored surface - and
+      switched `ClusteredFieldRow`'s boolean branch to it. `BooleanValueSurfaceContent` (the
+      tinted-Surface look) stays as-is for a boolean that's still genuinely standalone (its own
+      full card, not sandwiched inside a cluster).
 - [x] Updated tests: replaced the test that encoded the old (buggy) fragment-and-duplicate-title
       behavior for a boolean with one confirming it now stays inline in one cluster; added a
       still-fragmenting-type (`Image`) case to keep covering the untitled-second-run behavior.
 - [x] Verify remotely (rofl-13): full `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass,
-      twice (once per pass).
+      across all three passes.
 - [ ] Manual on-device check: confirm the rack that surfaced this now shows one single "Details"
-      card with "Desc. Units" inline, not two/three cards.
+      card with "Desc. Units" inline as a plain row, no tinted surface, no duplicate cards.
 
 Status: in progress, 2026-08-14; implementation done and verified with remote compile/unit tests,
 still needs on-device confirmation on the specific rack that surfaced this.

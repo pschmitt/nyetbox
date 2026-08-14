@@ -310,6 +310,37 @@ private fun BooleanValueSurfaceContent(
     }
 }
 
+/**
+ * A boolean field stacked inside a shared cluster card (e.g. a rack's `desc_units` sitting between
+ * plain/reference fields) - mirrors [PlainTextContent]'s plain row look instead of
+ * [BooleanValueSurfaceContent]'s standalone tinted surface, since that surface reads as an
+ * unrelated highlighted callout when it's just one row among several otherwise-plain ones.
+ */
+@Composable
+private fun BooleanPlainContent(
+    row: FieldRow.BooleanValue,
+    onFieldLongPress: (label: String) -> Unit,
+) {
+    Column(Modifier.padding(vertical = 6.dp)) {
+        FieldLabel(row.label) { onFieldLongPress(row.label) }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Icon(
+                if (row.value) Icons.Default.CheckCircle else Icons.Default.Close,
+                contentDescription = if (row.value) "Enabled" else "Disabled",
+                tint =
+                    if (row.value) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                if (row.value) "Enabled" else "Disabled",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
+    }
+}
+
 @Composable
 private fun MarkdownContent(row: FieldRow.Markdown, onFieldLongPress: (label: String) -> Unit) {
     Column(Modifier.padding(vertical = 6.dp)) {
@@ -789,12 +820,6 @@ private fun ClusteredFieldRow(
     onFieldLongPress: (label: String) -> Unit,
     onMatterPairingCode: (String) -> Unit,
 ) {
-    if (row is FieldRow.BooleanValue) {
-        // Already owns its own tinted Surface plus click handling - wrapping it in another
-        // clickable Column would just be redundant, not additive.
-        BooleanValueSurfaceContent(row, onFieldLongPress)
-        return
-    }
     val onClick: (() -> Unit)? =
         when (row) {
             is FieldRow.Reference -> {
@@ -829,7 +854,7 @@ private fun ClusteredFieldRow(
             is FieldRow.ReferenceList ->
                 ReferenceListContent(row, onNavigateToReference, onFieldLongPress)
             is FieldRow.TagList -> TagListContent(row, onNavigateToReference, onFieldLongPress)
-            is FieldRow.BooleanValue,
+            is FieldRow.BooleanValue -> BooleanPlainContent(row, onFieldLongPress)
             is FieldRow.Section,
             is FieldRow.CustomGroup -> Unit // Never produced as a custom-field group member.
         }
