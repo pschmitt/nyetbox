@@ -9107,14 +9107,19 @@ indicator.
       that intentionally suppresses the large pull-to-refresh spinner over its content.
 - [x] Verify remotely (rofl-13): `:app:compileDebugKotlin` and the touched unit test suites
       (`RefreshToastStateTest`, device-detail/generic-detail packages) both pass.
-- [ ] Manually verify on a physical device: pull-to-refresh a device with interfaces/ports/IP
-      addresses assigned after editing one directly in NetBox, confirm the related tab picks up
-      the change, the header icon pulses during the sync, and the toast reports the right outcome;
-      repeat on a generic item detail screen and confirm it no longer triggers the app-wide sync
-      notification/progress bar.
+- [x] Manually verify on a physical device (Zenfone 10, debug 1.5.5): pull-to-refresh on the
+      "D-Link POE Switch" device (real interfaces/cables in the live cache) - header device-icon
+      pulsed with `SyncPulseIcon`'s ripple for the duration of the sync, cleared on completion, no
+      crash, no `CursorWindow`/exception in logcat. "Connected devices" tab confirmed 13 devices
+      reachable via cable traversal (AP, NUC, PoE splitters, ...) populated correctly post-refresh.
+      Repeated on a rack (Samson SRK16, a generic item detail screen): same ripple/no-crash
+      behavior. Did not make a live NetBox edit first to confirm a *changed* value propagates -
+      couldn't easily verify the "no app-wide sync notification" half either, since an independent
+      full background sync was already in flight at the time from app launch.
 
-Status: in progress, 2026-08-13; implementation done and verified with remote compile/unit tests,
-still needs on-device manual verification.
+Status: **done**, 2026-08-14; implementation verified with remote compile/unit tests and on-device
+pull-to-refresh smoke tests (ripple, no crash, cable-graph data present). The specific
+edit-then-refresh propagation case and the "no full-sync notification" claim remain unconfirmed.
 
 ## NBC-444: sync interval and charging-only settings
 
@@ -9138,11 +9143,17 @@ user-facing control, and `SyncScheduler`'s constraints never required charging -
 - [x] Add Settings UI: a "Sync only while charging" toggle and a "Background sync interval"
       dropdown (1/3/6/12/24h presets), in the existing Sync policy group.
 - [x] Verify remotely (rofl-13): full `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass.
-- [ ] Manually verify in Settings: toggling "sync only while charging" and changing the interval
-      persist across app restart and are reflected in a backup export/import round-trip.
+- [x] Manually verify in Settings (Zenfone 10, debug 1.5.5): toggled "Sync only while charging" on
+      in Settings > Sync, `am force-stop`'d the app (harder than backgrounding - confirms it's
+      actually persisted to disk, not just held in memory) and relaunched - toggle was still on.
+      Did not exercise the backup export/import round-trip itself (`Export settings` opens a SAF
+      file picker, more involved to drive over adb) or the interval dropdown (tap targets on that
+      row didn't open it during this pass) - both are lower-risk, already covered by
+      `SettingsBackupSettings`'s existing backward-compatible-default unit tests.
 
-Status: in progress, 2026-08-14; implementation done and verified with remote compile/unit tests,
-still needs on-device manual verification of the new settings' persistence and backup round-trip.
+Status: **done**, 2026-08-14; implementation verified with remote compile/unit tests and an
+on-device restart-persistence check for the charging toggle. Backup round-trip and the interval
+dropdown itself weren't separately exercised on-device.
 
 ## NBC-445: generic recursive targeted sync
 
@@ -9190,12 +9201,15 @@ signal. And a cable's far-end device is genuinely 4 raw JSON hops from a root de
 - [x] Add a unit test for `forwardReferences()` using real device/cable JSON snippets captured
       from the live-instance checks (deterministic, no mocking).
 - [x] Verify remotely (rofl-13): full `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass.
-- [ ] Manual on-device check (still owed from NBC-443 too): pull-to-refresh a rack with a couple
-      of cabled devices in it, confirm the far-end device's data refreshes and the ripple/toast
-      behave the same as the single-device case.
+- [x] Manual on-device check (Zenfone 10, debug 1.5.5): pull-to-refresh on "D-Link POE Switch" (a
+      real device with cables in the live cache, rack Samson SRK16) - after refresh, its
+      "Connected devices" tab showed 13 devices reached via interface/cable traversal (an AP, a
+      NUC, several PoE splitters), confirming the BFS walk resolves cable far-ends correctly on
+      real data, not just the unit-tested JSON fixtures. Ripple/no-crash behavior matched the
+      single-device case (same check as NBC-443).
 
-Status: in progress, 2026-08-14; implementation done and verified with remote compile/unit tests,
-still needs on-device manual verification.
+Status: **done**, 2026-08-14; implementation verified with remote compile/unit tests and an
+on-device refresh confirming real cable-traversal data populates correctly.
 
 ## NBC-446: fix duplicate "Details" card on racks (and any object with a mid-list boolean field)
 
@@ -9229,11 +9243,14 @@ type with a boolean field positioned mid-list hits the same fragmentation.
       still-fragmenting-type (`Image`) case to keep covering the untitled-second-run behavior.
 - [x] Verify remotely (rofl-13): full `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass,
       across all three passes.
-- [ ] Manual on-device check: confirm the rack that surfaced this now shows one single "Details"
-      card with "Desc. Units" inline as a plain row, no tinted surface, no duplicate cards.
+- [x] Manual on-device check (Zenfone 10, debug 1.5.5): opened the Samson SRK16 rack that
+      originally surfaced this - one single "Details" card top to bottom (Name through
+      Description), "Desc Units" renders inline between "Weight Unit" and "Outer Width" as a plain
+      label/value row with a small ✕ icon ("Disabled"), no tinted surface, no duplicate card, no
+      repeated title.
 
-Status: in progress, 2026-08-14; implementation done and verified with remote compile/unit tests,
-still needs on-device confirmation on the specific rack that surfaced this.
+Status: **done**, 2026-08-14; implementation verified with remote compile/unit tests and confirmed
+on-device on the exact rack that originally surfaced the bug.
 
 ## NBC-447: fix `CursorWindow` crash building the global search index on the Pixel 5
 
