@@ -89,6 +89,19 @@ interface NetBoxObjectDao {
     @Query("SELECT * FROM netbox_objects ORDER BY endpointPath, display COLLATE NOCASE")
     fun observeAllObjects(): Flow<List<NetBoxObjectEntity>>
 
+    /**
+     * Just the distinct endpoint paths currently cached - used by
+     * [dev.pschmitt.nyetbox.data.repository.GlobalSearchRepository] to fan its whole-cache index
+     * out into one bounded per-endpoint [observeAll] query each, instead of a single `SELECT *`
+     * across every row of every endpoint. That single-cursor query used to hand Room's generated
+     * code a CursorWindow spanning the entire table (every endpoint's full raw `json` payload at
+     * once), which on a memory-constrained device (Pixel 5, 256MB heap) could fail to fully page
+     * in under memory pressure and throw `IllegalStateException: Couldn't read row N, col 0 from
+     * CursorWindow` well past the point where the window ran out of room.
+     */
+    @Query("SELECT DISTINCT endpointPath FROM netbox_objects")
+    fun observeAllEndpointPaths(): Flow<List<String>>
+
     @Query("SELECT * FROM netbox_objects WHERE endpointPath = :endpointPath AND id = :id")
     suspend fun getById(endpointPath: String, id: Int): NetBoxObjectEntity?
 

@@ -25,6 +25,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -167,7 +169,7 @@ fun recentVisitsToSearchHits(visits: List<RecentVisitEntity>): List<SearchHit> =
  * "search". What *does* work, also confirmed live: NetBox's per-model list endpoints accept a
  * free-text `?q=<term>` filter - used here as the refresh mechanism.
  */
-@OptIn(kotlinx.coroutines.FlowPreview::class)
+@OptIn(kotlinx.coroutines.FlowPreview::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @Singleton
 class GlobalSearchRepository
 @Inject
@@ -245,9 +247,28 @@ constructor(
     // just browsing the device list - which OOMed on a real 256MB-heap device (Pixel 5) even with
     // the debounce in place. Scoping it to "only while Search is actually being observed" means a
     // sync burst elsewhere in the app no longer competes for heap with whatever screen is active.
+    //
+    // Deliberately fanned out per endpoint (`observeAllEndpointPaths()` + one `observeAll(path)`
+    // per endpoint, `combine`d) rather than one `observeAllObjects()` `SELECT *` across every
+    // endpoint's rows: that single-cursor query used to hand Room a CursorWindow spanning the
+    // *entire* table's raw JSON at once, which on the same memory-constrained Pixel 5 could fail to
+    // page in fully under memory pressure and throw `IllegalStateException: Couldn't read row N,
+    // col 0 from CursorWindow` - a crash, not just the slow-path OOM the rest of this comment
+    // covers. Each per-endpoint query is bounded to that endpoint's own (typically page-sized)
+    // rows, matching the sync's own per-model page size instead of the whole cache at once.
     private val cachedGenericObjects =
         netBoxObjectDao
-            .observeAllObjects()
+            .observeAllEndpointPaths()
+            .distinctUntilChanged()
+            .flatMapLatest { endpointPaths ->
+                if (endpointPaths.isEmpty()) {
+                    flowOf(emptyList())
+                } else {
+                    combine(endpointPaths.map(netBoxObjectDao::observeAll)) { perEndpoint ->
+                        perEndpoint.asList().flatten()
+                    }
+                }
+            }
             .debounce(300)
             .map { objects ->
                 objects.mapNotNull { entity ->

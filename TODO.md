@@ -9234,3 +9234,50 @@ type with a boolean field positioned mid-list hits the same fragmentation.
 
 Status: in progress, 2026-08-14; implementation done and verified with remote compile/unit tests,
 still needs on-device confirmation on the specific rack that surfaced this.
+
+## NBC-447: fix `CursorWindow` crash building the global search index on the Pixel 5
+
+Live crash report (px5.lan, build 1.5.5): `IllegalStateException: Couldn't read row 366, col 0
+from CursorWindow` inside `NetBoxObjectDao_Impl.observeAllObjects$lambda$0`. Root cause:
+`GlobalSearchRepository.cachedGenericObjects` drove its index off
+`NetBoxObjectDao.observeAllObjects()`, a single `SELECT * FROM netbox_objects` with no
+`endpointPath` filter - every cached object across every endpoint, full raw `json` column
+included, in one Room `Flow` query. That handed Room a single `CursorWindow` spanning the whole
+table at once; on the same memory-constrained Pixel 5 already called out in
+`GlobalSearchRepository`'s `cachedGenericObjects` comment (256MB heap, prior OOM), the window
+could fail to fully page in under memory pressure, and reading past where it truncated threw this
+exact exception instead of an `OutOfMemoryError`.
+
+- [x] Added `NetBoxObjectDao.observeAllEndpointPaths()` (`SELECT DISTINCT endpointPath`).
+- [x] `GlobalSearchRepository.cachedGenericObjects` now fans out per endpoint - observes the
+      distinct endpoint path list, `flatMapLatest`s into a `combine` of one `observeAll(path)` Flow
+      per endpoint (reusing the same per-endpoint query the rest of the app already uses), instead
+      of one whole-table `observeAllObjects()` query. Each individual query's `CursorWindow` is now
+      bounded to a single endpoint's rows (matching the sync's own ~200-row-page size) rather than
+      the entire cache at once. Outer `debounce(300)` kept so a multi-endpoint sync burst still
+      collapses into one rebuild instead of one per endpoint page.
+- [x] Verify remotely (rofl-13): full `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass.
+- [x] Manual on-device check (Zenfone 10, debug build 1.5.5, ~388 devices/239 device types cached
+      mid-sync): searched "switch" (126 hits) and "a" (438 hits, spans multiple endpoints) with a
+      logcat watch for `FATAL EXCEPTION`/`CursorWindow`/`OutOfMemory` - none seen, results rendered
+      correctly across endpoints. Not reproduced on the original Pixel 5 itself (not on hand for
+      this pass), but exercises the same fixed code path under a comparably large cache.
+
+Status: **done**, 2026-08-14; implementation verified with remote compile/unit tests and an
+on-device Search smoke test (Zenfone 10) exercising the fixed per-endpoint index-build path with no
+crash. Original Pixel 5 not re-tested directly.
+
+## NBC-448: "Libraries" section on the About page (OSS deps + licenses)
+
+Idea, not started: an About-page entry, like Jellyfin's, that opens a dialog/screen listing every
+external dependency this app ships with and its license. Requested as dynamically generated rather
+than hand-maintained, so it can't silently drift out of date as dependencies change.
+
+- [ ] Feasibility: likely straightforward via a Gradle plugin that scans resolved dependencies at
+      build time and emits a licenses artifact/screen - e.g. `com.mikepenz.aboutlibraries` (ships
+      its own ready-made Compose screen) or Google's `oss-licenses-plugin`. Needs a spike to confirm
+      one of these covers this project's actual dependency set cleanly before committing to it.
+- [ ] Design: where in Settings/About this entry lives, and whether to use a plugin's stock UI or a
+      custom list themed to match the rest of the app.
+
+Status: not started, 2026-08-14.

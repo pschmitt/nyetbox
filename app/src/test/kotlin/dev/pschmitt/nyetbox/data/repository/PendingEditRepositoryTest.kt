@@ -490,6 +490,9 @@ internal class FakeNetBoxObjectDao : NetBoxObjectDao {
 
     override fun observeAllObjects(): Flow<List<NetBoxObjectEntity>> = flowOf(listOfNotNull(last))
 
+    override fun observeAllEndpointPaths(): Flow<List<String>> =
+        flowOf(listOfNotNull(last?.endpointPath))
+
     override fun observeThumbnails(endpointPath: String): Flow<List<ObjectThumbnail>> =
         flowOf(emptyList())
 

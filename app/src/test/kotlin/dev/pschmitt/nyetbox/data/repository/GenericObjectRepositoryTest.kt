@@ -384,6 +384,9 @@ private class InMemoryNetBoxObjectDao(initial: List<NetBoxObjectEntity> = emptyL
     override fun observeAllObjects(): Flow<List<NetBoxObjectEntity>> =
         flowOf(objects.values.toList())
 
+    override fun observeAllEndpointPaths(): Flow<List<String>> =
+        flowOf(objects.values.map { it.endpointPath }.distinct())
+
     override fun observeThumbnails(endpointPath: String): Flow<List<ObjectThumbnail>> =
         flowOf(
             objects.values.mapNotNull {
