@@ -369,6 +369,15 @@ private class InMemoryNetBoxObjectDao(initial: List<NetBoxObjectEntity> = emptyL
             }
         )
 
+    override suspend fun getByRelatedObjectId(
+        endpointPath: String,
+        relatedObjectId: Int,
+    ): List<NetBoxObjectEntity> =
+        objects.values.filter {
+            it.endpointPath == endpointPath &&
+                (it.relatedObjectId == relatedObjectId || it.relatedObjectId == null)
+        }
+
     override fun observeById(endpointPath: String, id: Int): Flow<NetBoxObjectEntity?> =
         flowOf(objects[endpointPath to id])
 

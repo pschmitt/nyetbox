@@ -16,6 +16,7 @@ object NetBoxRef {
     const val IP_ADDRESSES_ENDPOINT_PATH = "api/ipam/ip-addresses/"
     const val RACKS_ENDPOINT_PATH = "api/dcim/racks/"
     const val SITES_ENDPOINT_PATH = "api/dcim/sites/"
+    const val LOCATIONS_ENDPOINT_PATH = "api/dcim/locations/"
     const val CABLES_ENDPOINT_PATH = "api/dcim/cables/"
 
     /** "https://host/api/dcim/sites/3/" -> "api/dcim/sites/" (strips the trailing id segment). */
@@ -86,7 +87,7 @@ object NetBoxEndpointCatalog {
             // just the handful that used to be the only hardcoded options - one entry per commonly
             // browsed NetBox model across the apps this catalog already knows an icon for
             // (AppIcons.BY_APP_KEY), not an exhaustive sweep of NetBox's full data model.
-            NetBoxEndpointMetadata("api/dcim/locations/", "Locations", "dcim"),
+            NetBoxEndpointMetadata(NetBoxRef.LOCATIONS_ENDPOINT_PATH, "Locations", "dcim"),
             NetBoxEndpointMetadata("api/dcim/manufacturers/", "Manufacturers", "dcim"),
             NetBoxEndpointMetadata("api/dcim/device-roles/", "Device Roles", "dcim"),
             NetBoxEndpointMetadata(NetBoxRef.INTERFACES_ENDPOINT_PATH, "Interfaces", "dcim"),

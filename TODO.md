@@ -9143,3 +9143,56 @@ user-facing control, and `SyncScheduler`'s constraints never required charging -
 
 Status: in progress, 2026-08-14; implementation done and verified with remote compile/unit tests,
 still needs on-device manual verification of the new settings' persistence and backup round-trip.
+
+## NBC-445: generic recursive targeted sync
+
+NBC-443's targeted sync was a fixed, per-screen fan-out (device -> its device type/interfaces/
+ports/IPs; any other object -> itself alone). Asked to generalize it: refreshing a rack should
+sync its devices, their device types/interfaces/cables, and the device on the other end of each
+cable; a site/location should cascade through its racks and devices the same way - uniformly for
+any object type, not a hand-written list per screen.
+
+Two live checks against netbox.brkn.lol (via the `netbox` skill) shaped the design: NetBox
+silently ignores an unrecognized filter param and returns the endpoint's full unfiltered contents
+instead of erroring (`?bogus_filter_xyz=1` -> HTTP 200, full count) - a wrong guess at a filter
+param name would silently turn a "targeted" sync into an accidental full sync with no error
+signal. And a cable's far-end device is genuinely 4 raw JSON hops from a root device
+(device->interface->cable->far-interface->far-device), confirmed via a real cable's
+`a_terminations`/`b_terminations` shape - so a flat numeric hop cap wouldn't actually reach it.
+
+- [x] `sync/TargetedSyncEngine.kt`: BFS graph walk from any root `(endpointPath, id)`. Forward
+      references (`{id, url}` nested anywhere in an object's own JSON, e.g. `device.site`,
+      `interface.cable`) are discovered generically with zero per-type code via
+      `forwardReferences()`, resolved through the existing `NetBoxRef.endpointFromDetailUrl`.
+      Reverse relations (a rack's devices, a device's interfaces) use a small, live-verified
+      `REVERSE_RELATIONS` table (`rack_id`/`site_id`/`location_id`/`device_id` - every filter param
+      checked live to actually narrow the result count, none guessed).
+- [x] Safety property (deliberately no numeric node-count cap): a node reached via a *reverse*
+      relation from an expandable node stays expandable (continues rack -> devices ->
+      interfaces); a node reached via a *forward* reference is refreshed for its own sake but
+      never itself reverse-expanded. This is what bounds a cable's far-end device to being
+      refreshed once (with its own device type/site/rack context) without re-exploding into that
+      device's other interfaces or its site's other devices, and symmetrically stops a device's
+      own `site`/`rack` pointers from re-triggering that site/rack's full device list.
+- [x] Dual-write for the two endpoints this app caches twice (typed `DeviceEntity`/
+      `DeviceTypeEntity` tables plus the generic `NetBoxObjectEntity` cache): both get refreshed
+      so the device/device-type detail screens and everything else (e.g. rack elevation previews)
+      stay consistent.
+- [x] `GenericObjectRepository.syncAllAndFetchIds()` + `NetBoxObjectDao.getByRelatedObjectId()`
+      (new suspend twin of the existing Flow query): sync a reverse relation, then read back just
+      the matching ids to recurse into - no new Room migration, reuses the existing precomputed
+      `relatedObjectId` index where it applies (today only `rack`->devices) and the existing
+      `matchesRelation` scan fallback otherwise.
+- [x] `DeviceDetailViewModel.refresh()` and `GenericDetailViewModel.refresh()` both now delegate
+      to `TargetedSyncEngine.sync()` instead of their previous bespoke fan-out/single-object
+      refresh - removes the now-redundant `DEVICE_SCOPED_SYNC_ENDPOINTS` hand-written list from
+      NBC-443.
+- [x] Add a unit test for `forwardReferences()` using real device/cable JSON snippets captured
+      from the live-instance checks (deterministic, no mocking).
+- [x] Verify remotely (rofl-13): full `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass.
+- [ ] Manual on-device check (still owed from NBC-443 too): pull-to-refresh a rack with a couple
+      of cabled devices in it, confirm the far-end device's data refreshes and the ripple/toast
+      behave the same as the single-device case.
+
+Status: in progress, 2026-08-14; implementation done and verified with remote compile/unit tests,
+still needs on-device manual verification.

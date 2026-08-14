@@ -32,6 +32,7 @@ import dev.pschmitt.nyetbox.data.repository.isDocumentsPluginModel
 import dev.pschmitt.nyetbox.data.repository.isTopologyPluginModel
 import dev.pschmitt.nyetbox.data.schema.NetBoxRef
 import dev.pschmitt.nyetbox.data.topology.TopologyGraph
+import dev.pschmitt.nyetbox.sync.TargetedSyncEngine
 import dev.pschmitt.nyetbox.ui.common.REFRESH_QUEUED_TOAST
 import dev.pschmitt.nyetbox.ui.common.shouldShowRefreshQueuedToast
 import dev.pschmitt.nyetbox.ui.common.targetedSyncToast
@@ -44,8 +45,6 @@ import dev.pschmitt.nyetbox.ui.navigation.Route
 import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -160,18 +159,6 @@ val DEVICE_RELATED_TABS =
         DeviceRelatedTab("Module bays", "api/dcim/module-bays/"),
     )
 
-/**
- * Endpoints a device-scoped pull-to-refresh fans out to, beyond the device row itself - every real
- * (non-pseudo) [DEVICE_RELATED_TABS] endpoint plus IP addresses, which aren't a tab of their own
- * but back [DeviceDetailViewModel.interfaceIpAddresses]. Each is synced filtered to just this
- * device via a `device_id` query param, not a full unscoped pass.
- */
-private val DEVICE_SCOPED_SYNC_ENDPOINTS: List<String> =
-    DEVICE_RELATED_TABS.map { it.endpointPath }
-        .filterNot {
-            it == JOURNAL_TAB_ENDPOINT_PATH || it == CONNECTED_DEVICES_TAB_ENDPOINT_PATH
-        } + IP_ADDRESSES_ENDPOINT_PATH
-
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class DeviceDetailViewModel
@@ -192,6 +179,7 @@ constructor(
     private val settingsRepository: SettingsRepository,
     private val directoryRepository: DirectoryRepository,
     private val topologyRepository: TopologyRepository,
+    private val targetedSyncEngine: TargetedSyncEngine,
 ) : ViewModel() {
 
     private val deviceId: Int = savedStateHandle.toRoute<Route.DeviceDetail>().deviceId
@@ -450,10 +438,11 @@ constructor(
     }
 
     /**
-     * Targeted device sync: the device row itself, then (only if that succeeds - nothing else is
-     * meaningfully scoped without it) its device type, every device-scoped component endpoint
-     * (interfaces, ports, module bays), IP addresses, and image attachments, all fanned out
-     * concurrently and filtered to just this device rather than a full unscoped sync pass.
+     * Targeted device sync via [TargetedSyncEngine]: the device row itself, then (only if that
+     * succeeds) everything meaningfully linked to it - device type, interfaces/ports/IP addresses,
+     * cables on those interfaces, and the device on the other end of each cable - fanned out
+     * concurrently rather than a full unscoped sync pass. Image attachments and the journal aren't
+     * part of that generic link graph, so they're refreshed alongside it here.
      */
     fun refresh(showConfirmation: Boolean = false) {
         if (settingsRepository.offlineMode.value) return
@@ -462,46 +451,18 @@ constructor(
                 _refreshToastMessage.value = REFRESH_QUEUED_TOAST
             }
             _isRefreshing.value = true
-            val deviceResult = deviceRepository.refreshDevice(deviceId)
-            var failureCount = 0
-            deviceResult
-                .onSuccess { refreshedDevice ->
-                    coroutineScope {
-                        val linkedSyncs = buildList {
-                            refreshedDevice.deviceTypeId?.let { typeId ->
-                                add(async { deviceTypeRepository.refresh(typeId).isFailure })
-                            }
-                            DEVICE_SCOPED_SYNC_ENDPOINTS.forEach { endpointPath ->
-                                add(
-                                    async {
-                                        genericObjectRepository
-                                            .syncAll(
-                                                endpointPath,
-                                                filters = mapOf("device_id" to deviceId.toString()),
-                                            )
-                                            .isFailure
-                                    }
-                                )
-                            }
-                            add(
-                                async {
-                                    imageAttachmentRepository
-                                        .refresh(DEVICE_OBJECT_TYPE, deviceId)
-                                        .isFailure
-                                }
-                            )
-                        }
-                        failureCount = linkedSyncs.count { it.await() }
-                    }
-                }
-                .onFailure {
-                    _errorMessage.value = it.message ?: "Couldn't refresh - showing cached data"
-                }
+            val syncResult = targetedSyncEngine.sync(NetBoxRef.DEVICES_ENDPOINT_PATH, deviceId)
+            if (!syncResult.rootSucceeded) {
+                _errorMessage.value = "Couldn't refresh - showing cached data"
+            }
+            imageAttachmentRepository.refresh(DEVICE_OBJECT_TYPE, deviceId).onFailure {
+                Timber.w(it, "Couldn't refresh image attachments for device %d", deviceId)
+            }
             if (showConfirmation) {
                 _refreshToastMessage.value =
                     targetedSyncToast(
-                        primarySucceeded = deviceResult.isSuccess,
-                        failureCount = failureCount,
+                        primarySucceeded = syncResult.rootSucceeded,
+                        failureCount = syncResult.otherFailureCount,
                     )
             }
             refreshJournal()

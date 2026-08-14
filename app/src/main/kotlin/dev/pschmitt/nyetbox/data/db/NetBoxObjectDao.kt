@@ -69,6 +69,20 @@ interface NetBoxObjectDao {
         relatedObjectId: Int,
     ): Flow<List<NetBoxObjectEntity>>
 
+    /** Suspend twin of [observeByRelatedObjectId] for one-shot reads (e.g. a sync pass). */
+    @Query(
+        """
+        SELECT * FROM netbox_objects
+        WHERE endpointPath = :endpointPath
+          AND (relatedObjectId = :relatedObjectId OR relatedObjectId IS NULL)
+        ORDER BY display COLLATE NOCASE
+        """
+    )
+    suspend fun getByRelatedObjectId(
+        endpointPath: String,
+        relatedObjectId: Int,
+    ): List<NetBoxObjectEntity>
+
     @Query("SELECT * FROM netbox_objects WHERE endpointPath = :endpointPath AND id = :id")
     fun observeById(endpointPath: String, id: Int): Flow<NetBoxObjectEntity?>
 

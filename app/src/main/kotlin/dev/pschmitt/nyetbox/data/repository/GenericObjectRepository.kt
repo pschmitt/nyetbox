@@ -248,6 +248,34 @@ constructor(
         total
     }
 
+    /**
+     * Syncs [endpointPath] filtered to [filterQueryParam]=[filterValue] (a real, live-verified
+     * NetBox API filter param - see
+     * [TargetedSyncEngine][dev.pschmitt.nyetbox.sync.TargetedSyncEngine]), then returns just the
+     * ids of the rows that actually belong to that parent, for the caller to recurse into. Uses the
+     * precomputed [NetBoxObjectDao.getByRelatedObjectId] index when [relationKey] matches
+     * [precomputedRelationKeyFor] for this endpoint (today only `rack` on devices), else falls back
+     * to a full-endpoint scan - same shape [observeObjects] already uses reactively, just as a
+     * one-shot suspend read over the small set [syncAll] just wrote. [matchesRelation] is always
+     * re-applied on top regardless of which candidate set was used, since the precomputed column is
+     * only ever a narrowing index, never the correctness authority.
+     */
+    suspend fun syncAllAndFetchIds(
+        endpointPath: String,
+        filterQueryParam: String,
+        filterValue: Int,
+        relationKey: String,
+    ): Result<List<Int>> =
+        syncAll(endpointPath, filters = mapOf(filterQueryParam to filterValue.toString())).map {
+            val candidates =
+                if (precomputedRelationKeyFor(endpointPath) == relationKey) {
+                    dao.getByRelatedObjectId(endpointPath, filterValue)
+                } else {
+                    dao.getAll(endpointPath)
+                }
+            candidates.filter { it.matchesRelation(json, relationKey, filterValue) }.map { it.id }
+        }
+
     /** The incremental-sync watermark for this endpoint - see [NetBoxObjectDao.maxLastUpdated]. */
     suspend fun lastUpdatedWatermark(endpointPath: String): String? =
         dao.maxLastUpdated(endpointPath)
@@ -272,8 +300,8 @@ constructor(
             .mapNotNull { entity ->
                 val objectJson =
                     runCatching {
-                        json.decodeFromString(JsonObject.serializer(), entity.json)
-                    }
+                            json.decodeFromString(JsonObject.serializer(), entity.json)
+                        }
                         .getOrNull() ?: return@mapNotNull null
                 val appLabel = (objectJson["app_label"] as? JsonPrimitive)?.contentOrNull.orEmpty()
                 val model = (objectJson["model"] as? JsonPrimitive)?.contentOrNull.orEmpty()

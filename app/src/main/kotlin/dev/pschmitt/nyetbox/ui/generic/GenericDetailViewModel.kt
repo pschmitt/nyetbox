@@ -42,6 +42,7 @@ import dev.pschmitt.nyetbox.data.schema.NetBoxRef
 import dev.pschmitt.nyetbox.data.schema.assetTagState
 import dev.pschmitt.nyetbox.sync.SyncScheduler
 import dev.pschmitt.nyetbox.sync.SyncStatusRepository
+import dev.pschmitt.nyetbox.sync.TargetedSyncEngine
 import dev.pschmitt.nyetbox.ui.common.REFRESH_QUEUED_TOAST
 import dev.pschmitt.nyetbox.ui.common.shouldShowRefreshQueuedToast
 import dev.pschmitt.nyetbox.ui.common.targetedSyncToast
@@ -104,6 +105,7 @@ constructor(
     private val svgDiagramRepository: SvgDiagramRepository,
     private val syncScheduler: SyncScheduler,
     syncStatusRepository: SyncStatusRepository,
+    private val targetedSyncEngine: TargetedSyncEngine,
     private val json: Json,
     private val api: GenericNetBoxApi,
     private val directoryRepository: DirectoryRepository,
@@ -523,9 +525,12 @@ constructor(
     }
 
     /**
-     * Targeted refresh of this object alone - see
-     * [dev.pschmitt.nyetbox.ui.devicedetail.DeviceDetailViewModel.refresh] for the multi-object
-     * fan-out shape this mirrors for a single object with no linked items of its own to sync.
+     * Targeted refresh of this object via [TargetedSyncEngine] - for a container object (rack,
+     * site, location) this recursively syncs everything meaningfully linked to it (devices, their
+     * device types/interfaces/cables, connected devices, ...); for any other object type it's still
+     * more than a bare single-object refresh, since the engine always follows the object's own
+     * forward references (e.g. an interface's device and cable). Journal/cable-trace/image
+     * attachments aren't part of that generic link graph, so they're refreshed alongside it here.
      */
     fun refresh(showConfirmation: Boolean = false) {
         if (settingsRepository.offlineMode.value) return
@@ -534,13 +539,16 @@ constructor(
                 _refreshToastMessage.value = REFRESH_QUEUED_TOAST
             }
             _isRefreshing.value = true
-            val result = repository.refreshObject(route.endpointPath, route.id)
+            val syncResult = targetedSyncEngine.sync(route.endpointPath, route.id)
             if (showConfirmation) {
                 _refreshToastMessage.value =
-                    targetedSyncToast(primarySucceeded = result.isSuccess, failureCount = 0)
+                    targetedSyncToast(
+                        primarySucceeded = syncResult.rootSucceeded,
+                        failureCount = syncResult.otherFailureCount,
+                    )
             }
-            result.onFailure {
-                _errorMessage.value = it.message ?: "Couldn't refresh - showing cached data"
+            if (!syncResult.rootSucceeded) {
+                _errorMessage.value = "Couldn't refresh - showing cached data"
             }
             loadJournalEntries()
             loadCableTrace()
