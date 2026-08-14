@@ -8,7 +8,7 @@
         errorLine2="        ~~~~~~~~~~~~~~">
         <location
             file="build.gradle.kts"
-            line="43"
+            line="47"
             column="9"/>
     </issue>
 
@@ -19,7 +19,7 @@
         errorLine2="                           ~~~~~~~~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="6"
+            line="7"
             column="28"/>
     </issue>
 
@@ -30,7 +30,7 @@
         errorLine2="                           ~~~~~~~~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="6"
+            line="7"
             column="28"/>
     </issue>
 
@@ -41,7 +41,7 @@
         errorLine2="                   ~~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="8"
+            line="9"
             column="20"/>
     </issue>
 
@@ -52,7 +52,7 @@
         errorLine2="                   ~~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="8"
+            line="9"
             column="20"/>
     </issue>
 
@@ -63,7 +63,7 @@
         errorLine2="                   ~~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="8"
+            line="9"
             column="20"/>
     </issue>
 
@@ -74,7 +74,7 @@
         errorLine2="                   ~~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="8"
+            line="9"
             column="20"/>
     </issue>
 
@@ -85,7 +85,7 @@
         errorLine2="                   ~~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="8"
+            line="9"
             column="20"/>
     </issue>
 
@@ -96,7 +96,7 @@
         errorLine2="                   ~~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="8"
+            line="9"
             column="20"/>
     </issue>
 
@@ -107,7 +107,7 @@
         errorLine2="                   ~~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="8"
+            line="9"
             column="20"/>
     </issue>
 
