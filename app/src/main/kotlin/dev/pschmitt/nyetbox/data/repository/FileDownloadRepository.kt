@@ -49,7 +49,9 @@ internal fun downloadOrRevalidate(
     okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
         if (!response.isSuccessful) error("Download failed: HTTP ${response.code}")
         response.body.byteStream().use { input ->
-            temp.outputStream().use { output -> input.copyToWithProgress(output, onBytesDownloaded) }
+            temp.outputStream().use { output ->
+                input.copyToWithProgress(output, onBytesDownloaded)
+            }
         }
     }
     check(temp.renameTo(target)) { "Couldn't finalize downloaded attachment" }
