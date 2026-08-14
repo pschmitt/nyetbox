@@ -563,7 +563,10 @@ private fun FieldRow.isKeyDetailsField(): Boolean =
  *   These are reverse-related collections such as a site's circuits, devices, racks, and virtual
  *   machines, and remain individually clickable to open the cached filtered list.
  * - Other native row types (`Image`, `BooleanValue`, `ReferenceList`, `TagList`, `ChipList`,
- *   `ExternalLink`, `FileAttachment`) keep their own distinct cards and break both runs.
+ *   `ExternalLink`, `FileAttachment`) keep their own distinct cards and break both runs - if a
+ *   native run resumes afterward (e.g. a rack's boolean `desc_units` field sitting between other
+ *   plain/reference fields), only the first such run is titled [KEY_DETAILS_CARD_TITLE]; later ones
+ *   render as a plain, untitled card so a screen never shows two cards both saying "Details".
  * - From the `"Custom fields"` [FieldRow.Section] marker onward, custom fields sharing a real,
  *   admin-defined NetBox custom-field group cluster into one shared, titled card. The synthetic
  *   [UNGROUPED_CUSTOM_FIELD_GROUP_LABEL] bucket - and the `"Custom fields"` [FieldRow.Section]
@@ -575,12 +578,21 @@ internal fun clusterFieldRows(rows: List<FieldRow>): List<FieldRowCluster> = bui
     var pendingLinkedItemsRun: MutableList<FieldRow>? = null
     var pendingGroupLabel: String? = null
     var pendingGroupRows: MutableList<FieldRow>? = null
+    // A breaking row type (e.g. a boolean like a rack's "Desc. Units") can split one native run
+    // into several - only the first gets the "Details" title, so the screen never shows two cards
+    // both titled "Details"; any later run renders as a plain, untitled card instead.
+    var usedDetailsTitle = false
 
     fun flushNativeRun() {
         val run = pendingNativeRun
         pendingNativeRun = null
         if (run == null) return
-        add(FieldRowCluster.Grouped(label = KEY_DETAILS_CARD_TITLE, rows = run))
+        if (usedDetailsTitle) {
+            add(FieldRowCluster.Grouped(label = null, rows = run))
+        } else {
+            add(FieldRowCluster.Grouped(label = KEY_DETAILS_CARD_TITLE, rows = run))
+            usedDetailsTitle = true
+        }
     }
 
     fun flushLinkedItemsRun() {

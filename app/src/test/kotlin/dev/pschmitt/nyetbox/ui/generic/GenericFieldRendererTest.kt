@@ -531,6 +531,9 @@ class GenericFieldRendererTest {
         val assetTag = FieldRow.PlainText("Asset tag", "EYO-0001")
         val rows = listOf(site, manufacturer, airflow, assetTag)
 
+        // Only the first native run is titled "Details" - a resumed run (e.g. a rack's boolean
+        // desc_units field splitting site/role/serial from outer_width/comments) must not produce
+        // a second card that also says "Details".
         assertEquals(
             listOf(
                 FieldRowCluster.Grouped(
@@ -538,7 +541,7 @@ class GenericFieldRendererTest {
                     rows = listOf(site, manufacturer),
                 ),
                 FieldRowCluster.Standalone(airflow),
-                FieldRowCluster.Grouped(KEY_DETAILS_CARD_TITLE, listOf(assetTag)),
+                FieldRowCluster.Grouped(label = null, rows = listOf(assetTag)),
             ),
             clusterFieldRows(rows),
         )

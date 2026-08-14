@@ -9196,3 +9196,26 @@ signal. And a cable's far-end device is genuinely 4 raw JSON hops from a root de
 
 Status: in progress, 2026-08-14; implementation done and verified with remote compile/unit tests,
 still needs on-device manual verification.
+
+## NBC-446: fix duplicate "Details" card on racks (and any object with a mid-list boolean field)
+
+Reported live on the Zenfone 10 while viewing a rack: two separate cards both titled "Details".
+Root cause confirmed via a real `GET /api/dcim/racks/<id>/` response: NetBox's rack JSON has the
+boolean `desc_units` field sitting in the middle of the native field list (between `weight_unit`
+and `outer_width`). `GenericDetailFields.kt`'s `clusterFieldRows()` correctly gives `BooleanValue`
+rows their own distinct card (by design, for the tinted enabled/disabled surface), but the native
+field run that resumes afterward was unconditionally given the same `"Details"` title as the first
+run - so the screen showed two identically-titled cards with the boolean's card sandwiched between
+them. Not rack-specific: any object type with a boolean field positioned mid-list hits the same bug.
+
+- [x] `clusterFieldRows()`: only the first native-field run per screen is titled "Details"; any
+      later run (after being split by a boolean/image/reference-list/etc. row) renders as a plain,
+      untitled card instead of repeating the title.
+- [x] Updated the test that had encoded the old (buggy) two-"Details"-cards behavior as expected,
+      plus the function's doc comment.
+- [x] Verify remotely (rofl-13): full `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass.
+- [ ] Manual on-device check: confirm the rack the Zenfone was on now shows one "Details" card,
+      not two.
+
+Status: in progress, 2026-08-14; implementation done and verified with remote compile/unit tests,
+still needs on-device confirmation on the specific rack that surfaced this.
