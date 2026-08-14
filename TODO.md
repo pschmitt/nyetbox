@@ -6934,11 +6934,25 @@ verified green end to end, including inspecting the real output images.
 When configuring object-type colors, preview each object type's icon using its selected color so
 the setting is immediately understandable.
 
-- [ ] Apply the configured object-type color to the relevant icon in the color-setting UI.
-- [ ] Keep the preview consistent with object-type icons elsewhere in the app.
-- [ ] Add focused UI/unit coverage for the color preview.
+- [x] Apply the configured object-type color to the relevant icon in the color-setting UI. Already
+  landed as part of NBC-212's `ObjectTypeColorsDialog` (`SettingsDialogs.kt`): each row tints its
+  `AppIcons.forEndpointPath(...)` icon (and its circular background) with
+  `visualColorForEndpointPath(endpointPath, selected, ...)`, where `selected` is the row's
+  currently-configured `ThemeAccent?`.
+- [x] Keep the preview consistent with object-type icons elsewhere in the app - it already reuses
+  the same `AppIcons.forEndpointPath`/`visualColorForEndpointPath` helpers the sidebar, global
+  search, and detail screens use, so any override picked here matches everywhere else immediately.
+- [x] Add focused UI/unit coverage for the color preview: added
+  `app/src/test/kotlin/dev/pschmitt/nyetbox/ui/common/DetailAccentTest.kt`, a plain-JVM unit test
+  of `visualColorForEndpointPath` (deterministic per-path fallback, `null`/`System` override
+  parity, and each fixed `ThemeAccent` override's resolved color) - Compose UI tests can't easily
+  assert an `Icon`'s `tint` via semantics matchers, so this covers the actual color-resolution
+  logic `ObjectTypeColorsDialog` calls directly.
 
-Status: not started, 2026-08-04.
+Status: **done**, 2026-08-15; the icon-tinting behavior NBC-366 asked for was already implemented
+(NBC-212, 2026-08-03) by the time this entry was filed - verified by reading `SettingsDialogs.kt`
+directly. Only the missing test-coverage checklist item needed real work. Verified remotely
+(`:app:testDebugUnitTest` on rofl-13).
 
 ## NBC-368: versioned settings backup and restore
 
