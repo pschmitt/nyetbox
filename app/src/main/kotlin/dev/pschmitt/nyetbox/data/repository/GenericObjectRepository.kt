@@ -300,8 +300,8 @@ constructor(
             .mapNotNull { entity ->
                 val objectJson =
                     runCatching {
-                            json.decodeFromString(JsonObject.serializer(), entity.json)
-                        }
+                        json.decodeFromString(JsonObject.serializer(), entity.json)
+                    }
                         .getOrNull() ?: return@mapNotNull null
                 val appLabel = (objectJson["app_label"] as? JsonPrimitive)?.contentOrNull.orEmpty()
                 val model = (objectJson["model"] as? JsonPrimitive)?.contentOrNull.orEmpty()
