@@ -13,13 +13,112 @@
     </issue>
 
     <issue
+        id="GradleDependency"
+        message="A newer version of androidx.baselineprofile than 1.5.0-beta01 is available: 1.5.0-rc01"
+        errorLine1="androidx-baselineprofile = &quot;1.5.0-beta01&quot;"
+        errorLine2="                           ~~~~~~~~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="6"
+            column="28"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.benchmark:benchmark-macro-junit4 than 1.5.0-beta01 is available: 1.5.0-rc01"
+        errorLine1="androidx-baselineprofile = &quot;1.5.0-beta01&quot;"
+        errorLine2="                           ~~~~~~~~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="6"
+            column="28"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.compose.runtime:runtime than 1.11.4 is available: 1.12.0"
+        errorLine1="androidx-compose = &quot;1.11.4&quot;"
+        errorLine2="                   ~~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="8"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.compose.ui:ui than 1.11.4 is available: 1.12.0"
+        errorLine1="androidx-compose = &quot;1.11.4&quot;"
+        errorLine2="                   ~~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="8"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.compose.ui:ui-test-junit4 than 1.11.4 is available: 1.12.0"
+        errorLine1="androidx-compose = &quot;1.11.4&quot;"
+        errorLine2="                   ~~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="8"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.compose.ui:ui-test-manifest than 1.11.4 is available: 1.12.0"
+        errorLine1="androidx-compose = &quot;1.11.4&quot;"
+        errorLine2="                   ~~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="8"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.compose.ui:ui-tooling than 1.11.4 is available: 1.12.0"
+        errorLine1="androidx-compose = &quot;1.11.4&quot;"
+        errorLine2="                   ~~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="8"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.compose.ui:ui-tooling-preview than 1.11.4 is available: 1.12.0"
+        errorLine1="androidx-compose = &quot;1.11.4&quot;"
+        errorLine2="                   ~~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="8"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="Upgrade `androidx.compose.foundation` for keyboard and mouse support"
+        errorLine1="androidx-compose = &quot;1.11.4&quot;"
+        errorLine2="                   ~~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="8"
+            column="20"/>
+    </issue>
+
+    <issue
         id="ModifierParameter"
         message="Modifier parameter should be the first optional parameter"
         errorLine1="    modifier: Modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),"
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/kotlin/dev/pschmitt/nyetbox/ui/devicedetail/DeviceDetailScreen.kt"
-            line="1590"
+            line="1591"
             column="5"/>
     </issue>
 
@@ -30,7 +129,7 @@
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/kotlin/dev/pschmitt/nyetbox/ui/devicedetail/DeviceDetailScreen.kt"
-            line="1590"
+            line="1591"
             column="5"/>
     </issue>
 
@@ -41,7 +140,7 @@
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/kotlin/dev/pschmitt/nyetbox/ui/devicedetail/DeviceDetailScreen.kt"
-            line="1652"
+            line="1653"
             column="5"/>
     </issue>
 
@@ -52,7 +151,7 @@
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/kotlin/dev/pschmitt/nyetbox/ui/devicedetail/DeviceDetailScreen.kt"
-            line="1652"
+            line="1653"
             column="5"/>
     </issue>
 

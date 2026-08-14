@@ -28,19 +28,19 @@ private val PULSE_STROKE_WIDTH = 2.dp
 private const val PULSE_MAX_ALPHA = 0.35f
 
 /**
- * Header object-type icon that grows expanding, fading rings outward from itself while [syncing]
- * is true - the in-progress signal for detail screens (device/generic item) that intentionally
- * suppress the large pull-to-refresh spinner over their content (see
- * [SuppressiblePullToRefreshBox] call sites). Reserves the same layout space whether or not
- * [syncing] is true so the header doesn't jump when a sync starts or ends.
+ * Header object-type icon that grows expanding, fading rings outward from itself while [syncing] is
+ * true - the in-progress signal for detail screens (device/generic item) that intentionally
+ * suppress the large pull-to-refresh spinner over their content (see [SuppressiblePullToRefreshBox]
+ * call sites). Reserves the same layout space whether or not [syncing] is true so the header
+ * doesn't jump when a sync starts or ends.
  */
 @Composable
 fun SyncPulseIcon(
     icon: ImageVector,
     tint: Color,
     syncing: Boolean,
-    contentDescription: String? = null,
     modifier: Modifier = Modifier,
+    contentDescription: String? = null,
 ) {
     val transition = rememberInfiniteTransition(label = "syncPulse")
     val progress by
@@ -63,8 +63,7 @@ fun SyncPulseIcon(
                     PULSE_RING_PHASES.forEach { phase ->
                         val ringProgress = (progress + phase) % 1f
                         drawCircle(
-                            color =
-                                tint.copy(alpha = (1f - ringProgress) * PULSE_MAX_ALPHA),
+                            color = tint.copy(alpha = (1f - ringProgress) * PULSE_MAX_ALPHA),
                             radius = baseRadius + (maxRadius - baseRadius) * ringProgress,
                             style = Stroke(width = PULSE_STROKE_WIDTH.toPx()),
                         )

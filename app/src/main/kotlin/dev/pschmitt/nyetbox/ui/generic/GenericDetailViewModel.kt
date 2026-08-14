@@ -127,17 +127,15 @@ constructor(
     // Not every NetBox model accepts image attachments/documents (e.g. users.permission) - default
     // to true (shown) until the one-shot OPTIONS-derived answer lands, so the widgets don't flash
     // in and out for the common case where they are supported.
-    val supportsImageAttachments: StateFlow<Boolean> =
-        flow {
-                emit(mediaUploadRepository.supportsImageAttachments(route.endpointPath))
-            }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val supportsImageAttachments: StateFlow<Boolean> = flow {
+        emit(mediaUploadRepository.supportsImageAttachments(route.endpointPath))
+    }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
-    val supportsDocuments: StateFlow<Boolean> =
-        flow {
-                emit(mediaUploadRepository.supportsDocuments(route.endpointPath))
-            }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val supportsDocuments: StateFlow<Boolean> = flow {
+        emit(mediaUploadRepository.supportsDocuments(route.endpointPath))
+    }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     private val _isRefreshing = MutableStateFlow(false)
 
@@ -245,11 +243,10 @@ constructor(
             .observeFor(route.endpointPath, route.id)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val imageAttachmentObjectType: String? =
-        runCatching {
-                MediaUploadRepository.contentTypeForEndpoint(route.endpointPath)
-            }
-            .getOrNull()
+    private val imageAttachmentObjectType: String? = runCatching {
+        MediaUploadRepository.contentTypeForEndpoint(route.endpointPath)
+    }
+        .getOrNull()
 
     val imageAttachments: StateFlow<List<ImageAttachmentEntity>> =
         imageAttachmentObjectType
@@ -817,28 +814,26 @@ constructor(
             .forEach { field ->
                 val endpoint = field.referenceEndpointPath ?: return@forEach
                 val cached = repository.cachedObjects(endpoint)
-                val options =
-                    buildList {
-                            field.currentDisplay?.let { add(EditOption(field.value, it)) }
-                            addAll(
-                                cached.map { entity ->
-                                    val objectJson = decode(entity.json)
-                                    EditOption(
-                                        value = entity.id.toString(),
-                                        label = entity.display,
-                                        frontImageUrl =
-                                            (objectJson?.get("front_image") as? JsonPrimitive)
-                                                ?.contentOrNull,
-                                        rearImageUrl =
-                                            (objectJson?.get("rear_image") as? JsonPrimitive)
-                                                ?.contentOrNull,
-                                        searchFields =
-                                            objectJson?.createChoiceSearchFields().orEmpty(),
-                                    )
-                                }
+                val options = buildList {
+                    field.currentDisplay?.let { add(EditOption(field.value, it)) }
+                    addAll(
+                        cached.map { entity ->
+                            val objectJson = decode(entity.json)
+                            EditOption(
+                                value = entity.id.toString(),
+                                label = entity.display,
+                                frontImageUrl =
+                                    (objectJson?.get("front_image") as? JsonPrimitive)
+                                        ?.contentOrNull,
+                                rearImageUrl =
+                                    (objectJson?.get("rear_image") as? JsonPrimitive)
+                                        ?.contentOrNull,
+                                searchFields = objectJson?.createChoiceSearchFields().orEmpty(),
                             )
                         }
-                        .distinctBy { it.value }
+                    )
+                }
+                    .distinctBy { it.value }
                 references[field.key] = options
             }
         _referenceOptions.value = references
@@ -927,11 +922,10 @@ constructor(
         return deviceTypeId?.let { deviceTypeImages[it] }
     }
 
-    private fun decode(rawJson: String): JsonObject? =
-        runCatching {
-                json.decodeFromString(JsonObject.serializer(), rawJson)
-            }
-            .getOrNull()
+    private fun decode(rawJson: String): JsonObject? = runCatching {
+        json.decodeFromString(JsonObject.serializer(), rawJson)
+    }
+        .getOrNull()
 
     private fun customFieldAdminChoiceOptions(): Map<String, List<EditOption>> =
         mapOf(

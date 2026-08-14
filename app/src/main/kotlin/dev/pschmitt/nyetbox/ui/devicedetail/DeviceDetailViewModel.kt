@@ -123,8 +123,8 @@ internal fun parseInterfaceIpAddress(
 ): ParsedInterfaceIpAddress? {
     val objectJson =
         runCatching {
-                ipAddressJson.decodeFromString(JsonObject.serializer(), rawJson)
-            }
+            ipAddressJson.decodeFromString(JsonObject.serializer(), rawJson)
+        }
             .getOrNull() ?: return null
     if (objectJson["assigned_object_type"]?.jsonPrimitive?.contentOrNull != "dcim.interface") {
         return null
@@ -140,8 +140,8 @@ internal fun parseInterfaceIpAddress(
 internal fun parseManufacturerId(rawJson: String): Int? {
     val objectJson =
         runCatching {
-                ipAddressJson.decodeFromString(JsonObject.serializer(), rawJson)
-            }
+            ipAddressJson.decodeFromString(JsonObject.serializer(), rawJson)
+        }
             .getOrNull() ?: return null
     return (objectJson["manufacturer"] as? JsonObject)?.get("id")?.jsonPrimitive?.intOrNull
 }
@@ -412,14 +412,14 @@ constructor(
             .observeObjects(IP_ADDRESSES_ENDPOINT_PATH, "")
             .map { objects ->
                 buildMap {
-                        objects.forEach { objectEntity ->
-                            parseInterfaceIpAddress(objectEntity.id, objectEntity.json)?.let {
-                                assignment ->
-                                getOrPut(assignment.interfaceId) { mutableListOf() }
-                                    .add(assignment.ipAddress)
-                            }
+                    objects.forEach { objectEntity ->
+                        parseInterfaceIpAddress(objectEntity.id, objectEntity.json)?.let {
+                            assignment ->
+                            getOrPut(assignment.interfaceId) { mutableListOf() }
+                                .add(assignment.ipAddress)
                         }
                     }
+                }
                     .mapValues { (_, addresses) -> addresses.distinctBy { it.id } }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())

@@ -1507,13 +1507,13 @@ private fun dev.pschmitt.nyetbox.data.db.NetBoxObjectEntity.interfaceMacAddresse
         runCatching { interfaceJson.parseToJsonElement(json).jsonObject }.getOrNull()
             ?: return emptyList()
     return buildList {
-            listOf("mac_address", "primary_mac_address").forEach { key ->
-                objectJson[key]?.displayValue()?.let(::add)
-            }
-            (objectJson["mac_addresses"] as? JsonArray).orEmpty().forEach { element ->
-                element.displayValue()?.let(::add)
-            }
+        listOf("mac_address", "primary_mac_address").forEach { key ->
+            objectJson[key]?.displayValue()?.let(::add)
         }
+        (objectJson["mac_addresses"] as? JsonArray).orEmpty().forEach { element ->
+            element.displayValue()?.let(::add)
+        }
+    }
         .distinct()
 }
 
@@ -1523,16 +1523,15 @@ private fun dev.pschmitt.nyetbox.data.db.NetBoxObjectEntity.interfaceSubtitle(
     val objectJson =
         runCatching { interfaceJson.parseToJsonElement(json).jsonObject }.getOrNull()
             ?: return secondaryLine
-    val addresses =
-        buildList {
-                val ipList = objectJson["ip_addresses"] as? JsonArray
-                ipList.orEmpty().forEach { element -> element.displayValue()?.let(::add) }
-                listOf("primary_ip4", "primary_ip6", "ip_address").forEach { key ->
-                    objectJson[key]?.displayValue()?.let(::add)
-                }
-                addAll(cachedIpAddresses)
-            }
-            .distinct()
+    val addresses = buildList {
+        val ipList = objectJson["ip_addresses"] as? JsonArray
+        ipList.orEmpty().forEach { element -> element.displayValue()?.let(::add) }
+        listOf("primary_ip4", "primary_ip6", "ip_address").forEach { key ->
+            objectJson[key]?.displayValue()?.let(::add)
+        }
+        addAll(cachedIpAddresses)
+    }
+        .distinct()
     val macAddresses = interfaceMacAddresses()
     val networkParts = buildList {
         if (addresses.isNotEmpty()) add("IP: ${addresses.joinToString(", ")}")
