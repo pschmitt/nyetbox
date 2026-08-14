@@ -9199,23 +9199,31 @@ still needs on-device manual verification.
 
 ## NBC-446: fix duplicate "Details" card on racks (and any object with a mid-list boolean field)
 
-Reported live on the Zenfone 10 while viewing a rack: two separate cards both titled "Details".
-Root cause confirmed via a real `GET /api/dcim/racks/<id>/` response: NetBox's rack JSON has the
-boolean `desc_units` field sitting in the middle of the native field list (between `weight_unit`
-and `outer_width`). `GenericDetailFields.kt`'s `clusterFieldRows()` correctly gives `BooleanValue`
-rows their own distinct card (by design, for the tinted enabled/disabled surface), but the native
-field run that resumes afterward was unconditionally given the same `"Details"` title as the first
-run - so the screen showed two identically-titled cards with the boolean's card sandwiched between
-them. Not rack-specific: any object type with a boolean field positioned mid-list hits the same bug.
+Reported live on the Zenfone 10 while viewing a rack: two (then, after a first pass, still
+visually three cards' worth of surfaces) both/around "Details". Root cause confirmed via a real
+`GET /api/dcim/racks/<id>/` response: NetBox's rack JSON has the boolean `desc_units` field
+sitting in the middle of the native field list (between `weight_unit` and `outer_width`).
+`GenericDetailFields.kt`'s `clusterFieldRows()` gave `BooleanValue` rows their own distinct card,
+which fragmented the surrounding native-field run into two pieces. Not rack-specific: any object
+type with a boolean field positioned mid-list hits the same fragmentation.
 
-- [x] `clusterFieldRows()`: only the first native-field run per screen is titled "Details"; any
-      later run (after being split by a boolean/image/reference-list/etc. row) renders as a plain,
-      untitled card instead of repeating the title.
-- [x] Updated the test that had encoded the old (buggy) two-"Details"-cards behavior as expected,
-      plus the function's doc comment.
-- [x] Verify remotely (rofl-13): full `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass.
-- [ ] Manual on-device check: confirm the rack the Zenfone was on now shows one "Details" card,
-      not two.
+- [x] First pass: only the first native-field run per screen is titled "Details"; a later run
+      (after being split by a breaking row) renders as a plain, untitled card instead of repeating
+      the title - fixes the duplicate *title* but still leaves 3 separate card surfaces on screen.
+- [x] Follow-up (what was actually wanted - "merge the 3 cards properly"): `isKeyDetailsField()`
+      now includes `FieldRow.BooleanValue`, so a boolean field no longer breaks the native run at
+      all - it renders inline, in its original position, inside the single "Details" card via
+      `ClusteredFieldRow`'s existing boolean-surface branch (already used for booleans inside a
+      real custom-field group, so no new rendering code). Other still-fragmenting native types
+      (`Image`, `ReferenceList`, `TagList`, `ChipList`, `ExternalLink`, `FileAttachment`) keep the
+      first-pass "only the first run is titled" behavior as a backstop.
+- [x] Updated tests: replaced the test that encoded the old (buggy) fragment-and-duplicate-title
+      behavior for a boolean with one confirming it now stays inline in one cluster; added a
+      still-fragmenting-type (`Image`) case to keep covering the untitled-second-run behavior.
+- [x] Verify remotely (rofl-13): full `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass,
+      twice (once per pass).
+- [ ] Manual on-device check: confirm the rack that surfaced this now shows one single "Details"
+      card with "Desc. Units" inline, not two/three cards.
 
 Status: in progress, 2026-08-14; implementation done and verified with remote compile/unit tests,
 still needs on-device confirmation on the specific rack that surfaced this.

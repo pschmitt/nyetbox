@@ -544,29 +544,36 @@ internal sealed interface FieldRowCluster {
     data class Grouped(val label: String?, val rows: List<FieldRow>) : FieldRowCluster
 }
 
-/** Native/top-level field types that belong in the titled key-details card. */
+/**
+ * Native/top-level field types that belong in the titled key-details card. [FieldRow.BooleanValue]
+ * is included so a boolean sitting in the middle of an otherwise-plain field list (e.g. a rack's
+ * `desc_units`, between `weight_unit` and `outer_width`) doesn't fragment one "Details" card into
+ * several - [ClusteredFieldRow] already renders it with its own tinted surface inline, the same way
+ * it does for a boolean inside a real custom-field group.
+ */
 private fun FieldRow.isKeyDetailsField(): Boolean =
     this is FieldRow.PlainText ||
         this is FieldRow.Reference ||
         this is FieldRow.Markdown ||
-        this is FieldRow.Metadata
+        this is FieldRow.Metadata ||
+        this is FieldRow.BooleanValue
 
 /**
  * Clusters a flat [FieldRow] list (as produced by `buildFieldRows`) two ways, matching the
  * marker-walking idiom [visibleFieldRows] already uses:
  * - Before the `"Custom fields"` [FieldRow.Section] marker (native/top-level fields), consecutive
- *   [FieldRow.PlainText], [FieldRow.Reference], [FieldRow.Markdown], and [FieldRow.Metadata] rows
- *     - the generic shape of site, role, serial, device type, comments, and audit fields - cluster
- *       into one titled [KEY_DETAILS_CARD_TITLE] card. This is type-driven, not name-driven, so it
- *       stays generic across every NetBox object type.
+ *   [FieldRow.PlainText], [FieldRow.Reference], [FieldRow.Markdown], [FieldRow.Metadata], and
+ *   [FieldRow.BooleanValue] rows - the generic shape of site, role, serial, device type, comments,
+ *   audit fields, and boolean toggles like a rack's `desc_units` - cluster into one titled
+ *   [KEY_DETAILS_CARD_TITLE] card, in their original order. This is type-driven, not name-driven,
+ *   so it stays generic across every NetBox object type.
  * - Consecutive [FieldRow.Count] rows cluster into one titled [KEY_LINKED_ITEMS_CARD_TITLE] card.
  *   These are reverse-related collections such as a site's circuits, devices, racks, and virtual
  *   machines, and remain individually clickable to open the cached filtered list.
- * - Other native row types (`Image`, `BooleanValue`, `ReferenceList`, `TagList`, `ChipList`,
- *   `ExternalLink`, `FileAttachment`) keep their own distinct cards and break both runs - if a
- *   native run resumes afterward (e.g. a rack's boolean `desc_units` field sitting between other
- *   plain/reference fields), only the first such run is titled [KEY_DETAILS_CARD_TITLE]; later ones
- *   render as a plain, untitled card so a screen never shows two cards both saying "Details".
+ * - Other native row types (`Image`, `ReferenceList`, `TagList`, `ChipList`, `ExternalLink`,
+ *   `FileAttachment`) keep their own distinct cards and break both runs - if a native run resumes
+ *   afterward, only the first such run is titled [KEY_DETAILS_CARD_TITLE]; later ones render as a
+ *   plain, untitled card so a screen never shows two cards both saying "Details".
  * - From the `"Custom fields"` [FieldRow.Section] marker onward, custom fields sharing a real,
  *   admin-defined NetBox custom-field group cluster into one shared, titled card. The synthetic
  *   [UNGROUPED_CUSTOM_FIELD_GROUP_LABEL] bucket - and the `"Custom fields"` [FieldRow.Section]

@@ -523,24 +523,40 @@ class GenericFieldRendererTest {
     }
 
     @Test
+    fun `clusterFieldRows does not break a native run at a boolean field`() {
+        // Confirms the fix for a real bug: a rack's boolean `desc_units` field sits between
+        // plain/reference fields (weight_unit, outer_width, ...) in NetBox's actual JSON, and used
+        // to fragment one "Details" card into three (two of them confusingly both titled
+        // "Details"). A boolean now stays part of the same run, in its original position.
+        val site = FieldRow.Reference("Site", RefTarget("HQ", "api/dcim/sites/", 1))
+        val descUnits = FieldRow.BooleanValue("Desc. Units", true)
+        val outerWidth = FieldRow.PlainText("Outer width", "600")
+        val rows = listOf(site, descUnits, outerWidth)
+
+        assertEquals(
+            listOf(FieldRowCluster.Grouped(label = KEY_DETAILS_CARD_TITLE, rows = rows)),
+            clusterFieldRows(rows),
+        )
+    }
+
+    @Test
     fun `clusterFieldRows breaks a native run at non-clusterable row types`() {
         val site = FieldRow.Reference("Site", RefTarget("HQ", "api/dcim/sites/", 1))
         val manufacturer =
             FieldRow.Reference("Manufacturer", RefTarget("Acme", "api/dcim/manufacturers/", 2))
-        val airflow = FieldRow.BooleanValue("Airflow", true)
+        val frontImage = FieldRow.Image("Front image", "https://netbox.example/media/front.jpg")
         val assetTag = FieldRow.PlainText("Asset tag", "EYO-0001")
-        val rows = listOf(site, manufacturer, airflow, assetTag)
+        val rows = listOf(site, manufacturer, frontImage, assetTag)
 
-        // Only the first native run is titled "Details" - a resumed run (e.g. a rack's boolean
-        // desc_units field splitting site/role/serial from outer_width/comments) must not produce
-        // a second card that also says "Details".
+        // Only the first native run is titled "Details" - a resumed run must not produce a second
+        // card that also says "Details".
         assertEquals(
             listOf(
                 FieldRowCluster.Grouped(
                     label = KEY_DETAILS_CARD_TITLE,
                     rows = listOf(site, manufacturer),
                 ),
-                FieldRowCluster.Standalone(airflow),
+                FieldRowCluster.Standalone(frontImage),
                 FieldRowCluster.Grouped(label = null, rows = listOf(assetTag)),
             ),
             clusterFieldRows(rows),
