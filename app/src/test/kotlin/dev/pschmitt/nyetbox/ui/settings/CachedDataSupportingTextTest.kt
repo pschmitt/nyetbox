@@ -1,7 +1,6 @@
 package dev.pschmitt.nyetbox.ui.settings
 
 import dev.pschmitt.nyetbox.sync.SyncProgress
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -53,7 +52,9 @@ class CachedDataSupportingTextTest {
                 bytesDownloaded = 2_097_152L,
             )
         val result = text(isSyncing = true, syncProgress = progress)
-        assertTrue(result.startsWith("Downloading images and documents… 4 of 12 · 2.0 MiB downloaded"))
+        assertTrue(
+            result.startsWith("Downloading images and documents… 4 of 12 · 2.0 MiB downloaded")
+        )
         assertTrue(result.contains("10 devices"))
     }
 
