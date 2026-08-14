@@ -63,9 +63,29 @@ passed `just lint` on rofl-13 still failed CI's `Lint` job after being pushed an
   current change didn't touch or author - don't scope a fix to "only the lines I changed" if CI
   flags something adjacent. Never disable, skip, or baseline around a lint failure to make it go
   away; fix the actual violation.
-- Never tag a release from a commit whose CI hasn't gone green. If a tag was already pushed and
-  CI on it fails, delete the tag (`git push origin :refs/tags/<tag>`) and recreate it once a
-  fixed commit is fully green on `main`.
+- `just format` runs the local `ktfmt` CLI over *every* tracked `.kt`/`.kts` file in the repo, not
+  just the ones a change touched - combined with the local/CI ktfmt version drift above, this can
+  silently reformat (and sometimes visibly worsen the formatting of) dozens of unrelated files in
+  one run. Diff-review its output before committing; `git checkout -- <file>` anything it touched
+  outside the actual change, don't assume every file it modified was an intended fix.
+- **Releasing a new version is exactly this procedure, in order - never skip or reorder a step:**
+  1. Land every change for the release on `main` first (including the version bump below) and
+     confirm `git status` is clean before tagging anything.
+  2. Bump `configuredVersionCode`/`configuredVersionName`'s defaults in `app/build.gradle.kts` to
+     the new version, as its own `chore: bump versionCode/versionName defaults to N/X.Y.Z` commit.
+     These gradle-property defaults are what both the tag-triggered `Release` workflow and
+     `just build release` actually embed - skipping this step was the exact root cause of a real
+     failure (v1.5.5's Play Store job rejected the build with "Version code 24 has already been
+     used" because the defaults still said 24/1.5.4).
+  3. Push to `main`, then confirm **on that exact commit's SHA** - not an assumption, not an older
+     green run - that `Lint`, `Build`, and `Release` (the workflows that trigger on a push to
+     `main`) all succeeded: `gh run list --branch main --limit 5` and check the commit message/SHA
+     column, or `gh run list --commit <sha>`.
+  4. Only then tag it (`vX.Y.Z`, matching the bumped `versionName`) and push the tag - this is what
+     fires the permanent (non-prerelease) `Release` workflow run for that tag.
+  5. If a tag was already pushed and CI on it fails, delete the tag
+     (`git push origin :refs/tags/<tag>`) and recreate it once a fixed commit is fully green on
+     `main` - never leave a released tag pointing at a red build.
 
 ## Physical test devices
 
