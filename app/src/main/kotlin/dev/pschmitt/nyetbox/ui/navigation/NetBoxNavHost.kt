@@ -27,6 +27,7 @@ import dev.pschmitt.nyetbox.ui.onboarding.OnboardingScreen
 import dev.pschmitt.nyetbox.ui.pending.PendingChangesScreen
 import dev.pschmitt.nyetbox.ui.scanner.ScannerScreen
 import dev.pschmitt.nyetbox.ui.search.GlobalSearchScreen
+import dev.pschmitt.nyetbox.ui.settings.LibrariesScreen
 import dev.pschmitt.nyetbox.ui.settings.SettingsCategoryScreen
 import dev.pschmitt.nyetbox.ui.settings.SettingsScreen
 import dev.pschmitt.nyetbox.ui.sync.SyncSummaryScreen
@@ -405,7 +406,11 @@ fun NetBoxNavHost(
                 onLoggedOut = {
                     navController.navigate(Route.Onboarding) { popUpTo(0) { inclusive = true } }
                 },
+                onShowLibraries = { navController.navigate(Route.Libraries) },
             )
+        }
+        composable<Route.Libraries> {
+            LibrariesScreen(onBack = { navController.navigateBackSafely() })
         }
         composable<Route.EditConflicts> {
             EditConflictsScreen(onBack = { navController.navigateBackSafely() })

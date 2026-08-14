@@ -30,6 +30,9 @@ sealed interface Route {
         val openServerManager: Boolean = false,
     ) : Route
 
+    /** OSS dependency + license list (NBC-448), reached from Settings > About. */
+    @Serializable data object Libraries : Route
+
     /** Model picker for the metadata-driven create form, reachable from the global bottom bar. */
     @Serializable data object Add : Route
 

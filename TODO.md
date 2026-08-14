@@ -9286,15 +9286,39 @@ crash. Original Pixel 5 not re-tested directly.
 
 ## NBC-448: "Libraries" section on the About page (OSS deps + licenses)
 
-Idea, not started: an About-page entry, like Jellyfin's, that opens a dialog/screen listing every
-external dependency this app ships with and its license. Requested as dynamically generated rather
-than hand-maintained, so it can't silently drift out of date as dependencies change.
+An About-page entry, like Jellyfin's, that opens a screen listing every external dependency this
+app ships with and its license - dynamically generated rather than hand-maintained, so it can't
+silently drift out of date as dependencies change.
 
-- [ ] Feasibility: likely straightforward via a Gradle plugin that scans resolved dependencies at
-      build time and emits a licenses artifact/screen - e.g. `com.mikepenz.aboutlibraries` (ships
-      its own ready-made Compose screen) or Google's `oss-licenses-plugin`. Needs a spike to confirm
-      one of these covers this project's actual dependency set cleanly before committing to it.
-- [ ] Design: where in Settings/About this entry lives, and whether to use a plugin's stock UI or a
-      custom list themed to match the rest of the app.
+- [x] Feasibility spike: picked `com.mikepenz.aboutlibraries.plugin.android` (AboutLibraries,
+      v15.0.4) over Google's `oss-licenses-plugin` - it ships a ready-made Compose Material 3 UI
+      module (`aboutlibraries-compose-m3`) matching this app's stack, where the Google plugin's UI
+      is a separate legacy `Activity`. Confirmed live (v15.0.4 is the latest full release; v13
+      split the Gradle plugin into a manual-tasks variant and this `.android` variant, which hooks
+      into the Android build automatically with zero config and needs no manual export task).
+- [x] `app/build.gradle.kts`: applied the plugin and added the `aboutlibraries-compose-m3`
+      dependency (`gradle/libs.versions.toml` gained the `aboutlibraries` version/plugin/library
+      entries, root `build.gradle.kts` the `apply false` plugin declaration). The plugin generates
+      `res/raw/aboutlibraries.json` from the module's resolved dependency graph at every build.
+- [x] Design: a real full-screen destination (`Route.Libraries`, new `LibrariesScreen.kt` under
+      `ui/settings/`), not a dialog - `LibrariesContainer`'s list is potentially hundreds of rows
+      long, which doesn't fit the existing About screen's small-dialog pattern (`onShowHiddenFields`
+      /`onShowObjectTypeColors`). Reachable via a new "Libraries" row in the About screen's
+      "Project" card, wired through `SettingsCategoryActions.onShowLibraries` (mirroring how the
+      existing dialog-opening actions are threaded) down to a real `navController.navigate(...)` in
+      `NetBoxNavHost.kt`, since `Route.SettingsCategory` can't itself express a non-category screen.
+- [x] Bonus (explicit ask): tapping a library opens its real project page - `onLibraryClick` reads
+      `Library.website` (POM `<url>`) falling back to `Library.scm?.url` (repo URL) and opens it via
+      `LocalUriHandler`; a library with neither falls back to the container's own default of
+      expanding its license text inline, so nothing dead-ends with no reaction to a tap.
+- [x] Verify remotely (rofl-13): `:app:compileDebugKotlin` and `:app:testDebugUnitTest` both pass.
+- [x] Manual on-device check (Zenfone 10, debug build 1.5.6): Settings > About > Libraries renders
+      real generated data (AboutLibraries' own modules, Accompanist, AndroidX Activity, App Startup,
+      ...) with author/version/license badge per row; tapping a row (Accompanist Drawable Painter)
+      opened `github.com/google/accompanist` in the browser - confirmed via logcat (`WindowManager`
+      handing the `ACTION_VIEW` intent to Firefox) and a screenshot of the real GitHub page. No
+      crash, no exceptions in logcat across the whole pass.
 
-Status: not started, 2026-08-14.
+Status: **done**, 2026-08-15; implemented and verified with remote compile/unit tests and an
+on-device check confirming both the generated library list and the click-through-to-project-page
+behavior work against this app's real dependency graph.

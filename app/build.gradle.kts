@@ -5,6 +5,10 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.androidx.baselineprofile)
+    // NBC-448: generates res/raw/aboutlibraries.json (every dependency's name/license/project URL)
+    // at build time from the module's resolved dependency graph - the `.android` plugin variant
+    // hooks into the Android build automatically, no manual export task or extra config needed.
+    alias(libs.plugins.aboutlibraries)
 }
 
 ksp {
@@ -197,6 +201,10 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     implementation(libs.timber)
+
+    // Libraries screen (NBC-448) - renders the aboutLibraries plugin's generated dependency/
+    // license data, see Settings > About > Libraries.
+    implementation(libs.aboutlibraries.compose.m3)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

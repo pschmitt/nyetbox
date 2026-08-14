@@ -121,6 +121,7 @@ internal data class SettingsCategoryActions(
     val onSetThemeAccent: (ThemeAccent) -> Unit,
     val onShowObjectTypeColors: () -> Unit,
     val onShowHiddenFields: () -> Unit,
+    val onShowLibraries: () -> Unit = {},
     val onSetScannerLens: (ScannerLens) -> Unit,
     val onSetScannerRearLens: (ScannerRearLens) -> Unit,
     val onUpdatePrintSettings: ((PrintSettings) -> PrintSettings) -> Unit,
@@ -175,7 +176,7 @@ internal fun SettingsCategoryContent(
         SettingsCategory.NavigationBar -> NavBarSettingsContent(state, actions)
         SettingsCategory.Shortcuts -> ShortcutSettingsContent(state, actions)
         SettingsCategory.Notifications -> NotificationSettingsContent(state, actions)
-        SettingsCategory.About -> AboutSettingsContent()
+        SettingsCategory.About -> AboutSettingsContent(onShowLibraries = actions.onShowLibraries)
     }
 }
 
@@ -1133,7 +1134,7 @@ private fun NotificationSettingsContent(
 }
 
 @Composable
-private fun AboutSettingsContent() {
+private fun AboutSettingsContent(onShowLibraries: () -> Unit) {
     val context = LocalContext.current
     var buildTapCount by remember { mutableIntStateOf(0) }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -1167,6 +1168,15 @@ private fun AboutSettingsContent() {
             )
         }
         SettingsGroupCard(title = "Project", icon = Icons.Default.Code) {
+            SettingsListItem(
+                modifier = Modifier.clickable(onClick = onShowLibraries),
+                leadingContent = { Icon(Icons.Default.Inventory2, contentDescription = null) },
+                headlineContent = { Text("Libraries") },
+                supportingContent = { Text("Open-source dependencies and their licenses") },
+                trailingContent = {
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                },
+            )
             ExternalLinkRow(
                 context = context,
                 url = "https://github.com/pschmitt/nyetbox",

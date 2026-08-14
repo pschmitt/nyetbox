@@ -1,4 +1,5 @@
 [versions]
+aboutlibraries = "15.0.4"
 android-plugin = "9.3.1"
 androidx-activity = "1.13.0"
 # Shared by the :baselineprofile macrobenchmark module and androidx.profileinstaller in :app -
@@ -44,6 +45,7 @@ timber = "5.0.1"
 zxing-core = "3.5.4"
 
 [libraries]
+aboutlibraries-compose-m3 = { group = "com.mikepenz", name = "aboutlibraries-compose-m3", version.ref = "aboutlibraries" }
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "androidx-activity" }
 androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "androidx-baselineprofile" }
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "androidx-profileinstaller" }
@@ -105,6 +107,7 @@ timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "tim
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing-core" }
 
 [plugins]
+aboutlibraries = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "aboutlibraries" }
 android-application = { id = "com.android.application", version.ref = "android-plugin" }
 android-test = { id = "com.android.test", version.ref = "android-plugin" }
 androidx-baselineprofile = { id = "androidx.baselineprofile", version.ref = "androidx-baselineprofile" }
