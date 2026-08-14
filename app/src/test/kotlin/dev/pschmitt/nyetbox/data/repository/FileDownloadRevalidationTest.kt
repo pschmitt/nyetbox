@@ -125,4 +125,44 @@ class FileDownloadRevalidationTest {
 
         downloadOrRevalidate(client, server.url("/file").toString(), target, revalidate = true)
     }
+
+    // NBC-331: a fresh download reports a running byte count as it streams, so callers can surface
+    // live "N downloaded" progress instead of only learning the total once the file has landed.
+    @Test
+    fun `a fresh download reports increasing byte counts that end at the full file size`() {
+        val body = "x".repeat(5000)
+        server.enqueue(MockResponse().setBody(body))
+        val target = File(tempDir, "target")
+        val reported = mutableListOf<Long>()
+
+        val result =
+            downloadOrRevalidate(
+                client,
+                server.url("/file").toString(),
+                target,
+                revalidate = false,
+                onBytesDownloaded = reported::add,
+            )
+
+        assertEquals(body, result.readText())
+        assertTrue(reported.isNotEmpty())
+        assertEquals(reported.sorted(), reported)
+        assertEquals(body.length.toLong(), reported.last())
+    }
+
+    @Test
+    fun `no byte progress is reported when an existing file is trusted with zero requests`() {
+        val target = File(tempDir, "target").apply { writeText("cached") }
+        val reported = mutableListOf<Long>()
+
+        downloadOrRevalidate(
+            client,
+            server.url("/file").toString(),
+            target,
+            revalidate = false,
+            onBytesDownloaded = reported::add,
+        )
+
+        assertTrue(reported.isEmpty())
+    }
 }

@@ -14,10 +14,45 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+
+private const val ROTATE_DURATION_MS = 1400
+
+/**
+ * A restrained continuous rotation for a "sync in progress" control icon (NBC-332) - reuses this
+ * file's [rememberInfiniteTransition]-based idiom rather than a bespoke animation. The transition
+ * is only composed while [syncing] is true, so it stops immediately (and stays at rest) the moment
+ * a sync completes or fails instead of needing to be separately cancelled.
+ */
+@Composable
+fun RotatingSyncIcon(
+    icon: ImageVector,
+    contentDescription: String?,
+    syncing: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    if (syncing) {
+        val transition = rememberInfiniteTransition(label = "syncRotate")
+        val rotation by
+            transition.animateFloat(
+                initialValue = 0f,
+                targetValue = 360f,
+                animationSpec =
+                    infiniteRepeatable(
+                        animation = tween(ROTATE_DURATION_MS, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart,
+                    ),
+                label = "syncRotateAngle",
+            )
+        Icon(icon, contentDescription = contentDescription, modifier = modifier.rotate(rotation))
+    } else {
+        Icon(icon, contentDescription = contentDescription, modifier = modifier)
+    }
+}
 
 private const val PULSE_DURATION_MS = 1400
 private val PULSE_RING_PHASES = listOf(0f, 0.5f)

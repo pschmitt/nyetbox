@@ -23,6 +23,7 @@ import dev.pschmitt.nyetbox.data.repository.ScannerLens
 import dev.pschmitt.nyetbox.data.repository.ScannerRearLens
 import dev.pschmitt.nyetbox.data.repository.SettingsRepository
 import dev.pschmitt.nyetbox.data.schema.jsonInt
+import dev.pschmitt.nyetbox.sync.SyncProgress
 import dev.pschmitt.nyetbox.sync.SyncScheduler
 import dev.pschmitt.nyetbox.sync.SyncStatusRepository
 import dev.pschmitt.nyetbox.widget.WidgetUpdater
@@ -81,6 +82,13 @@ constructor(
             SharingStarted.WhileSubscribed(5000),
             false,
         )
+
+    val lastSuccessfulSyncAt: StateFlow<Long?> = settingsRepository.lastSuccessfulSyncAt
+
+    // Same step/message/item-count detail SyncStatusCard renders on the dashboard (NBC-370),
+    // reused here so the Sync settings screen shows one consolidated indicator instead of a bare
+    // "Syncing…" label (NBC-334).
+    val syncProgress: StateFlow<SyncProgress?> = syncStatusRepository.syncProgress
 
     val gestureTargets: StateFlow<Map<GestureShortcut, GestureTarget>> =
         settingsRepository.gestureTargets

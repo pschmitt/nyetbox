@@ -26,6 +26,7 @@ import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -53,6 +54,14 @@ data class SyncProgress(
     val itemLabel: String? = null,
     val itemCompleted: Int? = null,
     val itemTotal: Int? = null,
+    /**
+     * Running total of bytes downloaded so far during the current attachment-download step
+     * (NBC-331). There's no cheap, honest "bytes total" to pair it with - discovering that upfront
+     * would mean a HEAD request per attachment before starting, exactly the per-file network cost
+     * [FileDownloadRepository]'s revalidate-avoidance design elsewhere in this sync exists to skip
+     * - so this is presented as a live running count, not a fraction of a known target.
+     */
+    val bytesDownloaded: Long? = null,
     /**
      * Whether this step belongs to a full (24h-interval/forced) pass rather than a routine
      * incremental one (NBC-435) - surfaced so the UI/notification can tell the user "this is a
@@ -448,12 +457,13 @@ constructor(
                     val attachmentProgress =
                         reportProgress("Downloading cached images and documents…")
                     runCatching {
-                        syncAttachments(concurrency, isFullSyncPass) { completed, total ->
+                        syncAttachments(concurrency, isFullSyncPass) { completed, total, bytes ->
                             onProgress(
                                 attachmentProgress.copy(
                                     itemLabel = "images/documents",
                                     itemCompleted = completed,
                                     itemTotal = total,
+                                    bytesDownloaded = bytes,
                                 )
                             )
                         }
@@ -567,7 +577,7 @@ constructor(
     private suspend fun syncAttachments(
         concurrency: Int,
         isFullSyncPass: Boolean,
-        onProgress: (completed: Int, total: Int) -> Unit,
+        onProgress: (completed: Int, total: Int, bytesDownloaded: Long) -> Unit,
     ): Int {
         imageAttachmentRepository.refreshAll("dcim.device").onFailure { error ->
             syncIssueReporter.report(
@@ -601,19 +611,38 @@ constructor(
             .distinctBy(OfflineAttachment::url)
 
         val downloaded = AtomicInteger(0)
-        onProgress(0, attachments.size)
+        val totalBytesDownloaded = AtomicLong(0)
+        onProgress(0, attachments.size, 0)
         attachments.syncConcurrently(concurrency) { attachment ->
             // NBC-434: incremental passes stay as cheap as before (an existing file is trusted,
             // zero requests); only the 24h/forced full pass pays one conditional request per
             // attachment to catch NetBox-side replacements under the same URL, most of which come
             // back a near-zero-byte 304.
+            var lastReportedBytes = 0L
             fileDownloadRepository
                 .downloadToPersistent(
                     attachment.url,
                     attachment.filename,
                     revalidate = isFullSyncPass,
+                    onBytesDownloaded = { bytes ->
+                        // downloadToPersistent reports a running total per file, not a delta -
+                        // convert to a delta before folding it into the cross-attachment counter.
+                        val delta = bytes - lastReportedBytes
+                        lastReportedBytes = bytes
+                        onProgress(
+                            downloaded.get(),
+                            attachments.size,
+                            totalBytesDownloaded.addAndGet(delta),
+                        )
+                    },
                 )
-                .onSuccess { onProgress(downloaded.incrementAndGet(), attachments.size) }
+                .onSuccess {
+                    onProgress(
+                        downloaded.incrementAndGet(),
+                        attachments.size,
+                        totalBytesDownloaded.get(),
+                    )
+                }
                 .onFailure { error ->
                     Timber.w(error, "Couldn't persist offline attachment %s", attachment.url)
                     syncIssueReporter.report(

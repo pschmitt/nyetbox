@@ -154,6 +154,8 @@ fun SettingsCategoryScreen(
     val isLoadingCurrentUser by viewModel.isLoadingCurrentUser.collectAsStateWithLifecycle()
     val connectionTest by viewModel.connectionTest.collectAsStateWithLifecycle()
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
+    val lastSuccessfulSyncAt by viewModel.lastSuccessfulSyncAt.collectAsStateWithLifecycle()
+    val syncProgress by viewModel.syncProgress.collectAsStateWithLifecycle()
     val isUpdatingBaseUrl by viewModel.isUpdatingBaseUrl.collectAsStateWithLifecycle()
     val cachedDeviceCount by viewModel.cachedDeviceCount.collectAsStateWithLifecycle()
     val cachedObjectCount by viewModel.cachedObjectCount.collectAsStateWithLifecycle()
@@ -495,6 +497,8 @@ fun SettingsCategoryScreen(
                         tokenVisible = tokenVisible,
                         isSyncing = isSyncing,
                         syncIssue = syncIssue,
+                        lastSuccessfulSyncAt = lastSuccessfulSyncAt,
+                        syncProgress = syncProgress,
                         cachedDeviceCount = cachedDeviceCount,
                         cachedObjectCount = cachedObjectCount,
                         cachedImageCount = cachedImageCount,

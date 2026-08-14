@@ -20,7 +20,10 @@ import dev.pschmitt.nyetbox.BuildConfig
 import dev.pschmitt.nyetbox.data.db.NetBoxModelEntity
 import dev.pschmitt.nyetbox.data.db.NetBoxObjectEntity
 import dev.pschmitt.nyetbox.data.repository.*
+import dev.pschmitt.nyetbox.sync.SyncProgress
+import dev.pschmitt.nyetbox.ui.common.RotatingSyncIcon
 import dev.pschmitt.nyetbox.ui.common.SyncIssueCard
+import dev.pschmitt.nyetbox.ui.common.SyncStatusCard
 import dev.pschmitt.nyetbox.ui.common.iconForGestureAction
 import kotlinx.coroutines.flow.Flow
 
@@ -31,6 +34,39 @@ internal fun formatBytes(bytes: Long): String =
         bytes < 1024L * 1024L * 1024L -> "%.1f MiB".format(bytes / (1024.0 * 1024.0))
         else -> "%.2f GiB".format(bytes / (1024.0 * 1024.0 * 1024.0))
     }
+
+/**
+ * The "Cached data" row's supporting text: live attachment-download progress (NBC-331) while the
+ * sync's attachment phase (see `OfflineSyncRepository.syncAttachments`'s `itemLabel =
+ * "images/documents"`) is running, prepended to the usual cache totals - falling back to just the
+ * cache totals once that phase finishes (or the sync fails), since `SettingsViewModel` refreshes
+ * those totals as soon as `isSyncing` goes false. Takes plain values rather than the whole
+ * [SettingsCategoryState] so it stays trivially unit-testable.
+ */
+internal fun cachedDataSupportingText(
+    isSyncing: Boolean,
+    syncProgress: SyncProgress?,
+    cachedDeviceCount: Int,
+    cachedObjectCount: Int,
+    cachedImageCount: Int,
+    persistentCacheFiles: Int,
+    persistentCacheBytes: Long,
+): String {
+    val liveAttachmentProgress =
+        if (isSyncing && syncProgress?.itemLabel == "images/documents") {
+            val completed = syncProgress.itemCompleted ?: 0
+            val total = syncProgress.itemTotal ?: 0
+            val bytes = formatBytes(syncProgress.bytesDownloaded ?: 0L)
+            "Downloading images and documents… $completed of $total · $bytes downloaded\n"
+        } else {
+            ""
+        }
+    return liveAttachmentProgress +
+        "$cachedDeviceCount devices · $cachedObjectCount other objects · " +
+        "$cachedImageCount image records\n" +
+        "$persistentCacheFiles downloaded files · ${formatBytes(persistentCacheBytes)}\n" +
+        "Downloaded images and documents are kept in app storage for offline use and are not temporary Android cache files."
+}
 
 private const val MAX_NAV_BAR_ITEMS = 5
 private const val MAX_SHORTCUT_ITEMS = 4
@@ -60,6 +96,8 @@ internal data class SettingsCategoryState(
     val tokenVisible: Boolean,
     val isSyncing: Boolean,
     val syncIssue: SyncIssue?,
+    val lastSuccessfulSyncAt: Long? = null,
+    val syncProgress: SyncProgress? = null,
     val cachedDeviceCount: Int,
     val cachedObjectCount: Int,
     val cachedImageCount: Int,
@@ -473,13 +511,18 @@ private fun SyncSettingsContent(
     var concurrencyMenuExpanded by remember { mutableStateOf(false) }
     var intervalMenuExpanded by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // A single consolidated sync-status indicator (NBC-334) - SyncIssueCard and SyncStatusCard
+        // are mutually exclusive, mirroring DashboardScreen's shouldShowSyncIssue/
+        // shouldShowSyncStatus idiom, instead of this screen's former separate top card (shown
+        // only on error) plus a second bare "Syncing…" label on the "Cached data" button below.
         state.syncIssue?.let { issue ->
-            SyncIssueCard(
-                issue,
-                onRetry = actions.onSync,
-                isSyncing = state.isSyncing,
-            )
+            SyncIssueCard(issue, onRetry = actions.onSync, isSyncing = state.isSyncing)
         }
+            ?: SyncStatusCard(
+                lastSuccessfulSyncAt = state.lastSuccessfulSyncAt,
+                isSyncing = state.isSyncing,
+                syncProgress = state.syncProgress,
+            )
         SettingsGroupCard(title = "Sync policy", icon = Icons.Default.Sync) {
             SettingsToggleItem(
                 checked = state.syncAttachmentsToDisk,
@@ -607,21 +650,33 @@ private fun SyncSettingsContent(
                 headlineContent = { Text("Cached data") },
                 supportingContent = {
                     Text(
-                        "${state.cachedDeviceCount} devices · ${state.cachedObjectCount} other objects · " +
-                            "${state.cachedImageCount} image records\n" +
-                            "${state.persistentCacheFiles} downloaded files · ${formatBytes(state.persistentCacheBytes)}\n" +
-                            "Downloaded images and documents are kept in app storage for offline use and are not temporary Android cache files."
+                        cachedDataSupportingText(
+                            isSyncing = state.isSyncing,
+                            syncProgress = state.syncProgress,
+                            cachedDeviceCount = state.cachedDeviceCount,
+                            cachedObjectCount = state.cachedObjectCount,
+                            cachedImageCount = state.cachedImageCount,
+                            persistentCacheFiles = state.persistentCacheFiles,
+                            persistentCacheBytes = state.persistentCacheBytes,
+                        )
                     )
                 },
             )
+            // Status lives solely in the SyncStatusCard/SyncIssueCard above (NBC-334) - this button
+            // is purely the manual-sync action/control, not a second status indicator, so its
+            // label doesn't change while syncing (just disables like any other in-flight action).
             Button(
                 onClick = actions.onSync,
                 enabled = !state.isSyncing,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             ) {
-                Icon(Icons.Default.Sync, contentDescription = null)
+                RotatingSyncIcon(
+                    Icons.Default.Sync,
+                    contentDescription = null,
+                    syncing = state.isSyncing,
+                )
                 Spacer(Modifier.width(8.dp))
-                Text(if (state.isSyncing) "Syncing…" else "Sync now")
+                Text("Sync now")
             }
         }
     }

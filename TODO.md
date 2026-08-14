@@ -6394,11 +6394,31 @@ post-install verification; GitHub was renamed to `pschmitt/nyetbox` and the loca
 When a sync is actively downloading durable image attachments and documents, the Cached data
 settings row should show live progress instead of stale totals from the last completed sync.
 
-- [ ] Expose attachment completion/total and downloaded byte progress from the sync state.
-- [ ] Update the Cached data row while the attachment phase is running.
-- [ ] Restore the normal cache totals after completion or failure without blocking settings.
+- [x] Expose attachment completion/total and downloaded byte progress from the sync state.
+  `SyncProgress` gained a `bytesDownloaded: Long?` field alongside the existing `itemCompleted`/
+  `itemTotal`. There's no cheap, honest "bytes total" to pair it with - discovering that upfront
+  would mean a HEAD request per attachment before starting, exactly the per-file network cost
+  `FileDownloadRepository`'s revalidate-avoidance design (NBC-434) exists to skip - so it's a live
+  running count, not a fraction of a known target. `downloadOrRevalidate`/`downloadToPersistent`
+  gained an `onBytesDownloaded` callback (a manual buffered copy loop, `copyToWithProgress`,
+  replacing the old bare `input.copyTo(output)`), and `OfflineSyncRepository.syncAttachments`
+  folds each attachment's per-file byte deltas into a cross-attachment running total via an
+  `AtomicLong`.
+- [x] Update the Cached data row while the attachment phase is running. New
+  `cachedDataSupportingText()` in `SettingsCategoryContent.kt` prepends
+  "Downloading images and documents… N of M · X downloaded" while `isSyncing` and the current
+  `SyncProgress.itemLabel == "images/documents"`, ahead of the normal cache-total lines.
+- [x] Restore the normal cache totals after completion or failure without blocking settings - falls
+  back automatically once `isSyncing` goes false, since `SettingsViewModel` already refreshes the
+  cache counts as soon as syncing stops; no new logic needed for this part.
 
-Status: not started
+Status: **done**, 2026-08-15; verified remotely (`:app:testDebugUnitTest` - a new
+`FileDownloadRevalidationTest` byte-progress test against a real `MockWebServer`, and a new
+`CachedDataSupportingTextTest` covering the row's text logic) and live on the Zenfone 10: triggered
+a real full sync and caught the Cached data row reading "Downloading images and documents… 189 of
+636 · 0 B downloaded" mid-sync (0 B is correct here - these attachments were all HEAD-revalidated
+as unchanged, so nothing was actually re-downloaded this pass), reverting to the normal cache
+totals once the sync finished.
 
 
 ## NBC-335: keep the README icon on transparent artwork
@@ -6432,10 +6452,21 @@ The Settings → Sync screen currently exposes two separate sync indicators, one
 is not always visible and another at the bottom. It should present one clear, consistently placed
 status/control instead.
 
-- [ ] Remove the duplicate sync indicator.
-- [ ] Keep the remaining status and action visible and unambiguous while sync is active.
+- [x] Remove the duplicate sync indicator. `SyncSettingsContent` now shows exactly one status
+  card - `SyncIssueCard` when there's an active issue, else `SyncStatusCard` (the same
+  mutually-exclusive pair `DashboardScreen` already uses via `shouldShowSyncIssue`/
+  `shouldShowSyncStatus`) - instead of a conditional top card plus a second "Syncing…"/"Sync now"
+  label on the Cached data card's button.
+- [x] Keep the remaining status and action visible and unambiguous while sync is active. The single
+  `SyncStatusCard` is always visible and shows live step/message/item-count detail (the same
+  `SyncProgress` the dashboard and system notification already use) while syncing; the "Sync now"
+  button stays a pure action/control (disabled during sync, no more status text of its own) so
+  status and control never repeat the same information twice.
 
-Status: not started
+Status: **done**, 2026-08-15; verified remotely (`:app:compileDebugKotlin`,
+`:app:compileDebugAndroidTestKotlin`, `:app:testDebugUnitTest`) and live on the Zenfone 10: only one
+status card shows on the Sync settings screen ("Synced · Last synced ..." at rest, live step
+progress while syncing), with the Cached data card's button as a separate plain action.
 
 
 ## NBC-332: animate the active sync control
@@ -6443,8 +6474,19 @@ Status: not started
 The `Syncing…` control on Settings → Sync should provide a subtle animated progress indication
 while a sync is running, so it is visibly active rather than looking static.
 
-- [ ] Add a restrained rotation or progress animation to the syncing icon.
-- [ ] Keep the animation accessible and stop it immediately when sync completes or fails.
+- [x] Add a restrained rotation or progress animation to the syncing icon. New `RotatingSyncIcon`
+  in `SyncPulseIcon.kt` reuses that file's `rememberInfiniteTransition`-based idiom (the only
+  existing "in progress" animation precedent in the app) for a continuous rotation, applied to the
+  "Sync now" button's leading icon while `isSyncing` is true.
+- [x] Keep the animation accessible and stop it immediately when sync completes or fails. The
+  animated transition is only composed while `syncing` is true (an `if` branch, not a value that
+  animates back to 0) - so it leaves composition and stops immediately once syncing ends, rather
+  than needing a separate cancellation path; the static `Icon` branch renders otherwise.
+
+Status: **done**, 2026-08-15; verified remotely (compile) and live on the Zenfone 10 - confirmed
+the icon visibly rotates while a real sync is running (this device had system animations globally
+disabled for testing, `animator_duration_scale=0`; temporarily re-enabled to observe the rotation,
+then restored to 0 afterward) and sits static otherwise.
 
 Status: not started
 

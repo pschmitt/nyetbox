@@ -36,6 +36,7 @@ internal fun downloadOrRevalidate(
     url: String,
     target: File,
     revalidate: Boolean,
+    onBytesDownloaded: (Long) -> Unit = {},
 ): File {
     val existing = target.isFile && target.length() > 0L
     if (existing && !revalidate) return target
@@ -48,11 +49,32 @@ internal fun downloadOrRevalidate(
     okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
         if (!response.isSuccessful) error("Download failed: HTTP ${response.code}")
         response.body.byteStream().use { input ->
-            temp.outputStream().use { output -> input.copyTo(output) }
+            temp.outputStream().use { output -> input.copyToWithProgress(output, onBytesDownloaded) }
         }
     }
     check(temp.renameTo(target)) { "Couldn't finalize downloaded attachment" }
     return target
+}
+
+/**
+ * Like [java.io.InputStream.copyTo], but reports the running byte count after each buffer flush
+ * (NBC-331) so a caller can surface live "N bytes downloaded" progress instead of only knowing the
+ * total once the whole file has landed.
+ */
+private fun java.io.InputStream.copyToWithProgress(
+    output: java.io.OutputStream,
+    onBytesDownloaded: (Long) -> Unit,
+): Long {
+    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+    var bytesCopied = 0L
+    var bytes = read(buffer)
+    while (bytes >= 0) {
+        output.write(buffer, 0, bytes)
+        bytesCopied += bytes
+        onBytesDownloaded(bytesCopied)
+        bytes = read(buffer)
+    }
+    return bytesCopied
 }
 
 /**
@@ -150,10 +172,17 @@ constructor(
         url: String,
         filename: String,
         revalidate: Boolean = false,
+        onBytesDownloaded: (Long) -> Unit = {},
     ): Result<File> =
         withContext(Dispatchers.IO) {
             runCatching {
-                downloadOrRevalidate(okHttpClient, url, persistentPath(url, filename), revalidate)
+                downloadOrRevalidate(
+                    okHttpClient,
+                    url,
+                    persistentPath(url, filename),
+                    revalidate,
+                    onBytesDownloaded,
+                )
             }
         }
 
