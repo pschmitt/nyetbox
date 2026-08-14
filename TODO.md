@@ -7372,14 +7372,16 @@ and long-press reordering of sidebar app sections had silently stopped working.
   to `DashboardScreen.kt`'s section header, which used the identical dual-detector pattern.
 - [x] Verify formatting, compilation (`:app:compileDebugKotlin`, `:app:compileDebugAndroidTestKotlin`),
   unit tests, and lint remotely.
-- [ ] Install on a device and manually confirm: pin icon, sidebar/header icon colors, sticky offline
+- [x] Install on a device and manually confirm: pin icon, sidebar/header icon colors, sticky offline
   toggle, and long-press-drag section reordering all behave as expected.
 
-Status: in progress, 2026-08-06; remote compilation and unit tests pass. Root cause of the reorder
-regression is a plausible, evidence-backed diagnosis (matching Compose Foundation's documented
-`combinedClickable` long-click regression and the exact timing of this repo's 1.11.4 bump) rather
-than a reproduced-on-device confirmation - flag if long-press reorder still misbehaves after
-install.
+Status: **done**, 2026-08-15; verified live on the Zenfone 10 (debug build): pinned "Devices"/
+"Device Types" rows show the filled `PushPin` icon in a tinted circular background, every section
+(Tenancy, DCIM, Virtualization, Circuits, Wireless, IPAM, VPN, Extras, CORE, Documents) renders
+with a distinct per-type accent color, "Offline mode" stays pinned above the footer outside the
+scrolling list, and a single continuous long-press-and-drag on a section header now enters reorder
+mode cleanly (per-row up/down/visibility controls appear) instead of requiring two separate
+long-presses - confirms the `combinedClickable`/`sectionReorderGesture` dual-detector fix.
 
 ## NBC-380: bring the device-view overflow menu in line with the generic item view's
 
@@ -7719,13 +7721,14 @@ a different tab once the layout finished settling.
   show up). `GenericDetailScreen` gates on it the same way.
 - [x] Verified remotely: `:app:compileDebugKotlin` and `:app:testDebugUnitTest` (including
   `DeviceDetailViewModelTest`) both pass on rofl-13 with the change in place.
-- [ ] Verify live on a physical device that the tab bar no longer visibly grows after the screen
-  appears - not conclusively caught on the Zenfone 10 yet (a reflow this fast is hard to catch via
-  screenshots); the underlying mechanism is verified correct by code review and by NBC-389's live
-  confirmation of the same `stateIn`-placeholder pattern on the same screen family.
+- [x] Verify live on a physical device that the tab bar no longer visibly grows after the screen
+  appears - caught it live via a rapid adb screenshot burst on the Zenfone 10 opening a device with
+  three related tabs (Overview/Journal/Connected): the screen shows only a loading spinner (no tab
+  bar at all) for several frames, then the tab bar appears fully formed with all three tabs in a
+  single frame - no incremental pop-in/reflow between frames.
 
-Status: mostly done, 2026-08-06; remote compile/test verification done, live device tab-bar-reflow
-check still genuinely pending (not just unconfirmed - actually not caught live).
+Status: **done**, 2026-08-15; verified live on the Zenfone 10 with a rapid screenshot burst
+immediately after opening a device detail screen.
 
 ## NBC-389: generic item detail header showed the pluralized type instead of the item's name
 
