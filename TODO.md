@@ -6488,8 +6488,6 @@ the icon visibly rotates while a real sync is running (this device had system an
 disabled for testing, `animator_duration_scale=0`; temporarily re-enabled to observe the rotation,
 then restored to 0 afterward) and sits static otherwise.
 
-Status: not started
-
 
 ## NBC-336: show the independence disclaimer on login
 
