@@ -1261,15 +1261,6 @@ private fun AboutSettingsContent(onShowLibraries: () -> Unit) {
             )
         }
         SettingsGroupCard(title = "Project", icon = Icons.Default.Code) {
-            SettingsListItem(
-                modifier = Modifier.clickable(onClick = onShowLibraries),
-                leadingContent = { Icon(Icons.Default.Inventory2, contentDescription = null) },
-                headlineContent = { Text("Libraries") },
-                supportingContent = { Text("Open-source dependencies and their licenses") },
-                trailingContent = {
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
-                },
-            )
             ExternalLinkRow(
                 context = context,
                 url = "https://github.com/pschmitt/nyetbox",
@@ -1290,6 +1281,15 @@ private fun AboutSettingsContent(onShowLibraries: () -> Unit) {
                 icon = Icons.Default.PrivacyTip,
                 title = "Privacy policy",
                 subtitle = "How Nyetbox handles data and network access",
+            )
+            SettingsListItem(
+                modifier = Modifier.clickable(onClick = onShowLibraries),
+                leadingContent = { Icon(Icons.Default.Inventory2, contentDescription = null) },
+                headlineContent = { Text("Libraries") },
+                supportingContent = { Text("Open-source dependencies and their licenses") },
+                trailingContent = {
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                },
             )
         }
     }
