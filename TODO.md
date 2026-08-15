@@ -9427,9 +9427,9 @@ validated on the large cached Zenfone 10 dataset with targeted and broad global-
 
 ## NBC-450: Polish About-page metadata
 
-- [ ] Show the Nyetbox app icon in the About card
-- [ ] Display the license in its own About row
-- [ ] Display the debug/release build type in its own About row
-- [ ] Add focused About-page UI coverage and verify the change
+- [x] Show the Nyetbox app icon in the About card
+- [x] Display the license in its own About row
+- [x] Display the debug/release build type in its own About row
+- [x] Add focused About-page UI coverage and verify the change
 
-Status: in progress.
+Status: **done** (2026-08-15; CI runs 31910324321/31910324373/31910324429 passed; debug APK installed on ZF10, Mi Pad 4, and PX5).
