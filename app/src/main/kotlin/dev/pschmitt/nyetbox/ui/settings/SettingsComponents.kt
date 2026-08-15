@@ -80,6 +80,7 @@ internal fun SettingsGroupCard(
     icon: ImageVector,
     modifier: Modifier = Modifier,
     accentColor: Color = MaterialTheme.colorScheme.primary,
+    headerContent: (@Composable (() -> Unit))? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
@@ -91,14 +92,16 @@ internal fun SettingsGroupCard(
     ) {
         Column(modifier = Modifier.padding(vertical = 4.dp)) {
             SettingsListItem(
-                leadingContent = {
-                    Icon(
-                        icon,
-                        contentDescription = null,
-                        tint = accentColor,
-                        modifier = Modifier.size(24.dp),
-                    )
-                },
+                leadingContent =
+                    headerContent
+                        ?: {
+                            Icon(
+                                icon,
+                                contentDescription = null,
+                                tint = accentColor,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        },
                 headlineContent = {
                     Text(
                         title,

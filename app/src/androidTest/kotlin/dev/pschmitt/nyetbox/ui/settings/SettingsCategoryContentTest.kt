@@ -1,6 +1,7 @@
 package dev.pschmitt.nyetbox.ui.settings
 
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -28,6 +29,11 @@ class SettingsCategoryContentTest {
         }
 
         composeRule.onNodeWithText("Build").assertExists()
+        composeRule.onNodeWithContentDescription("Nyetbox app icon").assertExists()
+        composeRule.onNodeWithText("License").assertExists()
+        composeRule.onNodeWithText("GPLv3").assertExists()
+        composeRule.onNodeWithText("Build type").assertExists()
+        composeRule.onNodeWithText("Debug build").assertExists()
         composeRule.onNodeWithText("GitHub repository").assertExists()
     }
 

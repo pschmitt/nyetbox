@@ -9424,3 +9424,12 @@ lists before parsing/indexing them, so the whole cache can still peak above the 
 
 Status: **done**, 2026-08-15 - fixed, remotely verified, deployed to all attached devices, and
 validated on the large cached Zenfone 10 dataset with targeted and broad global-search queries.
+
+## NBC-450: Polish About-page metadata
+
+- [ ] Show the Nyetbox app icon in the About card
+- [ ] Display the license in its own About row
+- [ ] Display the debug/release build type in its own About row
+- [ ] Add focused About-page UI coverage and verify the change
+
+Status: in progress.
