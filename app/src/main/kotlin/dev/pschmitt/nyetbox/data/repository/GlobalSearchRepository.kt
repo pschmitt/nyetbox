@@ -273,13 +273,13 @@ constructor(
                 } else {
                     combine(
                         endpointPaths.map { endpointPath ->
-                            netBoxObjectDao
-                                .observeAll(endpointPath)
-                                .map { objects ->
-                                    objects.mapNotNull(::indexGenericObject)
-                                }
+                            netBoxObjectDao.observeAll(endpointPath).map { objects ->
+                                objects.mapNotNull(::indexGenericObject)
+                            }
                         }
-                    ) { perEndpoint -> perEndpoint.asList().flatten() }
+                    ) { perEndpoint ->
+                        perEndpoint.asList().flatten()
+                    }
                 }
             }
             .debounce(300)
@@ -294,8 +294,7 @@ constructor(
             id = entity.id,
             display = entity.display,
             secondaryLine = entity.secondaryLine,
-            objectJson =
-                decodedObject.takeIf { searchIndexNeedsObjectJson(entity.endpointPath) },
+            objectJson = decodedObject.takeIf { searchIndexNeedsObjectJson(entity.endpointPath) },
             searchFields = searchFields,
             assetTag = tag,
             normalizedSearchText = buildString {
@@ -307,7 +306,7 @@ constructor(
                         append(value)
                     }
                 }
-                .lowercase(),
+                    .lowercase(),
         )
     }
 
@@ -774,7 +773,9 @@ internal fun JsonObject.assetTag(): String? = assetTagState().value
 
 data class NetworkDeviceMatch(val deviceId: Int, val source: String)
 
-/** Only these cached endpoints need raw JSON after indexing for recursive device-network matches. */
+/**
+ * Only these cached endpoints need raw JSON after indexing for recursive device-network matches.
+ */
 internal fun searchIndexNeedsObjectJson(endpointPath: String): Boolean =
     endpointPath == GlobalSearchRepository.INTERFACES_ENDPOINT_PATH ||
         endpointPath == GlobalSearchRepository.IP_ADDRESSES_ENDPOINT_PATH

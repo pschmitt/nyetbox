@@ -202,9 +202,7 @@ class GlobalSearchRankingTest {
     fun `search index retains raw JSON only for network endpoints`() {
         assertTrue(searchIndexNeedsObjectJson(GlobalSearchRepository.INTERFACES_ENDPOINT_PATH))
         assertTrue(searchIndexNeedsObjectJson(GlobalSearchRepository.IP_ADDRESSES_ENDPOINT_PATH))
-        assertTrue(
-            !searchIndexNeedsObjectJson(GlobalSearchRepository.DEVICE_TYPES_ENDPOINT_PATH)
-        )
+        assertTrue(!searchIndexNeedsObjectJson(GlobalSearchRepository.DEVICE_TYPES_ENDPOINT_PATH))
         assertTrue(!searchIndexNeedsObjectJson("api/dcim/racks/"))
     }
 
