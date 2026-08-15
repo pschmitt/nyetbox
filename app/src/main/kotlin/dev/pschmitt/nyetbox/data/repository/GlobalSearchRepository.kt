@@ -5,6 +5,7 @@ import dev.pschmitt.nyetbox.data.db.DeviceDao
 import dev.pschmitt.nyetbox.data.db.DeviceEntity
 import dev.pschmitt.nyetbox.data.db.NetBoxModelEntity
 import dev.pschmitt.nyetbox.data.db.NetBoxObjectDao
+import dev.pschmitt.nyetbox.data.db.NetBoxObjectEntity
 import dev.pschmitt.nyetbox.data.db.RecentVisitEntity
 import dev.pschmitt.nyetbox.data.schema.AssetTagState
 import dev.pschmitt.nyetbox.data.schema.NetBoxRef
@@ -191,7 +192,8 @@ constructor(
         val id: Int,
         val display: String,
         val secondaryLine: String?,
-        val objectJson: JsonObject,
+        /** Retained only for interfaces/IP addresses, which need recursive network matching. */
+        val objectJson: JsonObject?,
         val searchFields: Map<String, String>,
         val assetTag: AssetTagState,
         val normalizedSearchText: String,
@@ -255,7 +257,12 @@ constructor(
     // page in fully under memory pressure and throw `IllegalStateException: Couldn't read row N,
     // col 0 from CursorWindow` - a crash, not just the slow-path OOM the rest of this comment
     // covers. Each per-endpoint query is bounded to that endpoint's own (typically page-sized)
-    // rows, matching the sync's own per-model page size instead of the whole cache at once.
+    // rows, matching the sync's own per-model page size instead of the whole cache at once. Each
+    // endpoint flow maps its raw rows to the compact index before the outer combine sees them -
+    // otherwise combine retains every raw entity list while the full index is being built, which
+    // recreates the same peak-memory pressure in a different place. The parsed JsonObject is also
+    // retained only for interfaces/IP addresses, the two endpoint families used by
+    // networkDeviceMatch; all other endpoints keep only their scalar search projection.
     private val cachedGenericObjects =
         netBoxObjectDao
             .observeAllEndpointPaths()
@@ -264,40 +271,44 @@ constructor(
                 if (endpointPaths.isEmpty()) {
                     flowOf(emptyList())
                 } else {
-                    combine(endpointPaths.map(netBoxObjectDao::observeAll)) { perEndpoint ->
+                    combine(
+                        endpointPaths.map { endpointPath ->
+                            netBoxObjectDao.observeAll(endpointPath).map { objects ->
+                                objects.mapNotNull(::indexGenericObject)
+                            }
+                        }
+                    ) { perEndpoint ->
                         perEndpoint.asList().flatten()
                     }
                 }
             }
             .debounce(300)
-            .map { objects ->
-                objects.mapNotNull { entity ->
-                    decodeObject(entity.json)?.let { objectJson ->
-                        val tag = objectJson.assetTagState()
-                        val searchFields = objectJson.createChoiceSearchFields()
-                        IndexedGenericObject(
-                            endpointPath = entity.endpointPath,
-                            id = entity.id,
-                            display = entity.display,
-                            secondaryLine = entity.secondaryLine,
-                            objectJson = objectJson,
-                            searchFields = searchFields,
-                            assetTag = tag,
-                            normalizedSearchText = buildString {
-                                    append(entity.display)
-                                    append('\n')
-                                    append(entity.secondaryLine.orEmpty())
-                                    searchFields.values.forEach { value ->
-                                        append('\n')
-                                        append(value)
-                                    }
-                                }
-                                    .lowercase(),
-                        )
+            .stateIn(searchScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private fun indexGenericObject(entity: NetBoxObjectEntity): IndexedGenericObject? {
+        val decodedObject = decodeObject(entity.json) ?: return null
+        val tag = decodedObject.assetTagState()
+        val searchFields = decodedObject.createChoiceSearchFields()
+        return IndexedGenericObject(
+            endpointPath = entity.endpointPath,
+            id = entity.id,
+            display = entity.display,
+            secondaryLine = entity.secondaryLine,
+            objectJson = decodedObject.takeIf { searchIndexNeedsObjectJson(entity.endpointPath) },
+            searchFields = searchFields,
+            assetTag = tag,
+            normalizedSearchText = buildString {
+                    append(entity.display)
+                    append('\n')
+                    append(entity.secondaryLine.orEmpty())
+                    searchFields.values.forEach { value ->
+                        append('\n')
+                        append(value)
                     }
                 }
-            }
-            .stateIn(searchScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                    .lowercase(),
+        )
+    }
 
     private val cachedDevices =
         deviceDao
@@ -427,11 +438,14 @@ constructor(
                                 val interfaceDeviceIds =
                                     interfaces
                                         .mapNotNull { indexed ->
-                                            networkDeviceMatch(
-                                                    INTERFACES_ENDPOINT_PATH,
-                                                    indexed.objectJson,
-                                                    emptyMap(),
-                                                )
+                                            indexed.objectJson
+                                                ?.let {
+                                                    networkDeviceMatch(
+                                                        INTERFACES_ENDPOINT_PATH,
+                                                        it,
+                                                        emptyMap(),
+                                                    )
+                                                }
                                                 ?.let { indexed.id to it.deviceId }
                                         }
                                         .toMap()
@@ -441,11 +455,13 @@ constructor(
                                             indexed.matches(cacheCandidateQuery, parsedQuery)
                                         }
                                         .mapNotNull { indexed ->
-                                            networkDeviceMatch(
-                                                indexed.endpointPath,
-                                                indexed.objectJson,
-                                                interfaceDeviceIds,
-                                            )
+                                            indexed.objectJson?.let {
+                                                networkDeviceMatch(
+                                                    indexed.endpointPath,
+                                                    it,
+                                                    interfaceDeviceIds,
+                                                )
+                                            }
                                         }
                                         .associateBy { it.deviceId }
                                 devices
@@ -756,6 +772,13 @@ private fun normalizeSearchFieldKey(key: String): String =
 internal fun JsonObject.assetTag(): String? = assetTagState().value
 
 data class NetworkDeviceMatch(val deviceId: Int, val source: String)
+
+/**
+ * Only these cached endpoints need raw JSON after indexing for recursive device-network matches.
+ */
+internal fun searchIndexNeedsObjectJson(endpointPath: String): Boolean =
+    endpointPath == GlobalSearchRepository.INTERFACES_ENDPOINT_PATH ||
+        endpointPath == GlobalSearchRepository.IP_ADDRESSES_ENDPOINT_PATH
 
 internal fun networkDeviceMatch(
     endpointPath: String,

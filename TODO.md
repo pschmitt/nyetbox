@@ -219,10 +219,12 @@ system.
       `LaunchedEffect` fed by shortcut/widget taps - one dispatch path regardless of origin.
 - [x] Remote `:app:assembleDebug`, `ktfmtCheck`, `:app:testDebugUnitTest` all passed; lint added
       one new hint (see NBC-418's lint note above), baselined.
+- [x] On-device check (Zenfone 10, debug 1.5.6, 2026-08-15): Settings > App shortcuts showed the
+      configurable list; adding Device list changed the live launcher menu, and resetting restored
+      Add item, QR scanner, and Global search. Each default shortcut opened its intended screen.
 
-Status: implemented and compiles/lints clean, 2026-08-08 - pending on-device verification (edit the
-list in Settings, confirm the launcher long-press menu updates live, confirm each shortcut lands on
-the right screen or triggers Sync).
+Status: **done**, 2026-08-15 - verified on-device on the Zenfone 10, including live edit/reset and
+the three default launcher routes.
 
 ## NBC-416: fix the store screenshot dashboard race for real (logcat marker, not overlay polling)
 
@@ -442,10 +444,12 @@ Three small polish items from the same conversation:
 - [x] Remote `:app:compileDebugKotlin`, `:app:assembleDebug`, and
       `:app:testDebugUnitTest --tests GlobalSearchRankingTest` all passed; installed on the
       Zenfone 10, Mi Pad 4, and Pixel 5.
-- [ ] On-device visual check - pending user's own check on a physical device.
+- [x] On-device visual/behavioral check (Zenfone 10, 2026-08-15): the dashboard rendered its
+      cards; search for `DLK-0001` ranked the matching asset-tag result first, showed the icon-only
+      Recently viewed badge, and ellipsized the long cable name.
 
-Status: mostly done, 2026-08-07 - compiles, unit tests pass, and installs cleanly on all three
-test devices; on-device verification still pending the user.
+Status: **done**, 2026-08-15 - compiles, unit tests pass, installed on all three test devices, and
+the dashboard/search behavior was verified on the Zenfone 10.
 
 ## NBC-411: make Settings section titles more discreet, drop their subtitles
 
@@ -462,10 +466,11 @@ just a section label, per the user's request.
       untouched (same param name, different composable).
 - [x] Remote `:app:compileDebugKotlin` and `:app:assembleDebug` both passed; installed on the
       Zenfone 10, Mi Pad 4, and Pixel 5.
-- [ ] On-device visual check - pending user's own check on a physical device.
+- [x] On-device visual check (Zenfone 10, 2026-08-15): Settings group titles were discreet muted
+      labels without subtitles, with the expected grouped-card layout.
 
-Status: mostly done, 2026-08-07 - compiles and installs cleanly on all three test devices;
-on-device verification still pending the user.
+Status: **done**, 2026-08-15 - compiles cleanly, installed on all three test devices, and visually
+verified on the Zenfone 10.
 
 ## NBC-410: subtle per-card-section tint; drop redundant "About" card title
 
@@ -486,10 +491,11 @@ card repeated "About" as both the card title and its one and only row.
       `SettingsGroupCard`, dropping the redundant "About" title above the single "About" row.
 - [x] Remote `:app:compileDebugKotlin` and `:app:assembleDebug` both passed; installed on the
       Zenfone 10, Mi Pad 4, and Pixel 5.
-- [ ] On-device visual check - pending user's own check on a physical device.
+- [x] On-device visual check (Zenfone 10, 2026-08-15): Settings section cards had subtle distinct
+      tints and About rendered as a single headerless card row.
 
-Status: mostly done, 2026-08-07 - compiles and installs cleanly on all three test devices;
-on-device verification still pending the user.
+Status: **done**, 2026-08-15 - compiles cleanly, installed on all three test devices, and visually
+verified on the Zenfone 10.
 
 ## NBC-409: fix card header/content indentation mismatch
 
@@ -508,14 +514,11 @@ cause: two independent guesses at a matching inset instead of one shared source 
       behind by deleting the old hand-rolled header `Row`s in both files.
 - [x] Remote `:app:compileDebugKotlin` and `:app:assembleDebug` both passed; installed on the
       Zenfone 10, Mi Pad 4, and Pixel 5.
-- [ ] Non-`ListItem` card content (e.g. `MediaCarousel.kt`'s carousel, which pads itself to
-      18dp to match the *old* hardcoded header inset) may still be a pixel or two off the new
-      `ListItem`-derived inset - not re-tuned since the exact default wasn't verified against a
-      live render. Flagged as a possible small follow-up once visually checked, not blocking.
-- [ ] On-device visual check - pending user's own check on a physical device.
+- [x] On-device visual check (Zenfone 10, 2026-08-15): Settings card headers and their content
+      rows were aligned; the Media card's content inset also matched its header visually.
 
-Status: mostly done, 2026-08-07 - compiles and installs cleanly on all three test devices;
-on-device verification still pending the user.
+Status: **done**, 2026-08-15 - compiles cleanly, installed on all three test devices, and visually
+verified on the Zenfone 10.
 
 ## NBC-408: Play Store screenshots captured before initial sync finishes
 
@@ -537,13 +540,13 @@ in that window got captured instead of the real dashboard.
       defensive "re-check right before the capture that matters" pattern `captureScreenshot()`
       itself already uses for a stray ANR dialog.
 - [x] Remote `:app:compileDebugAndroidTestKotlin` passed.
-- [ ] Not verified against a real screenshot run yet (requires the full disposable-NetBox +
-      emulator harness in `.github/workflows/screenshots.yaml` / `just screenshots`, which wasn't
-      run as part of this fix) - next real trigger of that workflow (a tagged release, or a
-      manual `gh workflow run screenshots.yaml`) will confirm.
+- [x] Superseded by NBC-416 (2026-08-08): this fix's overlay-tag re-check alone turned out
+      insufficient (see NBC-416's history of real triggered `Screenshots` runs still catching the
+      race) - NBC-416 replaced the approach entirely with a logcat-marker wait plus a settle delay,
+      confirmed clean across phone/sevenInch/tenInch in CI. No further action needed here.
 
-Status: mostly done, 2026-08-07 - fix implemented and compiles; not yet confirmed against a real
-screenshot-capture CI run.
+Status: **done**, 2026-08-15 - superseded by NBC-416, which fixed and CI-verified this race for
+real; this entry's own fix was a genuine but incomplete first attempt.
 
 ## NBC-407: group the top-level Settings menu into titled cards
 
@@ -562,10 +565,12 @@ menu the same way, into 4 titled cards proposed to and confirmed by the user:
       deleted from `SettingsComponents.kt`.
 - [x] Remote `:app:compileDebugKotlin` and `:app:assembleDebug` both passed; installed on the
       Zenfone 10, Mi Pad 4, and Pixel 5.
-- [ ] On-device visual check - pending user's own check on a physical device.
+- [x] On-device visual check (Zenfone 10, 2026-08-15): top-level Settings showed the Account &
+      Sync, Hardware, Appearance & Interaction, and single-item About cards with the intended
+      grouping and alignment.
 
-Status: mostly done, 2026-08-07 - compiles and installs cleanly on all three test devices;
-on-device verification still pending the user.
+Status: **done**, 2026-08-15 - compiles cleanly, installed on all three test devices, and visually
+verified on the Zenfone 10.
 
 ## NBC-406: colorize list-header icons; show asset tag badge on generic detail cards
 
@@ -590,11 +595,12 @@ badge (including a "No asset tag" state) for any type.
       `DeviceDetailScreen.kt` already uses for devices.
 - [x] Remote `:app:compileDebugKotlin` and `:app:assembleDebug` both passed; installed on the
       Zenfone 10, Mi Pad 4, and Pixel 5.
-- [ ] On-device visual check (list header tint, rack/other-type asset tag badge incl. missing
-      state) - pending user's own check on a physical device.
+- [x] On-device visual check (Zenfone 10, 2026-08-15): Devices and Prefixes showed their tinted
+      list-header icons (confirmed in the preceding Claude Work session), and Racks showed the
+      rack-accent header plus the `#SSM-0001` asset-tag badge on Samson SRK16.
 
-Status: mostly done, 2026-08-07 - compiles and installs cleanly on all three test devices;
-on-device verification still pending the user.
+Status: **done**, 2026-08-15 - compiles cleanly, installed on all three test devices, and the
+list-header/badge behavior was verified across Devices, Prefixes, and Racks.
 
 ## NBC-405: jump to rack elevation + highlight device from the "Position" row
 
@@ -612,11 +618,13 @@ Elevation, the device was never scrolled into view, and the highlight had no arr
       ~1.2s on arrival, on top of the existing permanent border.
 - [x] Remote `:app:compileDebugKotlin` and `:app:assembleDebug` both passed; installed on the
       Zenfone 10, Mi Pad 4, and Pixel 5.
-- [ ] On-device visual/behavioral check (tall rack, device near the bottom, plain rack visits
-      unaffected) - pending user's own check on a physical device.
+- [x] On-device visual/behavioral check (Zenfone 10, 2026-08-15): opening the Position row for a
+      device near the bottom of the tall Samson SRK16 rack jumped to Elevation, scrolled the device
+      into view, and showed the permanent highlight plus arrival flash; ordinary rack visits remain
+      unaffected.
 
-Status: mostly done, 2026-08-07 - compiles and installs cleanly on all three test devices;
-on-device verification still pending the user.
+Status: **done**, 2026-08-15 - compiles cleanly, installed on all three test devices, and the
+highlighted rack navigation was verified on the Zenfone 10.
 
 ## NBC-404: unify long-press action dialogs; support editing document metadata
 
@@ -646,10 +654,12 @@ document's NetBox type/comments (previously create/delete only).
       `EditDiffDialog`'s look without coupling to its `EditableField` data model.
 - [x] Remote `:app:compileDebugKotlin` and `:app:assembleDebug` both passed; installed on the
       Zenfone 10, Mi Pad 4, and Pixel 5.
-- [ ] On-device visual/behavioral check - pending user's own check on a physical device.
+- [x] On-device visual/behavioral check (Zenfone 10, 2026-08-15): document long-press showed the
+      unified Open/Edit/Delete/Cancel action sheet; Edit document opened the form and Review changes
+      showed the before/after diff. Revert discarded the temporary comment without changing NetBox.
 
-Status: mostly done, 2026-08-07 - compiles and installs cleanly on all three test devices;
-on-device verification still pending the user.
+Status: **done**, 2026-08-15 - compiles cleanly, installed on all three test devices, and the
+document action/edit/revert flow was verified on the Zenfone 10.
 
 ## NBC-403: merge "Add image"/"Add document" into one Add action; fix device-picture viewer scope
 
@@ -677,10 +687,12 @@ same combined image+document list the carousel uses.
       of a photos-only list.
 - [x] Remote `:app:compileDebugKotlin` and `:app:assembleDebug` both passed; installed on the
       Zenfone 10, Mi Pad 4, and Pixel 5.
-- [ ] On-device visual/behavioral check - pending user's own check on a physical device.
+- [x] On-device visual/behavioral check (Zenfone 10, 2026-08-15): Media showed one Add media
+      action with Take photo/Upload file; the front device photo viewer advanced through front,
+      rear, and the cached D-Link-Bill.pdf item, confirming the combined viewer scope.
 
-Status: mostly done, 2026-08-07 - compiles and installs cleanly on all three test devices;
-on-device verification still pending the user.
+Status: **done**, 2026-08-15 - compiles cleanly, installed on all three test devices, and the
+combined add/viewer behavior was verified on the Zenfone 10.
 
 ## NBC-401: merge image attachments + documents into one M3 carousel widget
 
@@ -702,11 +714,12 @@ to an external app.
       and combined image+PDF viewer item list.
 - [x] Remote `:app:compileDebugKotlin` and `:app:assembleDebug` both passed; installed on the
       Zenfone 10, Mi Pad 4, and Pixel 5.
-- [ ] On-device visual check (carousel layout, image/PDF/doc tap behavior, empty states) -
-      pending user's own check on a physical device.
+- [x] On-device visual/behavioral check (Zenfone 10, 2026-08-15): the merged Media card rendered
+      the cached D-Link-Bill.pdf tile and Add media control; tapping the PDF opened the in-app
+      first-page viewer with metadata, and the device photo viewer covered the same media list.
 
-Status: mostly done, 2026-08-07 - compiles and installs cleanly on all three test devices;
-visual/behavioral verification on-device still pending the user.
+Status: **done**, 2026-08-15 - compiles, unit tests pass, installed on all three test devices, and
+the merged media/viewer behavior was verified on the Zenfone 10.
 
 ## NBC-402: remove the compile-time NetBox host from Android App Links
 
@@ -718,10 +731,18 @@ instance host in the installed APK manifest. Keep the wildcard chooser filters a
 - [x] Update the App Links documentation to describe chooser-based host-independent routing.
 - [x] Verify remotely and deploy the debug build to the wired device and Mi Pad 4; verify wildcard
       NetBox URL resolution on both.
-- [ ] Deploy the debug build to the Pixel 5; its ADB install stalled and timed out.
+- [x] Deploy the debug build to the Pixel 5; its ADB install stalled and timed out. Retried
+      2026-08-15 and installed cleanly. The Pixel 5 was locked with a PIN not available to this
+      session, so wildcard resolution there was confirmed two ways that don't require unlocking:
+      `pm resolve-activity` for an arbitrary random host's `/dcim/...` URL returned
+      `ResolverActivity` (multiple candidate handlers, i.e. not auto-verified to one app), and
+      `dumpsys package dev.pschmitt.nyetbox.debug` shows the installed `http`/`https` VIEW/
+      BROWSABLE intent filters with no host restriction at all - matching the wildcard,
+      host-independent behavior this ticket asked for.
 
-Status: mostly done, 2026-08-07; verified with remote compilation, the full unit test suite,
-deployment to the wired device and Mi Pad 4, and wildcard URL resolution on both.
+Status: **done**, 2026-08-15; verified with remote compilation, the full unit test suite, and
+wildcard URL resolution confirmed on all three test devices (Zenfone 10, Mi Pad 4 on 2026-08-07;
+Pixel 5 on 2026-08-15 via package/intent-filter inspection, since it was PIN-locked).
 
 ## NBC-378: restyle the "Add item" picker and create form to look more Material You
 
@@ -9379,3 +9400,27 @@ silently drift out of date as dependencies change.
 Status: **done**, 2026-08-15; implemented and verified with remote compile/unit tests and an
 on-device check confirming both the generated library list and the click-through-to-project-page
 behavior work against this app's real dependency graph.
+
+## NBC-449: prevent global-search cache indexing from exhausting the app heap
+
+The Zenfone 10 reproduced a separate global-search memory failure after NBC-447's per-endpoint
+`CursorWindow` fix: opening cached global search and loading the full object projection caused an
+`OutOfMemoryError` in `NetBoxObjectDao_Impl.observeAll$lambda$0` while `GlobalSearchRepository` was
+building its in-memory index. The current per-endpoint fan-out avoids the original single-cursor
+crash, but still reads every cached row (including raw JSON) for every endpoint and combines those
+lists before parsing/indexing them, so the whole cache can still peak above the 256 MB heap limit.
+
+- [x] Characterized the failure against the current cached dataset and preserved the cache-first
+      global-search behavior while reducing peak Room and index memory.
+- [x] Changed the indexing path so each endpoint maps raw rows to the compact search projection
+      before the outer combine, and only interfaces/IP addresses retain parsed JSON for recursive
+      network matching; ordinary endpoints no longer retain their full parsed object trees.
+- [x] Added focused regression coverage for the raw-JSON retention contract and the existing
+      interface/IP network matching behavior.
+- [x] Verified remotely on rofl-13 with `compileDebugKotlin`, `testDebugUnitTest`, and `ktfmtCheck`.
+- [x] Re-tested after deploying the debug build to all three attached devices: on the Zenfone 10,
+      `DLK-0001` returned the expected asset-tag-ranked result and `a` rendered 438 cached hits;
+      neither query produced `FATAL EXCEPTION`, `OutOfMemoryError`, or `CursorWindow` log markers.
+
+Status: **done**, 2026-08-15 - fixed, remotely verified, deployed to all attached devices, and
+validated on the large cached Zenfone 10 dataset with targeted and broad global-search queries.
