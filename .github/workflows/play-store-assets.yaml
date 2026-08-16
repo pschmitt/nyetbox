@@ -16,7 +16,7 @@ on:
 
 jobs:
   upload:
-    uses: pschmitt/android-app-ci/.github/workflows/play-store-images.yaml@main
+    uses: pschmitt/android-app-ci/.github/workflows/play-store-assets.yaml@main
     with:
       application-id: dev.pschmitt.nyetbox
     secrets: inherit
