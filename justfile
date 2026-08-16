@@ -49,10 +49,13 @@ default:
 # 4 apps) and the remote sync/build/deploy pipeline - sync/gradle/build/fetch/build-fetch/clean/
 # lint/test plus the zenfone-*/mipad-*/px5-*/deploy-all device recipes (single-module.just, the 3
 # single-Gradle-module apps). See pschmitt/android-app-ci's just/ for the source of truth.
-# Vendored via vendir (not a git submodule - see that repo's README and this repo's vendir.yml)
-# as .just/*.just; `just update-common` (defined at the bottom of this file) refreshes both.
-import '.just/common.just'
-import '.just/single-module.just'
+# Pulled in via a git submodule at .just/android-app-ci (tracking that repo's main branch);
+# `just update-common` (defined at the bottom of this file) refreshes it. The devShell's shellHook
+# auto-runs `git submodule update --init` on every `nix develop` entry, so a fresh git worktree
+# (this fleet creates plenty - .claude/worktrees/, .codex/worktrees/, ...) never needs a manual
+# `--init` step - `git worktree add` alone doesn't check out submodule content.
+import '.just/android-app-ci/just/common.just'
+import '.just/android-app-ci/just/single-module.just'
 
 # --- Play Store screenshots (disposable NetBox + local emulator) -----------
 #
@@ -293,9 +296,8 @@ play-feature-graphic-upload:
 
 # --- Shared recipes (pschmitt/android-app-ci) -------------------------------
 
-# Refresh the vendored copies of pschmitt/android-app-ci's shared recipes (see the `import`s near
-# the top of this file, and vendir.yml for what's vendored from where). Re-resolves `ref: main` to
-# whatever's current and updates vendir.lock.yml's pinned commit accordingly - review the diff
-# like any other dependency bump before committing it.
+# Advance the .just/android-app-ci submodule to the tip of its tracked branch (main) and stage the
+# result - review the diff like any other dependency bump before committing it.
 update-common:
-    vendir sync
+    git submodule update --remote .just/android-app-ci
+    git add .just/android-app-ci

@@ -1,9 +1,0 @@
-apiVersion: vendir.k14s.io/v1alpha1
-directories:
-- contents:
-  - git:
-      commitTitle: 'devshells.nix: add vendir to the default devShell...'
-      sha: 7d2452054a0a4552fa3918a96152e7ba23db99ed
-    path: .
-  path: .just
-kind: LockConfig

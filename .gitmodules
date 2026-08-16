@@ -1,0 +1,4 @@
+[submodule ".just/android-app-ci"]
+	path = .just/android-app-ci
+	url = https://github.com/pschmitt/android-app-ci
+	branch = main
