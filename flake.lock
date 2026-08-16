@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "android-app-ci": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786896245,
+        "narHash": "sha256-fHmvY/tiRoAAQbHJRClVK6CorYY8UoRS+lfZGbslI7I=",
+        "owner": "pschmitt",
+        "repo": "android-app-ci",
+        "rev": "6c4a5fc71946e1a450888fabe4db2c7073d6d2dd",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pschmitt",
+        "repo": "android-app-ci",
+        "type": "github"
+      }
+    },
     "android-nixpkgs": {
       "inputs": {
         "devshell": "devshell",
@@ -116,6 +132,7 @@
     },
     "root": {
       "inputs": {
+        "android-app-ci": "android-app-ci",
         "android-nixpkgs": "android-nixpkgs",
         "git-hooks": "git-hooks",
         "nixpkgs": "nixpkgs"
