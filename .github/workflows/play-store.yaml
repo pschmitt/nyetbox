@@ -38,5 +38,13 @@ jobs:
       artifact-label: nyetbox
       version-code: ${{ github.event_name == 'workflow_dispatch' && inputs.version_code || '' }}
       version-name: ${{ github.event_name == 'workflow_dispatch' && inputs.version_name || '' }}
-      publish: ${{ github.event_name == 'workflow_dispatch' && inputs.publish || true }}
+      # NOT `event_name == 'workflow_dispatch' && inputs.publish || true` - that's a JS-ternary-
+      # style footgun that GitHub Actions expressions don't actually support: when inputs.publish
+      # is the legitimate, intentional value `false`, `X && false` is `false`, and `false || true`
+      # then unconditionally becomes `true` regardless of what the user asked for. Confirmed live:
+      # this silently published a real (if throwaway-versioned) build to Play's internal track
+      # from a workflow_dispatch test run with publish left at its default `false`. This form
+      # only ever short-circuits on the *event type*, never re-evaluates a boolean input through
+      # a truthy/falsy lens.
+      publish: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
     secrets: inherit
