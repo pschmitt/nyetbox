@@ -91,7 +91,7 @@ jobs:
           cores: 4
           emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
           script: |
-            bash ci/android-e2e-wait.sh
+            bash <(curl -fsSL https://raw.githubusercontent.com/pschmitt/android-app-ci/main/scripts/wait-for-android-emulator.sh)
             # Route the emulator's loopback to the runner's disposable NetBox port. This is more
             # reliable on GitHub-hosted Linux runners than relying on the emulator's 10.0.2.2 host
             # alias reaching Docker's published port.

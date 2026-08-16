@@ -2,7 +2,8 @@ name: Screenshots
 
 # Screenshot capture is intentionally manual. It uses the same disposable fixture and Android
 # emulator action as the E2E workflow, then uploads the reviewed images as a build artifact (or,
-# with open_pr, commits them straight to a PR for review there instead).
+# with open_pr, opens/updates a PR with them committed - see pschmitt/android-app-ci's
+# screenshots-open-pr.yaml reusable workflow for that part).
 on:
   workflow_dispatch:
     inputs:
@@ -42,14 +43,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '21.0.11'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+      - uses: pschmitt/android-app-ci/.github/actions/setup-jdk-gradle@main
 
       - name: Set up Ruby and fastlane
         uses: ruby/setup-ruby@v1
@@ -77,16 +71,7 @@ jobs:
           cp app/build/outputs/apk/debug/app-x86_64-debug.apk dist/
           cp app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk dist/
 
-      # GitHub-hosted runners ship /dev/kvm but don't grant the job user access to it, so the
-      # emulator silently falls back to software-only emulation and takes ~15+ minutes to boot.
-      # This grants real KVM access. (A controlled test in android-e2e.yaml ruled KVM out as the
-      # cause of the "device offline" flakiness both workflows have hit - see that file's
-      # comment - so it's not worth trading away for iteration speed here either.)
-      - name: Enable KVM group perms
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
+      - uses: pschmitt/android-app-ci/.github/actions/enable-kvm@main
 
       - name: Capture screenshots in a ${{ matrix.device_type }} emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -115,7 +100,7 @@ jobs:
           # (captureE2eScreenshot, written straight to the app's external files dir) while still
           # preserving the real exit code of the capture itself.
           script: |
-            bash ci/android-e2e-wait.sh
+            bash <(curl -fsSL https://raw.githubusercontent.com/pschmitt/android-app-ci/main/scripts/wait-for-android-emulator.sh)
             adb reverse tcp:8000 tcp:8000
             serial="$(adb devices | awk '$2 == "device" { print $1; exit }')" && test -n "$serial" && adb -s "$serial" install -r -g -t dist/app-x86_64-debug.apk && E2E_TOKEN="$E2E_TOKEN" SCREENGRAB_DEVICE_TYPE=${{ matrix.device_type }} SCREENGRAB_SPECIFIC_DEVICE="$serial" fastlane screenshots; rc=$?; mkdir -p dist/failure-screenshots dist/logcat; adb -s "$serial" pull /sdcard/Android/data/dev.pschmitt.nyetbox.debug/files/e2e-screenshots dist/failure-screenshots >/dev/null 2>&1 || true; adb -s "$serial" logcat -d > dist/logcat/logcat.txt 2>/dev/null || true; exit $rc
 
@@ -148,158 +133,21 @@ jobs:
         run: docker compose -f ci/netbox/docker-compose.yml -f ci/netbox/docker-compose.screenshots.yml down --volumes --remove-orphans
 
   open-pr:
-    name: Open PR with updated screenshots
     needs: capture
     if: ${{ !cancelled() && !failure() && inputs.open_pr }}
-    runs-on: ubuntu-24.04
+    uses: pschmitt/android-app-ci/.github/workflows/screenshots-open-pr.yaml@main
+    with:
+      artifact-label: nyetbox
+      commit-message: "chore: update Play Store and README screenshots (phone, 7in, 10in tablet)"
+      sync-readme: true
+      readme-images: |
+        01_dashboard|docs/images/readme-dashboard.png|_light_[0-9]*.png
+        02_device_detail|docs/images/readme-device-detail.png|_light_[0-9]*.png
+        03_topology|docs/images/readme-topology.png|_light_[0-9]*.png
+        04_search|docs/images/readme-search.png|_light_[0-9]*.png
+        05_settings|docs/images/readme-settings.png|_light_[0-9]*.png
+      pr-body-intro: "Merging this PR uploads the updated images to the Play Console listing automatically (see play-store-images.yaml)."
+    secrets: inherit
     permissions:
       contents: write
       pull-requests: write
-    steps:
-      # GITHUB_TOKEN can never push a branch whose commit range touches .github/workflows/* -
-      # main's own history (including this workflow file's own past fix-up commits) always will,
-      # so every branch built from it trips that restriction regardless of what this job's own
-      # commit changes ("refusing to allow a GitHub App to create or update workflow ... without
-      # `workflows` permission" - not a scope grantable via the `permissions:` key above).
-      # Needs a fine-grained PAT (scoped to just this repo: Contents + Pull requests + Workflows,
-      # all read & write) in the WORKFLOW_PUSH_TOKEN repo secret - falls back to the default token
-      # when that secret isn't set, which reproduces the same failure so it's obvious what's
-      # missing rather than silently no-op-ing.
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          token: ${{ secrets.WORKFLOW_PUSH_TOKEN || github.token }}
-
-      - name: Download phone screenshots
-        uses: actions/download-artifact@v8
-        with:
-          name: nyetbox-phone-screenshots-${{ github.run_id }}
-          path: fastlane/metadata/android/en-US/images/phoneScreenshots
-
-      - name: Download sevenInch screenshots
-        uses: actions/download-artifact@v8
-        with:
-          name: nyetbox-sevenInch-screenshots-${{ github.run_id }}
-          path: fastlane/metadata/android/en-US/images/sevenInchScreenshots
-
-      - name: Download tenInch screenshots
-        uses: actions/download-artifact@v8
-        with:
-          name: nyetbox-tenInch-screenshots-${{ github.run_id }}
-          path: fastlane/metadata/android/en-US/images/tenInchScreenshots
-
-      # Each device-type artifact was uploaded alongside app/build/reports/androidTests/ and
-      # dist/failure-screenshots/ (see the capture job), so it unpacks with the actual .pngs
-      # nested some levels deep rather than directly in the download path. Find them regardless of
-      # exact depth and drop everything else before committing.
-      - name: Flatten downloaded artifacts to just the screenshots
-        run: |
-          for device_type in phone sevenInch tenInch; do
-            dir="fastlane/metadata/android/en-US/images/${device_type}Screenshots"
-            find "$dir" -mindepth 2 -iname '*.png' -exec mv {} "$dir/" \;
-            find "$dir" -mindepth 1 -type d -exec rm -rf {} +
-          done
-
-      # README.md's screenshot gallery uses the phone bucket's light-mode captures under stable
-      # filenames, so those don't drift into a second, separately-maintained set of screenshots -
-      # see the "Screenshots" section there. StoreScreenshotTest.kt captures the dark pass
-      # unsuffixed (so it sorts first in the Play Store listing) and the light pass with a
-      # "_light" suffix, so match on that suffix explicitly rather than the numeric prefix alone.
-      - name: Sync README screenshots from the phone bucket
-        run: |
-          src="fastlane/metadata/android/en-US/images/phoneScreenshots"
-          declare -A readme_images=(
-            [01_dashboard]="docs/images/readme-dashboard.png"
-            [02_device_detail]="docs/images/readme-device-detail.png"
-            [03_topology]="docs/images/readme-topology.png"
-            [04_search]="docs/images/readme-search.png"
-            [05_settings]="docs/images/readme-settings.png"
-          )
-          for prefix in "${!readme_images[@]}"; do
-            match="$(find "$src" -iname "${prefix}_light_[0-9]*.png" | head -n1)"
-            test -n "$match" || { echo "No capture found for $prefix" >&2; exit 1; }
-            cp "$match" "${readme_images[$prefix]}"
-          done
-
-      - name: Check for changes
-        id: diff
-        run: |
-          git add fastlane/metadata/android/en-US/images docs/images
-          if git diff --cached --quiet; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      # A stable branch name (not keyed by run_id) plus a force-push means repeated dispatches
-      # update the same PR in place instead of piling up a new one per run.
-      - name: Commit and force-push
-        if: ${{ steps.diff.outputs.changed == 'true' }}
-        id: commit
-        run: |
-          branch="screenshots/update"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -B "$branch"
-          git commit -m "chore: update Play Store and README screenshots (phone, 7in, 10in tablet)"
-          git push --force origin "$branch"
-          echo "branch=$branch" >> "$GITHUB_OUTPUT"
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-      # The PR diff is just-renamed binary PNGs, next to unreviewable without opening every file -
-      # embed each one inline instead, addressed at this exact commit (not the branch, which gets
-      # force-pushed again on the next run) so a comment's images never silently change under a
-      # reviewer after the fact.
-      - name: Build inline image gallery
-        if: ${{ steps.diff.outputs.changed == 'true' }}
-        id: gallery
-        run: |
-          sha="${{ steps.commit.outputs.sha }}"
-          gallery_file="$(mktemp)"
-          for device_type in phone sevenInch tenInch; do
-            dir="fastlane/metadata/android/en-US/images/${device_type}Screenshots"
-            shopt -s nullglob
-            files=("$dir"/*.png)
-            [ ${#files[@]} -eq 0 ] && continue
-            {
-              echo "<details open>"
-              echo "<summary><strong>${device_type}</strong> (${#files[@]} images)</summary>"
-              echo
-              for f in "${files[@]}"; do
-                name="$(basename "$f")"
-                url="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${sha}/${f}"
-                printf '<img src="%s" width="200" alt="%s" title="%s">\n' "$url" "$name" "$name"
-              done
-              echo
-              echo "</details>"
-              echo
-            } >> "$gallery_file"
-          done
-          echo "path=$gallery_file" >> "$GITHUB_OUTPUT"
-
-      - name: Open or update the PR
-        if: ${{ steps.diff.outputs.changed == 'true' }}
-        env:
-          GH_TOKEN: ${{ secrets.WORKFLOW_PUSH_TOKEN || github.token }}
-          BRANCH: ${{ steps.commit.outputs.branch }}
-          GALLERY_FILE: ${{ steps.gallery.outputs.path }}
-        run: |
-          existing_pr="$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')"
-          body_file="$(mktemp)"
-          if [ -n "$existing_pr" ]; then
-            {
-              echo "Updated with fresh screenshots from run ${{ github.run_id }}."
-              echo
-              cat "$GALLERY_FILE"
-            } > "$body_file"
-            gh pr comment "$existing_pr" --body-file "$body_file"
-          else
-            {
-              echo "Automated screenshot refresh from the \`Screenshots\` workflow (run ${{ github.run_id }}), including README.md's gallery (phone bucket, light mode). Review the images below before merging. Re-running this workflow with \`open_pr\` updates this same PR instead of opening a new one."
-              echo
-              echo "Merging this PR uploads the updated images to the Play Console listing automatically (see \`play-store-images.yaml\`)."
-              echo
-              cat "$GALLERY_FILE"
-            } > "$body_file"
-            gh pr create --title "Update screenshots" --body-file "$body_file" --head "$BRANCH" --base "${{ github.ref_name }}"
-          fi
