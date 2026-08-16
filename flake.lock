@@ -3,11 +3,11 @@
     "android-app-ci": {
       "flake": false,
       "locked": {
-        "lastModified": 1786896245,
-        "narHash": "sha256-fHmvY/tiRoAAQbHJRClVK6CorYY8UoRS+lfZGbslI7I=",
+        "lastModified": 1786906227,
+        "narHash": "sha256-dD6faY4YtFkG7TA2t2CvzMe13hyrVQMbUXKMqFtvu/I=",
         "owner": "pschmitt",
         "repo": "android-app-ci",
-        "rev": "6c4a5fc71946e1a450888fabe4db2c7073d6d2dd",
+        "rev": "3b7e0708af7156eec45b6329e51f6743fdbb48a4",
         "type": "github"
       },
       "original": {
