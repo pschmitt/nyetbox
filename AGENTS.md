@@ -2,28 +2,14 @@
 
 Repository instructions for AI coding agents working on Nyetbox.
 
+See `.just/android-app-ci/AGENTS-shared.md` for the fleet-wide task-tracking convention, dev
+environment (`nix develop`/`git-hooks.nix`), CI-is-the-sole-lint-authority rule, and physical test
+device docs (this app has all three: Zenfone 10, Mi Pad 4, Pixel 5) - read it alongside this file,
+not instead of it.
+
 ## Task tracking
 
-- `TODO.md` is the running backlog/changelog for this project, one `## NBC-N:` entry per
-  feature or fix, numbered sequentially (never reuse or renumber an id). Each entry has a
-  checklist of sub-items (`- [ ]`/`- [x]`) and ends with a `Status:` line (`not started` /
-  `in progress` / `mostly done` / `**done**`, plus a date and how it was verified).
-- Before starting any non-trivial new feature or fix, add (or update) an `NBC-N` entry
-  describing it - even if the same conversation immediately goes on to implement it. Update the
-  checklist/status as work actually lands, rather than writing the whole entry retroactively once
-  everything's finished. This keeps `TODO.md` an accurate record of what's done vs. still open,
-  and lets another agent (or a future you) resume the work cold from just this file.
-- Trivial one-off asks (a typo, a single-line tweak) don't need their own entry.
-
-## Dev environment
-
-- `nix develop` provides the full toolchain (JDK 21, Android SDK, `just`, `ktfmt`) and installs
-  the repo's pre-commit hooks (see `flake.nix`'s `git-hooks.nix` integration - trailing
-  whitespace, EOF fixer, merge-conflict/large-file checks, `nixfmt`, `statix`). The generated
-  `.pre-commit-config.yaml` is gitignored - it's regenerated from `flake.nix` on every shell
-  entry, don't hand-edit it.
-- Prefer the `justfile` recipes over raw `./gradlew`/`ssh`/`adb` invocations - run `just --list`
-  for the full set.
+- This project's `TODO.md` prefix is `NBC-N` (e.g. `## NBC-42: ...`).
 
 ## Builds
 
@@ -49,25 +35,10 @@ Repository instructions for AI coding agents working on Nyetbox.
     drift from the `com.ncorti.ktfmt.gradle`-resolved engine version CI actually uses, so it can
     "fix" formatting that CI's version considers already correct (or vice versa).
 
-**CI is the sole authority on lint/format, full stop - not `just lint`, not `just format`, not
-local judgment.** Both of the above discrepancies were discovered the hard way: a change that
-passed `just lint` on rofl-13 still failed CI's `Lint` job after being pushed and tagged. If CI's
-`Lint` job fails or disagrees with what a local/remote check said:
-- `.github/workflows/lint.yaml`'s `Lint` job auto-uploads a `ktfmt-diff-patch` artifact whenever
-  `ktfmtCheck` fails - on any trigger, push/PR or manual. It contains exactly what
-  `./gradlew ktfmtFormat` would change, computed in the same environment CI's `ktfmtCheck` uses.
-  Grab it with `gh run download <run-id> -n ktfmt-diff-patch` and apply it (`git apply`) rather
-  than guessing or reformatting by hand. Dispatch it directly (`gh workflow run lint.yaml`) to get
-  a patch preemptively, without waiting for a real push/PR to fail first.
-- Fix every lint/format violation CI reports before calling a change done, even in files the
-  current change didn't touch or author - don't scope a fix to "only the lines I changed" if CI
-  flags something adjacent. Never disable, skip, or baseline around a lint failure to make it go
-  away; fix the actual violation.
-- `just format` runs the local `ktfmt` CLI over *every* tracked `.kt`/`.kts` file in the repo, not
-  just the ones a change touched - combined with the local/CI ktfmt version drift above, this can
-  silently reformat (and sometimes visibly worsen the formatting of) dozens of unrelated files in
-  one run. Diff-review its output before committing; `git checkout -- <file>` anything it touched
-  outside the actual change, don't assume every file it modified was an intended fix.
+**CI is the sole authority on lint/format** - see the shared doc for why and for the
+`ktfmt-diff-patch` retrieval procedure; both discrepancies above (the `NO-SOURCE` gotcha and
+local/CI `ktfmt` version drift) are why it applies doubly here.
+
 - **Releasing a new version is exactly this procedure, in order - never skip or reorder a step:**
   1. Land every change for the release on `main` first (including the version bump below) and
      confirm `git status` is clean before tagging anything.
@@ -89,30 +60,8 @@ passed `just lint` on rofl-13 still failed CI's `Lint` job after being pushed an
 
 ## Physical test devices
 
-- **Zenfone 10** (`arm64-v8a`), connected directly over USB to this machine's adb. Recipes:
-  `just zenfone-install <apk>`, `just zenfone-uninstall [pkg]`, `just zenfone-logcat [filter]`,
-  `just deploy-zenfone [variant]` (build + fetch + install in one step).
-- **Mi Pad 4** (`arm64-v8a`, rooted), reachable via SSH at `mi-pad-4.lan` port `8022` (Termux).
-  Recipes mirror the Zenfone ones but go through `just mipad-connect` first (finds the port
-  `adbd` is listening on via a root SSH shell, `adb connect`s to it): `just mipad-install <apk>`,
-  `just mipad-uninstall [pkg]`, `just mipad-logcat [filter]`, `just deploy-mipad [variant]`.
-- **Pixel 5** (`arm64-v8a`, codename `redfin`), wireless adb at `px5.lan` - not always listening,
-  enabled on demand via `zhj adb::connect px5.lan` (triggers wireless debugging through Home
-  Assistant/Tasker on the phone). The port changes every time it's (re)enabled, so
-  `just px5-connect` always re-discovers it from `adb devices` rather than assuming a fixed one.
-  `just px5-install <apk>`, `just px5-uninstall [pkg]`, `just px5-logcat [filter]`,
-  `just deploy-px5 [variant]`.
-- **Always deploy to every attached adb device**, not just one: after landing a verified change
-  (compiled, tested, lint-checked remotely), run `just deploy-all [variant]` rather than a
-  single-device recipe. It builds, fetches, and installs on the Zenfone 10, Mi Pad 4, and Pixel 5 in
-  one step - install onto whatever's connected by default, not just whichever device happens to be
-  handy. Only target a single device (`just deploy-zenfone`/`deploy-mipad`/`deploy-px5`) when
-  there's a specific reason to, e.g. reproducing a device-specific bug.
-- Signature mismatch gotcha: if a device already has a build signed with a different key than the
-  one you're installing, install fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. Fix is
-  `just zenfone-uninstall`/`just mipad-uninstall`/`just px5-uninstall` then install fresh - this
-  wipes local app data (Room DB cache, stored token). Confirm with the user before doing this if
-  it's not their own throwaway data.
+See `.just/android-app-ci/AGENTS-shared.md` - this app has recipes for all three fleet devices
+(Zenfone 10, Mi Pad 4, Pixel 5), default to `just deploy-all [variant]`.
 
 ## Architecture
 
