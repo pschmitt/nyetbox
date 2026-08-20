@@ -6,7 +6,7 @@ androidx-activity = "1.13.0"
 # both are versioned together upstream (NBC-426).
 androidx-baselineprofile = "1.5.0-beta01"
 androidx-camera = "1.6.1"
-androidx-compose = "1.11.4"
+androidx-compose = "1.12.0"
 # Decoupled from androidx-compose above - this artifact's release cadence lags the rest of Compose
 # (last published at 1.7.8), but it's just a large set of static ImageVector vals with no API
 # coupling to the newer compose-ui/foundation versions, so it's safe to pin independently.
