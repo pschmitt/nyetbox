@@ -13,7 +13,73 @@
     </issue>
 
     <issue
-        id="GradleDependency"
+        id="AndroidGradlePluginVersion"
+        message="A newer version of Gradle than 9.7.0 is available: 9.7.1"
+        errorLine1="distributionUrl=https\://services.gradle.org/distributions/gradle-9.7.0-bin.zip"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="gradle/wrapper/gradle-wrapper.properties"
+            line="4"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.mikepenz.aboutlibraries.plugin.android than 15.0.4 is available: 15.1.0"
+        errorLine1="aboutlibraries = &quot;15.0.4&quot;"
+        errorLine2="                 ~~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="2"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.mikepenz:aboutlibraries-compose-m3 than 15.0.4 is available: 15.1.0"
+        errorLine1="aboutlibraries = &quot;15.0.4&quot;"
+        errorLine2="                 ~~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="2"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.mikepenz:multiplatform-markdown-renderer than 0.43.0 is available: 0.44.0"
+        errorLine1="markdown-renderer = &quot;0.43.0&quot;"
+        errorLine2="                    ~~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="40"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.mikepenz:multiplatform-markdown-renderer-m3 than 0.43.0 is available: 0.44.0"
+        errorLine1="markdown-renderer = &quot;0.43.0&quot;"
+        errorLine2="                    ~~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="40"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.squareup.okhttp3:logging-interceptor than 5.4.0 is available: 5.5.0"
+        errorLine1="okhttp = &quot;5.4.0&quot;"
+        errorLine2="         ~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="41"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
         message="A newer version of com.squareup.okhttp3:mockwebserver than 5.4.0 is available: 5.5.0"
         errorLine1="okhttp = &quot;5.4.0&quot;"
         errorLine2="         ~~~~~~~">
@@ -24,7 +90,7 @@
     </issue>
 
     <issue
-        id="GradleDependency"
+        id="NewerVersionAvailable"
         message="A newer version of com.squareup.okhttp3:okhttp than 5.4.0 is available: 5.5.0"
         errorLine1="okhttp = &quot;5.4.0&quot;"
         errorLine2="         ~~~~~~~">
