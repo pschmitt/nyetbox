@@ -18,7 +18,7 @@
         errorLine1="distributionUrl=https\://services.gradle.org/distributions/gradle-9.7.0-bin.zip"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="gradle/wrapper/gradle-wrapper.properties"
+            file="$HOME/work/nyetbox/nyetbox/gradle/wrapper/gradle-wrapper.properties"
             line="4"
             column="17"/>
     </issue>
