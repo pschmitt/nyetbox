@@ -40,10 +40,9 @@ constructor(
 
     /**
      * @param forceFullSync Skips incremental (`last_updated`-filtered) fetching for this run and
-     *   fully re-fetches every endpoint instead. Only the explicit Settings "Sync now" button
-     *   should pass `true` - the many other callers of this function (pull-to-refresh, post-CRUD
-     *   refreshes, gesture shortcuts) are incidental refreshes that should stay incremental, or
-     *   forcing a full pass from all of them would defeat the point of incremental sync.
+     *   fully re-fetches every endpoint instead. The explicit Settings "Sync now" button and the
+     *   dashboard pull-to-refresh gesture pass `true`; the many other callers of this function
+     *   (post-CRUD refreshes, gesture shortcuts, and other incidental refreshes) stay incremental.
      */
     fun syncNow(forceFullSync: Boolean = false) {
         val request =

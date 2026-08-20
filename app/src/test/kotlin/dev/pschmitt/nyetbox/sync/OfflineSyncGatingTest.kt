@@ -22,8 +22,9 @@ class OfflineSyncGatingTest {
         )
     }
 
+    // NBC-451: the explicit dashboard pull uses the same full-sync request as Settings' Sync now.
     @Test
-    fun `never skips a forced full sync regardless of freshness`() {
+    fun `never skips an explicitly requested full sync regardless of freshness`() {
         assertFalse(
             shouldSkipSyncPass(
                 forceFullSync = true,

@@ -3,6 +3,19 @@
 Running backlog/changelog for Nyetbox. One `## NBC-N:` entry per feature or fix,
 numbered sequentially (never reuse or renumber an id). See `AGENTS.md` for the full convention.
 
+## NBC-451: make dashboard pull-to-refresh run a full sync
+
+The home-page pull-to-refresh gesture should honor an explicit user request even when the cache
+was synced less than five minutes ago. It should use the same full reconciliation as Settings'
+"Sync now" so server-side deletions are also detected.
+
+- [x] Make the dashboard pull request a full sync.
+- [x] Add unit coverage proving a fresh cache is not skipped for that request.
+- [x] Verify with remote compilation, unit tests, and lint.
+
+Status: **done**, 2026-08-20 - remote `:app:compileDebugKotlin`, `:app:testDebugUnitTest`, and
+`ktfmtCheck` passed.
+
 ## NBC-419: rack-view widget (scrollable, per-unit device layout)
 
 A second, separate home-screen widget (not another content mode of NBC-418's widget - see

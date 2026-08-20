@@ -203,7 +203,7 @@ constructor(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     fun refresh() {
-        if (!offlineMode.value) syncScheduler.syncNow()
+        if (!offlineMode.value) syncScheduler.syncNow(forceFullSync = true)
     }
 
     fun errorShown() {
@@ -211,7 +211,7 @@ constructor(
     }
 
     fun retrySync() {
-        if (!offlineMode.value) syncScheduler.syncNow()
+        if (!offlineMode.value) syncScheduler.syncNow(forceFullSync = true)
     }
 
     fun setDashboardSectionOrder(order: List<String>) {
