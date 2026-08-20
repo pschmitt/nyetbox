@@ -14,101 +14,24 @@
 
     <issue
         id="GradleDependency"
-        message="A newer version of androidx.baselineprofile than 1.5.0-beta01 is available: 1.5.0-rc01"
-        errorLine1="androidx-baselineprofile = &quot;1.5.0-beta01&quot;"
-        errorLine2="                           ~~~~~~~~~~~~~~">
+        message="A newer version of com.squareup.okhttp3:mockwebserver than 5.4.0 is available: 5.5.0"
+        errorLine1="okhttp = &quot;5.4.0&quot;"
+        errorLine2="         ~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="7"
-            column="28"/>
+            line="41"
+            column="10"/>
     </issue>
 
     <issue
         id="GradleDependency"
-        message="A newer version of androidx.benchmark:benchmark-macro-junit4 than 1.5.0-beta01 is available: 1.5.0-rc01"
-        errorLine1="androidx-baselineprofile = &quot;1.5.0-beta01&quot;"
-        errorLine2="                           ~~~~~~~~~~~~~~">
+        message="A newer version of com.squareup.okhttp3:okhttp than 5.4.0 is available: 5.5.0"
+        errorLine1="okhttp = &quot;5.4.0&quot;"
+        errorLine2="         ~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="7"
-            column="28"/>
-    </issue>
-
-    <issue
-        id="GradleDependency"
-        message="A newer version of androidx.compose.runtime:runtime than 1.11.4 is available: 1.12.0"
-        errorLine1="androidx-compose = &quot;1.11.4&quot;"
-        errorLine2="                   ~~~~~~~~">
-        <location
-            file="gradle/libs.versions.toml"
-            line="9"
-            column="20"/>
-    </issue>
-
-    <issue
-        id="GradleDependency"
-        message="A newer version of androidx.compose.ui:ui than 1.11.4 is available: 1.12.0"
-        errorLine1="androidx-compose = &quot;1.11.4&quot;"
-        errorLine2="                   ~~~~~~~~">
-        <location
-            file="gradle/libs.versions.toml"
-            line="9"
-            column="20"/>
-    </issue>
-
-    <issue
-        id="GradleDependency"
-        message="A newer version of androidx.compose.ui:ui-test-junit4 than 1.11.4 is available: 1.12.0"
-        errorLine1="androidx-compose = &quot;1.11.4&quot;"
-        errorLine2="                   ~~~~~~~~">
-        <location
-            file="gradle/libs.versions.toml"
-            line="9"
-            column="20"/>
-    </issue>
-
-    <issue
-        id="GradleDependency"
-        message="A newer version of androidx.compose.ui:ui-test-manifest than 1.11.4 is available: 1.12.0"
-        errorLine1="androidx-compose = &quot;1.11.4&quot;"
-        errorLine2="                   ~~~~~~~~">
-        <location
-            file="gradle/libs.versions.toml"
-            line="9"
-            column="20"/>
-    </issue>
-
-    <issue
-        id="GradleDependency"
-        message="A newer version of androidx.compose.ui:ui-tooling than 1.11.4 is available: 1.12.0"
-        errorLine1="androidx-compose = &quot;1.11.4&quot;"
-        errorLine2="                   ~~~~~~~~">
-        <location
-            file="gradle/libs.versions.toml"
-            line="9"
-            column="20"/>
-    </issue>
-
-    <issue
-        id="GradleDependency"
-        message="A newer version of androidx.compose.ui:ui-tooling-preview than 1.11.4 is available: 1.12.0"
-        errorLine1="androidx-compose = &quot;1.11.4&quot;"
-        errorLine2="                   ~~~~~~~~">
-        <location
-            file="gradle/libs.versions.toml"
-            line="9"
-            column="20"/>
-    </issue>
-
-    <issue
-        id="GradleDependency"
-        message="Upgrade `androidx.compose.foundation` for keyboard and mouse support"
-        errorLine1="androidx-compose = &quot;1.11.4&quot;"
-        errorLine2="                   ~~~~~~~~">
-        <location
-            file="gradle/libs.versions.toml"
-            line="9"
-            column="20"/>
+            line="41"
+            column="10"/>
     </issue>
 
     <issue
