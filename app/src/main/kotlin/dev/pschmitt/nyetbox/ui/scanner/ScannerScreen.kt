@@ -842,11 +842,14 @@ private val HIGH_ANALYSIS_SIZE = AndroidSize(1920, 1080)
 
 /**
  * The barcode scanner runs on everything from a Pixel to a 2018 midrange tablet (the Mi Pad 4 in
- * this app's own test fleet), and ZXing's decode cost tracks pixel count regardless of how fast
- * the device is - so [ScannerResolution.Auto] picks a lower analysis resolution on hardware
- * that's unlikely to keep up with the sharper one, rather than always defaulting to the best case.
+ * this app's own test fleet), and ZXing's decode cost tracks pixel count regardless of how fast the
+ * device is - so [ScannerResolution.Auto] picks a lower analysis resolution on hardware that's
+ * unlikely to keep up with the sharper one, rather than always defaulting to the best case.
  */
-private fun resolveAnalysisTargetSize(context: Context, resolution: ScannerResolution): AndroidSize =
+private fun resolveAnalysisTargetSize(
+    context: Context,
+    resolution: ScannerResolution,
+): AndroidSize =
     when (resolution) {
         ScannerResolution.Standard -> STANDARD_ANALYSIS_SIZE
         ScannerResolution.High -> HIGH_ANALYSIS_SIZE
@@ -855,7 +858,8 @@ private fun resolveAnalysisTargetSize(context: Context, resolution: ScannerResol
             val memoryInfo = ActivityManager.MemoryInfo()
             activityManager?.getMemoryInfo(memoryInfo)
             val lowTier =
-                activityManager?.isLowRamDevice == true || memoryInfo.totalMem in 1 until LOW_TIER_RAM_BYTES
+                activityManager?.isLowRamDevice == true ||
+                    memoryInfo.totalMem in 1 until LOW_TIER_RAM_BYTES
             if (lowTier) STANDARD_ANALYSIS_SIZE else HIGH_ANALYSIS_SIZE
         }
     }
@@ -879,7 +883,13 @@ private fun mapImagePointToView(
     val (rx, ry, rotatedWidth, rotatedHeight) =
         when (((rotationDegrees % 360) + 360) % 360) {
             90 -> Quadruple(y, imageWidth - x, imageHeight.toFloat(), imageWidth.toFloat())
-            180 -> Quadruple(imageWidth - x, imageHeight - y, imageWidth.toFloat(), imageHeight.toFloat())
+            180 ->
+                Quadruple(
+                    imageWidth - x,
+                    imageHeight - y,
+                    imageWidth.toFloat(),
+                    imageHeight.toFloat(),
+                )
             270 -> Quadruple(imageHeight - y, x, imageHeight.toFloat(), imageWidth.toFloat())
             else -> Quadruple(x, y, imageWidth.toFloat(), imageHeight.toFloat())
         }

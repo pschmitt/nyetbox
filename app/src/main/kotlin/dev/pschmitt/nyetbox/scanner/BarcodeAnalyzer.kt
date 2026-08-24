@@ -66,7 +66,8 @@ class BarcodeAnalyzer(private val onResult: (Detection) -> Unit) : ImageAnalysis
             val source = PlanarYUVLuminanceSource(data, width, height, 0, 0, width, height, false)
             val bitmap = BinaryBitmap(HybridBinarizer(source))
             val result = reader.decodeWithState(bitmap)
-            val points = result.resultPoints?.filterNotNull()?.map { PointF(it.x, it.y) } ?: emptyList()
+            val points =
+                result.resultPoints?.filterNotNull()?.map { PointF(it.x, it.y) } ?: emptyList()
             onResult(
                 Detection(
                     text = result.text,
