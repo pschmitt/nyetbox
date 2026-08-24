@@ -24,8 +24,30 @@
     </issue>
 
     <issue
+        id="AndroidGradlePluginVersion"
+        message="A newer version of com.android.application than 9.3.1 is available: 9.3.2"
+        errorLine1="android-plugin = &quot;9.3.1&quot;"
+        errorLine2="                 ~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="3"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="AndroidGradlePluginVersion"
+        message="A newer version of com.android.test than 9.3.1 is available: 9.3.2"
+        errorLine1="android-plugin = &quot;9.3.1&quot;"
+        errorLine2="                 ~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="3"
+            column="18"/>
+    </issue>
+
+    <issue
         id="NewerVersionAvailable"
-        message="A newer version of com.mikepenz.aboutlibraries.plugin.android than 15.0.4 is available: 15.1.0"
+        message="A newer version of com.mikepenz.aboutlibraries.plugin.android than 15.0.4 is available: 15.1.1"
         errorLine1="aboutlibraries = &quot;15.0.4&quot;"
         errorLine2="                 ~~~~~~~~">
         <location
@@ -36,7 +58,7 @@
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of com.mikepenz:aboutlibraries-compose-m3 than 15.0.4 is available: 15.1.0"
+        message="A newer version of com.mikepenz:aboutlibraries-compose-m3 than 15.0.4 is available: 15.1.1"
         errorLine1="aboutlibraries = &quot;15.0.4&quot;"
         errorLine2="                 ~~~~~~~~">
         <location
