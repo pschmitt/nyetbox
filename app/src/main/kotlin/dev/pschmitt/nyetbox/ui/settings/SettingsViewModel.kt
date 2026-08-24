@@ -21,6 +21,7 @@ import dev.pschmitt.nyetbox.data.repository.NetBoxUserIdentity
 import dev.pschmitt.nyetbox.data.repository.PrintSettings
 import dev.pschmitt.nyetbox.data.repository.ScannerLens
 import dev.pschmitt.nyetbox.data.repository.ScannerRearLens
+import dev.pschmitt.nyetbox.data.repository.ScannerResolution
 import dev.pschmitt.nyetbox.data.repository.SettingsRepository
 import dev.pschmitt.nyetbox.data.schema.jsonInt
 import dev.pschmitt.nyetbox.sync.SyncProgress
@@ -485,6 +486,10 @@ constructor(
 
     fun setScannerRearLens(lens: ScannerRearLens) {
         settingsRepository.setScannerRearLens(lens)
+    }
+
+    fun setScannerResolution(resolution: ScannerResolution) {
+        settingsRepository.setScannerResolution(resolution)
     }
 
     fun updatePrintSettings(transform: (PrintSettings) -> PrintSettings) {

@@ -240,6 +240,17 @@ enum class ScannerRearLens(val storageKey: String, val label: String) {
     }
 }
 
+enum class ScannerResolution(val storageKey: String, val label: String) {
+    Auto("auto", "Automatic (based on device)"),
+    Standard("standard", "Standard (720p, faster)"),
+    High("high", "High (1080p, better range)");
+
+    companion object {
+        fun fromStorage(value: String?): ScannerResolution =
+            entries.firstOrNull { it.storageKey == value } ?: Auto
+    }
+}
+
 enum class ThemeMode(val storageKey: String, val label: String) {
     FollowSystem("system", "Follow system"),
     Light("light", "Light"),
@@ -407,6 +418,9 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
 
     private val _scannerRearLens = MutableStateFlow(loadScannerRearLens())
     val scannerRearLens: StateFlow<ScannerRearLens> = _scannerRearLens.asStateFlow()
+
+    private val _scannerResolution = MutableStateFlow(loadScannerResolution())
+    val scannerResolution: StateFlow<ScannerResolution> = _scannerResolution.asStateFlow()
 
     private val _themeMode = MutableStateFlow(loadThemeMode())
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
@@ -627,6 +641,11 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
     fun setScannerRearLens(lens: ScannerRearLens) {
         prefs.edit().putString(KEY_SCANNER_REAR_LENS, lens.storageKey).apply()
         _scannerRearLens.value = lens
+    }
+
+    fun setScannerResolution(resolution: ScannerResolution) {
+        prefs.edit().putString(KEY_SCANNER_RESOLUTION, resolution.storageKey).apply()
+        _scannerResolution.value = resolution
     }
 
     fun setThemeMode(mode: ThemeMode) {
@@ -1116,6 +1135,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         if (settings.navBarItems.isNotEmpty()) setNavBarItems(settings.navBarItems)
         setScannerLens(ScannerLens.fromStorage(settings.scannerLens))
         setScannerRearLens(ScannerRearLens.fromStorage(settings.scannerRearLens))
+        setScannerResolution(ScannerResolution.fromStorage(settings.scannerResolution))
         setThemeMode(ThemeMode.fromStorage(settings.themeMode))
         setThemeAccent(ThemeAccent.fromStorage(settings.themeAccent))
         settings.objectTypeAccents.forEach { (path, accentKey) ->
@@ -1452,6 +1472,11 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
             prefs.getString(KEY_SCANNER_REAR_LENS, ScannerRearLens.Automatic.storageKey)
         )
 
+    private fun loadScannerResolution(): ScannerResolution =
+        ScannerResolution.fromStorage(
+            prefs.getString(KEY_SCANNER_RESOLUTION, ScannerResolution.Auto.storageKey)
+        )
+
     private fun loadPrintSettings(): PrintSettings =
         PrintSettings(
                 defaultPrinterName = prefs.getString(KEY_DEFAULT_PRINTER_NAME, null),
@@ -1579,6 +1604,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         const val TARGET_SEPARATOR = "\u001F"
         const val KEY_SCANNER_LENS = "scanner_default_lens"
         const val KEY_SCANNER_REAR_LENS = "scanner_default_rear_lens"
+        const val KEY_SCANNER_RESOLUTION = "scanner_resolution"
         const val KEY_THEME_MODE = "theme_mode"
         const val KEY_THEME_ACCENT = "theme_accent"
         const val KEY_OBJECT_TYPE_ACCENT_PREFIX = "object_type_accent:"

@@ -13,6 +13,7 @@ import dev.pschmitt.nyetbox.data.repository.NavBarItem
 import dev.pschmitt.nyetbox.data.repository.PrintSettings
 import dev.pschmitt.nyetbox.data.repository.ScannerLens
 import dev.pschmitt.nyetbox.data.repository.ScannerRearLens
+import dev.pschmitt.nyetbox.data.repository.ScannerResolution
 import dev.pschmitt.nyetbox.data.repository.ServerProfile
 import dev.pschmitt.nyetbox.data.repository.SettingsRepository
 import dev.pschmitt.nyetbox.data.repository.ThemeAccent
@@ -56,6 +57,7 @@ data class SettingsBackupSettings(
     val navBarItems: List<NavBarItem> = emptyList(),
     val scannerLens: String = ScannerLens.Back.storageKey,
     val scannerRearLens: String = ScannerRearLens.Automatic.storageKey,
+    val scannerResolution: String = ScannerResolution.Auto.storageKey,
     val themeMode: String = ThemeMode.FollowSystem.storageKey,
     val themeAccent: String = ThemeAccent.System.storageKey,
     val objectTypeAccents: Map<String, String> = emptyMap(),
@@ -206,6 +208,7 @@ constructor(
                     navBarItems = settingsRepository.navBarItems.value,
                     scannerLens = settingsRepository.scannerLens.value.storageKey,
                     scannerRearLens = settingsRepository.scannerRearLens.value.storageKey,
+                    scannerResolution = settingsRepository.scannerResolution.value.storageKey,
                     themeMode = settingsRepository.themeMode.value.storageKey,
                     themeAccent = settingsRepository.themeAccent.value.storageKey,
                     objectTypeAccents =

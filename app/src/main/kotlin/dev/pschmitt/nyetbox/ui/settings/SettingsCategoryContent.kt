@@ -127,6 +127,7 @@ internal data class SettingsCategoryState(
     val shortcutItems: List<NavBarItem>,
     val scannerLens: ScannerLens,
     val scannerRearLens: ScannerRearLens,
+    val scannerResolution: ScannerResolution,
     val printSettings: PrintSettings,
     val hiddenFieldKeys: Set<String>,
     val pinnedModelPaths: Set<String>,
@@ -169,6 +170,7 @@ internal data class SettingsCategoryActions(
     val onShowLibraries: () -> Unit = {},
     val onSetScannerLens: (ScannerLens) -> Unit,
     val onSetScannerRearLens: (ScannerRearLens) -> Unit,
+    val onSetScannerResolution: (ScannerResolution) -> Unit,
     val onUpdatePrintSettings: ((PrintSettings) -> PrintSettings) -> Unit,
     val onSetDefaultPrinter: (String, String) -> Unit,
     val onClearDefaultPrinter: () -> Unit,
@@ -841,6 +843,7 @@ private fun CameraSettingsContent(
 ) {
     var scannerLensMenuExpanded by remember { mutableStateOf(false) }
     var scannerRearLensMenuExpanded by remember { mutableStateOf(false) }
+    var scannerResolutionMenuExpanded by remember { mutableStateOf(false) }
     SettingsGroupCard(title = "Scanner", icon = Icons.Default.Cameraswitch) {
         SettingsListItem(
             modifier = Modifier.clickable { scannerLensMenuExpanded = true },
@@ -895,6 +898,38 @@ private fun CameraSettingsContent(
                                 onClick = {
                                     actions.onSetScannerRearLens(lens)
                                     scannerRearLensMenuExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+            },
+        )
+        SettingsListItem(
+            modifier = Modifier.clickable { scannerResolutionMenuExpanded = true },
+            leadingContent = { Icon(Icons.Default.HighQuality, contentDescription = null) },
+            headlineContent = { Text("Scan resolution") },
+            supportingContent = {
+                Text(
+                    "${state.scannerResolution.label}; higher catches smaller or farther codes but decodes slower"
+                )
+            },
+            trailingContent = {
+                Box {
+                    Icon(Icons.Default.ExpandMore, contentDescription = null)
+                    DropdownMenu(
+                        expanded = scannerResolutionMenuExpanded,
+                        onDismissRequest = { scannerResolutionMenuExpanded = false },
+                    ) {
+                        ScannerResolution.entries.forEach { resolution ->
+                            DropdownMenuItem(
+                                text = { Text(resolution.label) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.HighQuality, contentDescription = null)
+                                },
+                                onClick = {
+                                    actions.onSetScannerResolution(resolution)
+                                    scannerResolutionMenuExpanded = false
                                 },
                             )
                         }

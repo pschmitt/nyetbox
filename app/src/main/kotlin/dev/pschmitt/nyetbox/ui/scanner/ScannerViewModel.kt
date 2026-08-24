@@ -7,6 +7,7 @@ import dev.pschmitt.nyetbox.data.repository.DeviceRepository
 import dev.pschmitt.nyetbox.data.repository.GenericObjectRepository
 import dev.pschmitt.nyetbox.data.repository.ScannerLens
 import dev.pschmitt.nyetbox.data.repository.ScannerRearLens
+import dev.pschmitt.nyetbox.data.repository.ScannerResolution
 import dev.pschmitt.nyetbox.data.repository.SettingsRepository
 import dev.pschmitt.nyetbox.scanner.NetBoxTarget
 import dev.pschmitt.nyetbox.scanner.NetBoxUrlParser
@@ -42,6 +43,7 @@ constructor(
 
     val scannerLens: StateFlow<ScannerLens> = settingsRepository.scannerLens
     val scannerRearLens: StateFlow<ScannerRearLens> = settingsRepository.scannerRearLens
+    val scannerResolution: StateFlow<ScannerResolution> = settingsRepository.scannerResolution
 
     private var handled = false
 

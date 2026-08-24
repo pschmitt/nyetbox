@@ -3,9 +3,12 @@
 package dev.pschmitt.nyetbox.ui.scanner
 
 import android.Manifest
+import android.app.ActivityManager
+import android.content.Context
 import android.content.pm.PackageManager
 import android.hardware.camera2.CameraCharacteristics
 import android.os.Build
+import android.util.Size as AndroidSize
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -18,8 +21,11 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -30,8 +36,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cameraswitch
@@ -39,7 +47,6 @@ import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -63,6 +70,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
@@ -72,14 +80,18 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.pschmitt.nyetbox.data.repository.ScannerLens
 import dev.pschmitt.nyetbox.data.repository.ScannerRearLens
+import dev.pschmitt.nyetbox.data.repository.ScannerResolution
 import dev.pschmitt.nyetbox.scanner.BarcodeAnalyzer
 import dev.pschmitt.nyetbox.scanner.NetBoxTarget
 import dev.pschmitt.nyetbox.ui.common.NetBoxBottomBar
 import dev.pschmitt.nyetbox.ui.common.NetBoxResponsiveScaffold
 import dev.pschmitt.nyetbox.ui.navigation.Route
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.hypot
+import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import timber.log.Timber
 
@@ -96,6 +108,7 @@ fun ScannerScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val scannerLens by viewModel.scannerLens.collectAsStateWithLifecycle()
     val scannerRearLens by viewModel.scannerRearLens.collectAsStateWithLifecycle()
+    val scannerResolution by viewModel.scannerResolution.collectAsStateWithLifecycle()
     var camera by remember { mutableStateOf<Camera?>(null) }
     var availableCameras by remember { mutableStateOf<List<ScannerCameraOption>>(emptyList()) }
     var selectedRearCameraId by remember { mutableStateOf<String?>(null) }
@@ -154,6 +167,7 @@ fun ScannerScreen(
                 CameraPreview(
                     desiredLens = scannerLens,
                     selectedCameraId = selectedRearCameraId,
+                    resolution = scannerResolution,
                     onCodeScanned = viewModel::onCodeScanned,
                     onAvailableCameras = { options ->
                         availableCameras = options
@@ -173,7 +187,6 @@ fun ScannerScreen(
                     zoomRatio = zoomRatio,
                     onZoomRatioChanged = { zoomRatio = it },
                 )
-                ScannerViewfinder(modifier = Modifier.fillMaxSize())
             } else {
                 Text(
                     "Camera permission is required to scan device stickers",
@@ -202,11 +215,11 @@ fun ScannerScreen(
                     Surface(
                         modifier = Modifier.zIndex(1f),
                         shape = MaterialTheme.shapes.extraLarge,
-                        color = Color.Black.copy(alpha = 0.62f),
+                        color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.55f),
                         contentColor = Color.White,
                     ) {
                         Text(
-                            text = "%.1f×".format(zoomRatio),
+                            text = formatZoomLabel(zoomRatio),
                             style = MaterialTheme.typography.labelLarge,
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
                         )
@@ -274,24 +287,43 @@ private fun RearLensSelector(
     Surface(
         modifier = Modifier.zIndex(1f),
         shape = MaterialTheme.shapes.extraLarge,
-        color = Color.Black.copy(alpha = 0.62f),
+        color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.55f),
         contentColor = Color.White,
-        tonalElevation = 4.dp,
     ) {
         Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(4.dp),
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
+            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(6.dp),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             cameras.forEach { camera ->
                 val selected = camera.id == selectedCameraId
-                FilterChip(
+                LensButton(
+                    label = if (selected) camera.label else camera.label.removeSuffix("×"),
                     selected = selected,
                     onClick = { onCameraSelected(camera) },
-                    label = {
-                        Text(if (selected) camera.label else camera.label.removeSuffix("×"))
-                    },
                 )
             }
+        }
+    }
+}
+
+/** A round lens button, like the Pixel Camera app's zoom selector. */
+@Composable
+private fun LensButton(label: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.size(36.dp),
+        shape = CircleShape,
+        color = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
+        contentColor =
+            if (selected) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = 0.75f),
+    ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            )
         }
     }
 }
@@ -309,9 +341,8 @@ private fun ScannerControls(
     Surface(
         modifier = modifier.zIndex(1f),
         shape = MaterialTheme.shapes.extraLarge,
-        color = Color.Black.copy(alpha = 0.62f),
+        color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.55f),
         contentColor = Color.White,
-        tonalElevation = 4.dp,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -340,43 +371,6 @@ private fun ScannerControls(
     }
 }
 
-/**
- * A dimmed frame around a centered square cutout, like most QR scanner apps - purely cosmetic, the
- * analyzer scans the whole camera frame regardless of what's inside the square.
- */
-@Composable
-private fun ScannerViewfinder(modifier: Modifier = Modifier) {
-    val dim = Color.Black.copy(alpha = 0.55f)
-    Canvas(modifier = modifier) {
-        val squareSize = size.minDimension * 0.65f
-        val left = (size.width - squareSize) / 2f
-        val top = (size.height - squareSize) / 2f
-        val right = left + squareSize
-        val bottom = top + squareSize
-
-        drawRect(color = dim, topLeft = Offset(0f, 0f), size = Size(size.width, top))
-        drawRect(
-            color = dim,
-            topLeft = Offset(0f, bottom),
-            size = Size(size.width, size.height - bottom),
-        )
-        drawRect(color = dim, topLeft = Offset(0f, top), size = Size(left, squareSize))
-        drawRect(
-            color = dim,
-            topLeft = Offset(right, top),
-            size = Size(size.width - right, squareSize),
-        )
-
-        drawRoundRect(
-            color = Color.White,
-            topLeft = Offset(left, top),
-            size = Size(squareSize, squareSize),
-            cornerRadius = CornerRadius(24f, 24f),
-            style = Stroke(width = 3.dp.toPx()),
-        )
-    }
-}
-
 @Composable
 private fun ScanOverlay(content: @Composable () -> Unit) {
     Surface(
@@ -391,6 +385,7 @@ private fun ScanOverlay(content: @Composable () -> Unit) {
 private fun CameraPreview(
     desiredLens: ScannerLens,
     selectedCameraId: String?,
+    resolution: ScannerResolution,
     onCodeScanned: (String) -> Unit,
     onAvailableCameras: (List<ScannerCameraOption>) -> Unit,
     onCameraReady: (Camera?) -> Unit,
@@ -405,6 +400,22 @@ private fun CameraPreview(
     var cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
     val boundCamera = remember { mutableStateOf<Camera?>(null) }
     var cameraSwitching by remember { mutableStateOf(true) }
+    var focusTapPoint by remember { mutableStateOf<Offset?>(null) }
+    val focusRingAlpha = remember { Animatable(0f) }
+    LaunchedEffect(focusTapPoint) {
+        if (focusTapPoint != null) {
+            focusRingAlpha.snapTo(1f)
+            focusRingAlpha.animateTo(0f, animationSpec = tween(600, delayMillis = 400))
+        }
+    }
+    var lastDetection by remember { mutableStateOf<BarcodeAnalyzer.Detection?>(null) }
+    val detectionAlpha = remember { Animatable(0f) }
+    LaunchedEffect(lastDetection) {
+        if (lastDetection != null) {
+            detectionAlpha.snapTo(1f)
+            detectionAlpha.animateTo(0f, animationSpec = tween(900, delayMillis = 250))
+        }
+    }
     val switchOverlayAlpha by
         animateFloatAsState(
             targetValue = if (cameraSwitching) 1f else 0f,
@@ -424,7 +435,7 @@ private fun CameraPreview(
         camera.cameraControl.setZoomRatio(clamped)
     }
 
-    DisposableEffect(cameraProvider, previewView, desiredLens, selectedCameraId) {
+    DisposableEffect(cameraProvider, previewView, desiredLens, selectedCameraId, resolution) {
         val provider = cameraProvider
         val view = previewView
         if (provider == null || view == null) {
@@ -444,6 +455,22 @@ private fun CameraPreview(
                 val analysisBuilder =
                     ImageAnalysis.Builder()
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        // CameraX's unconfigured default analysis resolution is a low 640x480,
+                        // which struggles on small, dense, or distant QR codes that the stock
+                        // camera app's much larger preview/capture frames decode fine. Both
+                        // 1280x720 and 1920x1080 are mainstream, universally supported
+                        // YUV_420_888 sizes; STRATEGY_KEEP_ONLY_LATEST just drops frames rather
+                        // than backing up if a device can't keep up with the chosen one.
+                        .setResolutionSelector(
+                            ResolutionSelector.Builder()
+                                .setResolutionStrategy(
+                                    ResolutionStrategy(
+                                        resolveAnalysisTargetSize(context, resolution),
+                                        ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER,
+                                    )
+                                )
+                                .build()
+                        )
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     activeCamera.physicalCameraId?.let { physicalCameraId ->
                         // CameraSelector carries the physical ID through CameraX's lifecycle
@@ -460,7 +487,13 @@ private fun CameraPreview(
                     previewBuilder.build().also { it.surfaceProvider = view.surfaceProvider }
                 val analysis =
                     analysisBuilder.build().also {
-                        it.setAnalyzer(cameraExecutor, BarcodeAnalyzer(onCodeScanned))
+                        it.setAnalyzer(
+                            cameraExecutor,
+                            BarcodeAnalyzer { detection ->
+                                lastDetection = detection
+                                onCodeScanned(detection.text)
+                            },
+                        )
                     }
                 runCatching {
                     // CameraX must be fully unbound before a different physical or facing
@@ -550,9 +583,15 @@ private fun CameraPreview(
                         val point = previewView.meteringPointFactory.createPoint(event.x, event.y)
                         val action =
                             FocusMeteringAction.Builder(point)
-                                .setAutoCancelDuration(3, TimeUnit.SECONDS)
+                                // Keep the tapped focus locked instead of reverting to continuous
+                                // AF after a few seconds - that reversion could re-hunt right as
+                                // the user is holding the phone steady on a code to decode it,
+                                // which read as "focus randomly stops working". A later tap starts
+                                // a fresh one-shot action that replaces this lock.
+                                .disableAutoCancel()
                                 .build()
                         boundCamera.value?.cameraControl?.startFocusAndMetering(action)
+                        focusTapPoint = Offset(event.x, event.y)
                         view.performClick()
                     }
                     if (
@@ -568,6 +607,56 @@ private fun CameraPreview(
             },
             update = { view -> previewView = view },
         )
+        focusTapPoint?.let { point ->
+            if (focusRingAlpha.value > 0f) {
+                Canvas(Modifier.fillMaxSize()) {
+                    drawCircle(
+                        color = Color.White.copy(alpha = focusRingAlpha.value),
+                        radius = 32.dp.toPx(),
+                        center = point,
+                        style = Stroke(width = 2.dp.toPx()),
+                    )
+                }
+            }
+        }
+        lastDetection?.let { detection ->
+            if (detectionAlpha.value > 0f) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val mirror = desiredLens == ScannerLens.Front
+                    val mapped =
+                        detection.points.map { point ->
+                            mapImagePointToView(
+                                x = point.x,
+                                y = point.y,
+                                imageWidth = detection.imageWidth,
+                                imageHeight = detection.imageHeight,
+                                rotationDegrees = detection.rotationDegrees,
+                                viewWidth = size.width,
+                                viewHeight = size.height,
+                                mirror = mirror,
+                            )
+                        }
+                    if (mapped.isNotEmpty()) {
+                        val minX = mapped.minOf { it.x }
+                        val minY = mapped.minOf { it.y }
+                        val maxX = mapped.maxOf { it.x }
+                        val maxY = mapped.maxOf { it.y }
+                        // ZXing's finder-pattern points sit near, not at, the QR code's outer
+                        // edges - pad the box so the highlight covers the whole symbol.
+                        val padX = ((maxX - minX) * 0.2f).coerceAtLeast(12.dp.toPx())
+                        val padY = ((maxY - minY) * 0.2f).coerceAtLeast(12.dp.toPx())
+                        val color = Color(0xFF00E676).copy(alpha = detectionAlpha.value)
+                        drawRoundRect(
+                            color = color,
+                            topLeft = Offset(minX - padX, minY - padY),
+                            size = Size(maxX - minX + padX * 2, maxY - minY + padY * 2),
+                            cornerRadius = CornerRadius(16.dp.toPx(), 16.dp.toPx()),
+                            style = Stroke(width = 3.dp.toPx()),
+                        )
+                    }
+                }
+            }
+        }
         if (switchOverlayAlpha > 0f) {
             Box(
                 Modifier.fillMaxSize().graphicsLayer { alpha = switchOverlayAlpha },
@@ -586,7 +675,10 @@ private data class ScannerCameraOption(
     val label: String,
     val selector: CameraSelector,
     val physicalCameraId: String? = null,
-    val focalLength: Float? = null,
+    // 35mm-equivalent focal length: focal length alone isn't comparable across physical lenses
+    // because each has a differently sized sensor (a tele lens' sensor is typically much smaller
+    // than the main lens'), so raw focal-length ratios understate its actual optical zoom.
+    val equivFocalLength: Float? = null,
     val zoomRatio: Float = 1f,
 )
 
@@ -635,6 +727,21 @@ private fun availableCameraOptions(provider: ProcessCameraProvider): List<Scanne
                                     CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS
                                 )
                                 ?.firstOrNull()
+                        val sensorSize =
+                            physicalCamera2Info.getCameraCharacteristic(
+                                CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE
+                            )
+                        val equivFocalLength =
+                            if (focalLength != null && sensorSize != null) {
+                                val diagonal =
+                                    hypot(sensorSize.width.toDouble(), sensorSize.height.toDouble())
+                                        .toFloat()
+                                // 43.27mm is the diagonal of a full-frame (36x24mm) sensor - the
+                                // conventional reference for "35mm-equivalent" focal length.
+                                focalLength * (43.27f / diagonal)
+                            } else {
+                                null
+                            }
                         ScannerCameraOption(
                             id = "physical:$cameraId",
                             lens = ScannerLens.Back,
@@ -646,7 +753,7 @@ private fun availableCameraOptions(provider: ProcessCameraProvider): List<Scanne
                                 // requested physical sensor instead of clamping a logical zoom.
                                 info.selector(physicalCameraId = cameraId),
                             physicalCameraId = cameraId,
-                            focalLength = focalLength,
+                            equivFocalLength = equivFocalLength,
                         )
                     }
                 } else {
@@ -683,27 +790,26 @@ private fun labelRearCameraOptions(options: List<ScannerCameraOption>): List<Sca
     val rear = options.filter { it.lens == ScannerLens.Back }
     if (rear.size <= 1) return options
 
-    val sorted = rear.sortedWith(compareBy(nullsLast()) { it.focalLength })
-    val referenceFocal = sorted[sorted.size / 2].focalLength
+    // The lower-middle equivalent focal length among the rear physical sensors is the "1x" wide
+    // lens: shorter focal lengths are ultrawide, longer ones are telephoto. Phones with more than
+    // one tele lens (e.g. a mid + periscope tele) still put wide just above ultrawide, hence the
+    // lower- rather than upper-middle index for an even lens count.
+    val sorted = rear.sortedWith(compareBy(nullsLast()) { it.equivFocalLength })
+    val referenceFocal = sorted[(sorted.size - 1) / 2].equivFocalLength
     val labelsById =
         sorted
             .mapIndexed { index, option ->
-                val label =
-                    if (option.focalLength != null && referenceFocal != null) {
-                        val ratio = option.focalLength / referenceFocal
-                        when {
-                            ratio <= 0.75f -> "0.6×"
-                            ratio >= 1.6f -> "2×"
-                            else -> "1×"
-                        }
-                    } else {
-                        "Rear ${index + 1}"
-                    }
                 val zoomRatio =
-                    if (option.focalLength != null && referenceFocal != null) {
-                        (option.focalLength / referenceFocal).coerceIn(0.5f, 8f)
+                    if (option.equivFocalLength != null && referenceFocal != null) {
+                        (option.equivFocalLength / referenceFocal).coerceIn(0.5f, 8f)
                     } else {
                         1f
+                    }
+                val label =
+                    if (option.equivFocalLength != null && referenceFocal != null) {
+                        formatZoomLabel(zoomRatio)
+                    } else {
+                        "Rear ${index + 1}"
                     }
                 option.id to (label to zoomRatio)
             }
@@ -714,3 +820,75 @@ private fun labelRearCameraOptions(options: List<ScannerCameraOption>): List<Sca
         option.copy(label = label, zoomRatio = zoomRatio)
     }
 }
+
+/** Formats an actual zoom ratio, e.g. 0.6, 1, 2 or 4.8, dropping a trailing ".0". */
+private fun formatZoomLabel(ratio: Float): String {
+    // The sensor-geometry-derived ratio tends to undershoot a tele lens' marketed zoom factor
+    // (real telephoto modules often add a bit of hybrid/sensor-crop zoom on top of pure optical),
+    // so round up rather than to nearest - e.g. a computed 4.3x reads as "5x", matching what the
+    // stock camera app calls the same lens.
+    val rounded = if (ratio < 1f) (ratio * 10).roundToInt() / 10f else ceil(ratio)
+    val text =
+        if (rounded == rounded.toInt().toFloat()) rounded.toInt().toString()
+        else "%.1f".format(rounded)
+    return "$text×"
+}
+
+/** Devices below this much total RAM are treated as the low tier for [ScannerResolution.Auto]. */
+private const val LOW_TIER_RAM_BYTES = 4L * 1024 * 1024 * 1024
+
+private val STANDARD_ANALYSIS_SIZE = AndroidSize(1280, 720)
+private val HIGH_ANALYSIS_SIZE = AndroidSize(1920, 1080)
+
+/**
+ * The barcode scanner runs on everything from a Pixel to a 2018 midrange tablet (the Mi Pad 4 in
+ * this app's own test fleet), and ZXing's decode cost tracks pixel count regardless of how fast
+ * the device is - so [ScannerResolution.Auto] picks a lower analysis resolution on hardware
+ * that's unlikely to keep up with the sharper one, rather than always defaulting to the best case.
+ */
+private fun resolveAnalysisTargetSize(context: Context, resolution: ScannerResolution): AndroidSize =
+    when (resolution) {
+        ScannerResolution.Standard -> STANDARD_ANALYSIS_SIZE
+        ScannerResolution.High -> HIGH_ANALYSIS_SIZE
+        ScannerResolution.Auto -> {
+            val activityManager = context.getSystemService(ActivityManager::class.java)
+            val memoryInfo = ActivityManager.MemoryInfo()
+            activityManager?.getMemoryInfo(memoryInfo)
+            val lowTier =
+                activityManager?.isLowRamDevice == true || memoryInfo.totalMem in 1 until LOW_TIER_RAM_BYTES
+            if (lowTier) STANDARD_ANALYSIS_SIZE else HIGH_ANALYSIS_SIZE
+        }
+    }
+
+/**
+ * Maps a point in the analysis image's own pixel space (as ZXing sees it) into the displayed
+ * PreviewView's pixel space, replicating PreviewView's default FILL_CENTER scale type: rotate by
+ * the buffer's sensor-to-display rotation, scale up to cover the view while preserving aspect
+ * ratio, center-crop the overflow, then mirror horizontally for a front camera's selfie flip.
+ */
+private fun mapImagePointToView(
+    x: Float,
+    y: Float,
+    imageWidth: Int,
+    imageHeight: Int,
+    rotationDegrees: Int,
+    viewWidth: Float,
+    viewHeight: Float,
+    mirror: Boolean,
+): Offset {
+    val (rx, ry, rotatedWidth, rotatedHeight) =
+        when (((rotationDegrees % 360) + 360) % 360) {
+            90 -> Quadruple(y, imageWidth - x, imageHeight.toFloat(), imageWidth.toFloat())
+            180 -> Quadruple(imageWidth - x, imageHeight - y, imageWidth.toFloat(), imageHeight.toFloat())
+            270 -> Quadruple(imageHeight - y, x, imageHeight.toFloat(), imageWidth.toFloat())
+            else -> Quadruple(x, y, imageWidth.toFloat(), imageHeight.toFloat())
+        }
+    val scale = max(viewWidth / rotatedWidth, viewHeight / rotatedHeight)
+    val offsetX = (viewWidth - rotatedWidth * scale) / 2f
+    val offsetY = (viewHeight - rotatedHeight * scale) / 2f
+    val vx = rx * scale + offsetX
+    val vy = ry * scale + offsetY
+    return Offset(if (mirror) viewWidth - vx else vx, vy)
+}
+
+private data class Quadruple(val a: Float, val b: Float, val c: Float, val d: Float)

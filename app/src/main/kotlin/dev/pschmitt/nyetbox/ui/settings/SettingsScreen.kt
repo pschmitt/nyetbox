@@ -187,6 +187,8 @@ fun SettingsCategoryScreen(
     val scannerLens by viewModel.settingsRepository.scannerLens.collectAsStateWithLifecycle()
     val scannerRearLens by
         viewModel.settingsRepository.scannerRearLens.collectAsStateWithLifecycle()
+    val scannerResolution by
+        viewModel.settingsRepository.scannerResolution.collectAsStateWithLifecycle()
     val printSettings by printSettingsViewModel.settings.collectAsStateWithLifecycle()
     val hiddenFieldKeys by
         viewModel.settingsRepository.hiddenFieldKeys.collectAsStateWithLifecycle()
@@ -521,6 +523,7 @@ fun SettingsCategoryScreen(
                         shortcutItems = shortcutItems,
                         scannerLens = scannerLens,
                         scannerRearLens = scannerRearLens,
+                        scannerResolution = scannerResolution,
                         printSettings = printSettings,
                         hiddenFieldKeys = hiddenFieldKeys,
                         pinnedModelPaths = pinnedModelPaths,
@@ -584,6 +587,7 @@ fun SettingsCategoryScreen(
                         onShowLibraries = onShowLibraries,
                         onSetScannerLens = viewModel::setScannerLens,
                         onSetScannerRearLens = viewModel::setScannerRearLens,
+                        onSetScannerResolution = viewModel::setScannerResolution,
                         onUpdatePrintSettings = printSettingsViewModel::update,
                         onSetDefaultPrinter = printSettingsViewModel::setDefaultPrinter,
                         onClearDefaultPrinter = printSettingsViewModel::clearDefaultPrinter,
