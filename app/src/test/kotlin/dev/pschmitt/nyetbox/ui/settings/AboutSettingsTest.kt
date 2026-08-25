@@ -16,9 +16,7 @@ class AboutSettingsTest {
     @Test
     fun `server version uses the NetBox status response field`() {
         val status =
-            Json.parseToJsonElement(
-                    """{"netbox-version":"4.6.8","django-version":"6.0.8"}"""
-                )
+            Json.parseToJsonElement("""{"netbox-version":"4.6.8","django-version":"6.0.8"}""")
                 .jsonObject
 
         assertEquals("4.6.8", parseNetBoxServerVersion(status))

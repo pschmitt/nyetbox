@@ -1327,9 +1327,9 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
             prefs.getString(serverScopedKey(KEY_SERVER_VERSION_BASE_URL), null)
                 ?: if (useLegacyKeys) prefs.getString(KEY_SERVER_VERSION_BASE_URL, null) else null
         if (storedBaseUrl != credentialsOrEmpty().baseUrl) return null
-        return prefs
-            .getString(serverScopedKey(KEY_SERVER_VERSION), null)
-            ?.takeIf { it.isNotBlank() }
+        return prefs.getString(serverScopedKey(KEY_SERVER_VERSION), null)?.takeIf {
+            it.isNotBlank()
+        }
             ?: if (useLegacyKeys) {
                 prefs.getString(KEY_SERVER_VERSION, null)?.takeIf { it.isNotBlank() }
             } else null
