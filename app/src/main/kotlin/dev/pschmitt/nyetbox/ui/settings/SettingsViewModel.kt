@@ -271,9 +271,7 @@ constructor(
             lookupCurrentUser(credentials)
                 .onSuccess {
                     settingsRepository.setCurrentUser(it)
-                    lookupServerVersion().onSuccess {
-                        settingsRepository.setServerVersion(it)
-                    }
+                    lookupServerVersion().onSuccess { settingsRepository.setServerVersion(it) }
                     _connectionTest.value =
                         ConnectionTestState.Success("Connected as ${it.summary}")
                 }
@@ -316,10 +314,9 @@ constructor(
             parseCurrentUser(user)
         }
 
-    private suspend fun lookupServerVersion(): Result<String> =
-        runCatching {
-            parseNetBoxServerVersion(api.getObject("api/status/"))
-        }
+    private suspend fun lookupServerVersion(): Result<String> = runCatching {
+        parseNetBoxServerVersion(api.getObject("api/status/"))
+    }
 
     private fun parseCurrentUser(user: JsonObject): NetBoxUserIdentity {
         val username =
