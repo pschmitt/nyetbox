@@ -314,6 +314,9 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
     private val _currentUser = MutableStateFlow(loadCurrentUser())
     val currentUser: StateFlow<NetBoxUserIdentity?> = _currentUser.asStateFlow()
 
+    private val _serverVersion = MutableStateFlow(loadServerVersion())
+    val serverVersion: StateFlow<String?> = _serverVersion.asStateFlow()
+
     val isConfigured: Boolean
         get() = _credentials.value.isValid
 
@@ -941,6 +944,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         }
         _activeServer.value = profile
         clearCurrentUser()
+        clearServerVersion()
         _credentials.value = NetBoxCredentials(normalizedBaseUrl, trimmedToken)
     }
 
@@ -974,8 +978,9 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         persistServerProfiles(_serverProfiles.value.map { if (it.id == id) updated else it })
         if (_activeServerId.value == id) {
             _activeServer.value = updated
-            _credentials.value = updated.credentials
             clearCurrentUser()
+            clearServerVersion()
+            _credentials.value = updated.credentials
         }
         return updated
     }
@@ -996,6 +1001,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         _activeServer.value = profile
         _credentials.value = profile.credentials
         _currentUser.value = loadCurrentUser()
+        _serverVersion.value = loadServerVersion()
         _syncIssue.value = loadSyncIssue()
         _lastSuccessfulSyncAt.value = loadLastSuccessfulSyncAt()
         _lastSyncSummary.value = loadLastSyncSummary()
@@ -1014,6 +1020,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
             _activeServer.value = next
             _credentials.value = next?.credentials ?: NetBoxCredentials("", "")
             _currentUser.value = loadCurrentUser()
+            _serverVersion.value = loadServerVersion()
             _syncIssue.value = loadSyncIssue()
             _lastSuccessfulSyncAt.value = loadLastSuccessfulSyncAt()
             _lastSyncSummary.value = loadLastSyncSummary()
@@ -1031,6 +1038,29 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
             .putString(serverScopedKey(KEY_CURRENT_USER_ID), user.id?.toString())
             .apply()
         _currentUser.value = user
+    }
+
+    fun setServerVersion(version: String) {
+        val normalized = version.trim().takeIf { it.isNotBlank() } ?: return
+        prefs
+            .edit()
+            .putString(serverScopedKey(KEY_SERVER_VERSION_BASE_URL), credentials.value.baseUrl)
+            .putString(serverScopedKey(KEY_SERVER_VERSION), normalized)
+            .apply()
+        _serverVersion.value = normalized
+    }
+
+    fun clearServerVersion() {
+        val editor =
+            prefs
+                .edit()
+                .remove(serverScopedKey(KEY_SERVER_VERSION_BASE_URL))
+                .remove(serverScopedKey(KEY_SERVER_VERSION))
+        if (_activeServerId.value == LEGACY_SERVER_ID) {
+            editor.remove(KEY_SERVER_VERSION_BASE_URL).remove(KEY_SERVER_VERSION)
+        }
+        editor.apply()
+        _serverVersion.value = null
     }
 
     fun clearCurrentUser() {
@@ -1061,6 +1091,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         _activeServer.value = null
         _credentials.value = NetBoxCredentials("", "")
         _currentUser.value = null
+        _serverVersion.value = null
         _offlineMode.value = false
         _printSettings.value = PrintSettings()
         _themeMode.value = ThemeMode.FollowSystem
@@ -1288,6 +1319,20 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
                         ?: if (useLegacyKeys) prefs.getString(KEY_CURRENT_USER_ID, null) else null)
                     ?.toIntOrNull(),
         )
+    }
+
+    private fun loadServerVersion(): String? {
+        val useLegacyKeys = _activeServerId.value == LEGACY_SERVER_ID
+        val storedBaseUrl =
+            prefs.getString(serverScopedKey(KEY_SERVER_VERSION_BASE_URL), null)
+                ?: if (useLegacyKeys) prefs.getString(KEY_SERVER_VERSION_BASE_URL, null) else null
+        if (storedBaseUrl != credentialsOrEmpty().baseUrl) return null
+        return prefs
+            .getString(serverScopedKey(KEY_SERVER_VERSION), null)
+            ?.takeIf { it.isNotBlank() }
+            ?: if (useLegacyKeys) {
+                prefs.getString(KEY_SERVER_VERSION, null)?.takeIf { it.isNotBlank() }
+            } else null
     }
 
     private fun loadSyncIssue(): SyncIssue? {
@@ -1578,6 +1623,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         const val KEY_CURRENT_USER_FULL_NAME = "current_user_full_name"
         const val KEY_CURRENT_USER_EMAIL = "current_user_email"
         const val KEY_CURRENT_USER_ID = "current_user_id"
+        const val KEY_SERVER_VERSION_BASE_URL = "server_version_base_url"
+        const val KEY_SERVER_VERSION = "server_version"
         const val KEY_PINNED_MODELS = "pinned_model_paths"
         const val KEY_PINNED_MODELS_VERSION = "pinned_model_paths_version"
         val DEFAULT_PINNED_MODEL_PATHS =

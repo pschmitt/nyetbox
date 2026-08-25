@@ -98,6 +98,7 @@ internal data class SettingsCategoryState(
     val serverProfiles: List<ServerProfile> = emptyList(),
     val activeServerId: String? = null,
     val currentUser: NetBoxUserIdentity?,
+    val serverVersion: String?,
     val isLoadingCurrentUser: Boolean,
     val connectionTest: ConnectionTestState,
     val tokenVisible: Boolean,
@@ -223,7 +224,11 @@ internal fun SettingsCategoryContent(
         SettingsCategory.NavigationBar -> NavBarSettingsContent(state, actions)
         SettingsCategory.Shortcuts -> ShortcutSettingsContent(state, actions)
         SettingsCategory.Notifications -> NotificationSettingsContent(state, actions)
-        SettingsCategory.About -> AboutSettingsContent(onShowLibraries = actions.onShowLibraries)
+        SettingsCategory.About ->
+            AboutSettingsContent(
+                serverVersion = state.serverVersion,
+                onShowLibraries = actions.onShowLibraries,
+            )
     }
 }
 
@@ -414,6 +419,11 @@ private fun ConnectionSettingsContent(
                         }
                     )
                 },
+            )
+            SettingsListItem(
+                leadingContent = { Icon(Icons.Default.Info, contentDescription = null) },
+                headlineContent = { Text("NetBox version") },
+                supportingContent = { Text(state.serverVersion ?: "Not available yet") },
             )
             SettingsListItem(
                 leadingContent = { Icon(Icons.Default.Key, contentDescription = null) },
@@ -1231,7 +1241,7 @@ private fun NotificationSettingsContent(
 }
 
 @Composable
-private fun AboutSettingsContent(onShowLibraries: () -> Unit) {
+private fun AboutSettingsContent(serverVersion: String?, onShowLibraries: () -> Unit) {
     val context = LocalContext.current
     val appIconBitmap = remember {
         ContextCompat.getDrawable(context, R.mipmap.ic_launcher)?.toBitmap()?.asImageBitmap()
@@ -1261,6 +1271,11 @@ private fun AboutSettingsContent(onShowLibraries: () -> Unit) {
                 leadingContent = { Icon(Icons.Default.Apps, contentDescription = null) },
                 headlineContent = { Text("Version") },
                 supportingContent = { Text(BuildConfig.VERSION_NAME) },
+            )
+            SettingsListItem(
+                leadingContent = { Icon(Icons.Default.Dns, contentDescription = null) },
+                headlineContent = { Text("NetBox version") },
+                supportingContent = { Text(serverVersion ?: "Not available yet") },
             )
             SettingsListItem(
                 leadingContent = { Icon(Icons.Default.Description, contentDescription = null) },

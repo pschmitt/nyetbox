@@ -34,6 +34,7 @@ class SettingsCategoryContentTest {
         composeRule.onNodeWithText("GPLv3").assertExists()
         composeRule.onNodeWithText("Build type").assertExists()
         composeRule.onNodeWithText("Debug build").assertExists()
+        composeRule.onNodeWithText("4.6.8").assertExists()
         composeRule.onNodeWithText("GitHub repository").assertExists()
     }
 
@@ -62,10 +63,26 @@ class SettingsCategoryContentTest {
         assertEquals(ScannerLens.Front, updated)
     }
 
+    @Test
+    fun connectionCategoryRendersCachedServerVersion() {
+        composeRule.setContent {
+            NyetboxTheme(
+                themeMode = ThemeMode.Light,
+                accent = ThemeAccent.Teal,
+            ) {
+                SettingsCategoryContent(SettingsCategory.Connection, state(), actions())
+            }
+        }
+
+        composeRule.onNodeWithText("NetBox version").assertExists()
+        composeRule.onNodeWithText("4.6.8").assertExists()
+    }
+
     private fun state() =
         SettingsCategoryState(
             credentials = NetBoxCredentials("https://netbox.test", "nbp_test.value"),
             currentUser = null,
+            serverVersion = "4.6.8",
             isLoadingCurrentUser = false,
             connectionTest = ConnectionTestState.Idle,
             tokenVisible = false,

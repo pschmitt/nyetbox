@@ -3,6 +3,18 @@
 Running backlog/changelog for Nyetbox. One `## NBC-N:` entry per feature or fix,
 numbered sequentially (never reuse or renumber an id). See `AGENTS.md` for the full convention.
 
+## NBC-452: display the connected NetBox server version
+
+Fetch the server version from NetBox's authenticated status endpoint, retain the last known value
+per server profile for offline use, and show it on both the Connection and About settings screens.
+
+- [x] Cache and refresh the NetBox server version per saved connection.
+- [x] Display the cached version on Connection and About.
+- [x] Verify with parser/UI coverage, remote compilation, unit tests, and lint.
+
+Status: **done**, 2026-08-25 - remote `:app:compileDebugKotlin`,
+`:app:testDebugUnitTest`, and `ktfmtCheck` passed.
+
 ## NBC-451: make dashboard pull-to-refresh run a full sync
 
 The home-page pull-to-refresh gesture should honor an explicit user request even when the cache

@@ -74,6 +74,8 @@ constructor(
 
     val currentUser: StateFlow<NetBoxUserIdentity?> = settingsRepository.currentUser
 
+    val serverVersion: StateFlow<String?> = settingsRepository.serverVersion
+
     private val _connectionTest = MutableStateFlow<ConnectionTestState>(ConnectionTestState.Idle)
     val connectionTest: StateFlow<ConnectionTestState> = _connectionTest.asStateFlow()
 
@@ -269,6 +271,9 @@ constructor(
             lookupCurrentUser(credentials)
                 .onSuccess {
                     settingsRepository.setCurrentUser(it)
+                    lookupServerVersion().onSuccess {
+                        settingsRepository.setServerVersion(it)
+                    }
                     _connectionTest.value =
                         ConnectionTestState.Success("Connected as ${it.summary}")
                 }
@@ -285,6 +290,7 @@ constructor(
             if (!credentials.isValid) return@launch
             _isLoadingCurrentUser.value = true
             lookupCurrentUser(credentials).onSuccess { settingsRepository.setCurrentUser(it) }
+            lookupServerVersion().onSuccess { settingsRepository.setServerVersion(it) }
             _isLoadingCurrentUser.value = false
         }
     }
@@ -308,6 +314,11 @@ constructor(
                 tokenPage.results.firstOrNull()?.get("user") as? JsonObject
                     ?: error("The NetBox API did not return the token owner")
             parseCurrentUser(user)
+        }
+
+    private suspend fun lookupServerVersion(): Result<String> =
+        runCatching {
+            parseNetBoxServerVersion(api.getObject("api/status/"))
         }
 
     private fun parseCurrentUser(user: JsonObject): NetBoxUserIdentity {
@@ -544,3 +555,7 @@ constructor(
         settingsRepository.clear()
     }
 }
+
+internal fun parseNetBoxServerVersion(status: JsonObject): String =
+    status["netbox-version"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+        ?: error("The NetBox status endpoint did not return a server version")

@@ -151,6 +151,7 @@ fun SettingsCategoryScreen(
     val serverProfiles by viewModel.settingsRepository.serverProfiles.collectAsStateWithLifecycle()
     val activeServerId by viewModel.settingsRepository.activeServerId.collectAsStateWithLifecycle()
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
+    val serverVersion by viewModel.serverVersion.collectAsStateWithLifecycle()
     val isLoadingCurrentUser by viewModel.isLoadingCurrentUser.collectAsStateWithLifecycle()
     val connectionTest by viewModel.connectionTest.collectAsStateWithLifecycle()
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
@@ -494,6 +495,7 @@ fun SettingsCategoryScreen(
                         serverProfiles = serverProfiles,
                         activeServerId = activeServerId,
                         currentUser = currentUser,
+                        serverVersion = serverVersion,
                         isLoadingCurrentUser = isLoadingCurrentUser,
                         connectionTest = connectionTest,
                         tokenVisible = tokenVisible,
