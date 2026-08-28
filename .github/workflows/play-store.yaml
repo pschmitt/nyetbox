@@ -1,13 +1,16 @@
 name: Play Store Release
 
 # Runs on the same semantic-version tags release.yaml publishes GitHub releases from ("vX.Y.Z" or
-# "X.Y.Z"), always building a signed AAB for inspection. Delegates to pschmitt/android-app-ci's
-# reusable play-store workflow, which additionally requires the repository variable
-# PLAY_PUBLISH_ENABLED=true and a PLAY_SERVICE_ACCOUNT_JSON secret to actually publish - neither
-# exists until those are deliberately set up in Settings > Secrets and variables, so a tag push
-# safely fails loudly (see that workflow's publish-gate job) rather than silently no-op'ing on a
-# fresh checkout. A manual workflow_dispatch run is also available for ad-hoc bundles with an
-# arbitrary version, and never publishes unless its own `publish` input is explicitly set.
+# "X.Y.Z"), always building a signed AAB for inspection. Publishes to both the internal and closed
+# (alpha) testing tracks in one upload - closed testing is the highest track this app is currently
+# eligible for, so every tagged release goes out to both simultaneously rather than needing a
+# separate promotion step. Delegates to pschmitt/android-app-ci's reusable play-store workflow,
+# which additionally requires the repository variable PLAY_PUBLISH_ENABLED=true and a
+# PLAY_SERVICE_ACCOUNT_JSON secret to actually publish - neither exists until those are
+# deliberately set up in Settings > Secrets and variables, so a tag push safely fails loudly (see
+# that workflow's publish-gate job) rather than silently no-op'ing on a fresh checkout. A manual
+# workflow_dispatch run is also available for ad-hoc bundles with an arbitrary version, and never
+# publishes unless its own `publish` input is explicitly set.
 
 on:
   push:
@@ -25,7 +28,7 @@ on:
         required: false
         type: string
       publish:
-        description: "Upload the bundle to the Play internal-testing track"
+        description: "Upload the bundle to the Play internal + closed (alpha) testing tracks"
         required: true
         default: false
         type: boolean
@@ -47,4 +50,7 @@ jobs:
       # only ever short-circuits on the *event type*, never re-evaluates a boolean input through
       # a truthy/falsy lens.
       publish: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
+      # Publish to both tracks in one upload - closed (alpha) is the highest track this app is
+      # currently eligible for, and there's no reason internal testers should lag behind it.
+      track: internal,alpha
     secrets: inherit
