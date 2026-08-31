@@ -5,7 +5,7 @@ androidx-activity = "1.13.0"
 # Shared by the :baselineprofile macrobenchmark module and androidx.profileinstaller in :app -
 # both are versioned together upstream (NBC-426).
 androidx-baselineprofile = "1.5.0-rc01"
-androidx-camera = "1.6.1"
+androidx-camera = "1.6.2"
 androidx-compose = "1.12.0"
 # Decoupled from androidx-compose above - this artifact's release cadence lags the rest of Compose
 # (last published at 1.7.8), but it's just a large set of static ImageVector vals with no API
