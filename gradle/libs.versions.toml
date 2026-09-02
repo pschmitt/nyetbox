@@ -1,6 +1,6 @@
 [versions]
 aboutlibraries = "15.0.4"
-android-plugin = "9.3.1"
+android-plugin = "9.4.0"
 androidx-activity = "1.13.0"
 # Shared by the :baselineprofile macrobenchmark module and androidx.profileinstaller in :app -
 # both are versioned together upstream (NBC-426).
