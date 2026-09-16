@@ -32,6 +32,11 @@ on:
         required: true
         default: false
         type: boolean
+      release_status:
+        description: "Play release status (draft for the first release of a draft app)"
+        required: false
+        default: draft
+        type: string
 
 jobs:
   play-store:
@@ -53,4 +58,5 @@ jobs:
       # Publish to both tracks in one upload - closed (alpha) is the highest track this app is
       # currently eligible for, and there's no reason internal testers should lag behind it.
       track: internal,alpha
+      status: ${{ github.event_name == 'workflow_dispatch' && inputs.release_status || 'completed' }}
     secrets: inherit
