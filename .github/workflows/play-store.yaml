@@ -37,6 +37,11 @@ on:
         required: false
         default: draft
         type: string
+      track:
+        description: "Play track(s), comma-separated (e.g. internal,alpha)"
+        required: false
+        default: "internal,alpha"
+        type: string
 
 jobs:
   play-store:
@@ -57,6 +62,6 @@ jobs:
       publish: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
       # Publish to both tracks in one upload - closed (alpha) is the highest track this app is
       # currently eligible for, and there's no reason internal testers should lag behind it.
-      track: internal,alpha
+      track: ${{ github.event_name == 'workflow_dispatch' && inputs.track || 'internal,alpha' }}
       status: ${{ github.event_name == 'workflow_dispatch' && inputs.release_status || 'completed' }}
     secrets: inherit
