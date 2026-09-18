@@ -19,7 +19,7 @@ ksp {
 val configuredVersionCode =
     providers
         .gradleProperty("versionCode")
-        .orElse("31")
+        .orElse("35")
         .map { value ->
             value.toIntOrNull()?.takeIf { it > 0 }
                 ?: error("versionCode must be a positive integer")
