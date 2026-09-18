@@ -43,15 +43,31 @@ constructor(
      *   fully re-fetches every endpoint instead. The explicit Settings "Sync now" button and the
      *   dashboard pull-to-refresh gesture pass `true`; the many other callers of this function
      *   (post-CRUD refreshes, gesture shortcuts, and other incidental refreshes) stay incremental.
+     * @param force Replaces any already-queued manual sync instead of keeping it, and tells
+     *   [SyncWorker] to attempt the sync immediately even while Android's Battery Saver is on
+     *   (which would otherwise defer it). A prior request can be sitting unstarted for a long
+     *   time - blocked on constraints, backing off after a failure, deferred by the OS's
+     *   app-standby job throttling, or waiting out Battery Saver - and `KEEP`/the Battery Saver
+     *   check would then make a fresh tap on "Sync now" a silent no-op. The explicit
+     *   "Sync now"/"Retry" buttons pass `true` so the user's tap always wins; incidental callers
+     *   stay `false` so a routine post-CRUD refresh doesn't cancel and restart a user-initiated
+     *   sync already in flight, and so the ordinary background/auto-sync path keeps deferring to
+     *   Battery Saver like it should.
      */
-    fun syncNow(forceFullSync: Boolean = false) {
+    fun syncNow(forceFullSync: Boolean = false, force: Boolean = false) {
         val request =
             OneTimeWorkRequestBuilder<SyncWorker>()
                 .setConstraints(syncConstraints())
                 .setSyncBackoffCriteria()
-                .setInputData(workDataOf(KEY_FORCE_FULL_SYNC to forceFullSync))
+                .setInputData(
+                    workDataOf(
+                        KEY_FORCE_FULL_SYNC to forceFullSync,
+                        KEY_IGNORE_BATTERY_SAVER to force,
+                    )
+                )
                 .build()
-        workManager.enqueueUniqueWork(ONE_TIME_WORK_NAME, ExistingWorkPolicy.KEEP, request)
+        val policy = if (force) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP
+        workManager.enqueueUniqueWork(ONE_TIME_WORK_NAME, policy, request)
     }
 
     /** Queues the first refresh without making app startup wait for network or disk work. */
@@ -121,6 +137,9 @@ constructor(
 
         // Not private: SyncWorker reads this same key back out of its inputData.
         const val KEY_FORCE_FULL_SYNC = "force_full_sync"
+
+        // Not private: SyncWorker reads this same key back out of its inputData.
+        const val KEY_IGNORE_BATTERY_SAVER = "ignore_battery_saver"
 
         private const val SYNC_RETRY_BACKOFF_MINUTES = 1L
     }

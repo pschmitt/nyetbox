@@ -32,9 +32,13 @@ constructor(
         // this check immediately before starting the network/foreground work so a manual or
         // already-enqueued request cannot begin while the user has asked the system to conserve
         // power. Returning retry leaves it queued for a later attempt after Battery Saver ends.
+        // The explicit "Sync now"/"Retry" buttons set KEY_IGNORE_BATTERY_SAVER so a user's
+        // deliberate tap always attempts the sync right away instead of silently deferring -
+        // the ordinary background/auto-sync path still defers like it always has.
+        val ignoreBatterySaver = inputData.getBoolean(SyncScheduler.KEY_IGNORE_BATTERY_SAVER, false)
         val powerManager =
             applicationContext.getSystemService(Context.POWER_SERVICE) as? PowerManager
-        if (powerManager?.isPowerSaveMode == true) return Result.retry()
+        if (powerManager?.isPowerSaveMode == true && !ignoreBatterySaver) return Result.retry()
         // Full syncs include every discovered model plus optional durable attachments and can
         // legitimately run for minutes. Promote the WorkManager job before touching the network
         // so Android keeps it alive and the user gets the real system progress notification.

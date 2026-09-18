@@ -158,7 +158,7 @@ constructor(
      */
     fun syncNow() {
         if (settingsRepository.offlineMode.value) return
-        syncScheduler.syncNow(forceFullSync = true)
+        syncScheduler.syncNow(forceFullSync = true, force = true)
     }
 
     fun switchServer(id: String) {
