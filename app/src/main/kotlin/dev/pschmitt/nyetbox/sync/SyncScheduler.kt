@@ -48,11 +48,11 @@ constructor(
      *   (which would otherwise defer it). A prior request can be sitting unstarted for a long
      *   time - blocked on constraints, backing off after a failure, deferred by the OS's
      *   app-standby job throttling, or waiting out Battery Saver - and `KEEP`/the Battery Saver
-     *   check would then make a fresh tap on "Sync now" a silent no-op. The explicit
-     *   "Sync now"/"Retry" buttons pass `true` so the user's tap always wins; incidental callers
-     *   stay `false` so a routine post-CRUD refresh doesn't cancel and restart a user-initiated
-     *   sync already in flight, and so the ordinary background/auto-sync path keeps deferring to
-     *   Battery Saver like it should.
+     *   check would then make a fresh tap on "Sync now" a silent no-op. The explicit "Sync
+     *   now"/"Retry" buttons pass `true` so the user's tap always wins; incidental callers stay
+     *   `false` so a routine post-CRUD refresh doesn't cancel and restart a user-initiated sync
+     *   already in flight, and so the ordinary background/auto-sync path keeps deferring to Battery
+     *   Saver like it should.
      */
     fun syncNow(forceFullSync: Boolean = false, force: Boolean = false) {
         val request =
