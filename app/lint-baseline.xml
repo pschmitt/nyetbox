@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="6" by="lint 9.3.1" type="baseline" client="gradle" dependencies="false" name="AGP (9.3.1)" variant="all" version="9.3.1">
+<issues format="6" by="lint 9.4.0" type="baseline" client="gradle" dependencies="false" name="AGP (9.4.0)" variant="all" version="9.4.0">
 
     <issue
         id="OldTargetApi"
@@ -13,63 +13,74 @@
     </issue>
 
     <issue
-        id="AndroidGradlePluginVersion"
-        message="A newer version of Gradle than 9.7.0 is available: 9.7.1"
-        errorLine1="distributionUrl=https\://services.gradle.org/distributions/gradle-9.7.0-bin.zip"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        id="GradleDependency"
+        message="A newer version of androidx.navigation:navigation-compose than 2.9.8 is available: 2.10.1"
+        errorLine1="androidx-navigation = &quot;2.9.8&quot;"
+        errorLine2="                      ~~~~~~~">
         <location
-            file="$HOME/work/nyetbox/nyetbox/gradle/wrapper/gradle-wrapper.properties"
-            line="4"
+            file="gradle/libs.versions.toml"
+            line="20"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.room:room-compiler than 2.8.4 is available: 2.8.5"
+        errorLine1="androidx-room = &quot;2.8.4&quot;"
+        errorLine2="                ~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="22"
             column="17"/>
     </issue>
 
     <issue
-        id="AndroidGradlePluginVersion"
-        message="A newer version of com.android.application than 9.3.1 is available: 9.3.2"
-        errorLine1="android-plugin = &quot;9.3.1&quot;"
-        errorLine2="                 ~~~~~~~">
+        id="GradleDependency"
+        message="A newer version of androidx.room:room-ktx than 2.8.4 is available: 2.8.5"
+        errorLine1="androidx-room = &quot;2.8.4&quot;"
+        errorLine2="                ~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="3"
-            column="18"/>
+            line="22"
+            column="17"/>
     </issue>
 
     <issue
-        id="AndroidGradlePluginVersion"
-        message="A newer version of com.android.test than 9.3.1 is available: 9.3.2"
-        errorLine1="android-plugin = &quot;9.3.1&quot;"
-        errorLine2="                 ~~~~~~~">
+        id="GradleDependency"
+        message="A newer version of androidx.room:room-runtime than 2.8.4 is available: 2.8.5"
+        errorLine1="androidx-room = &quot;2.8.4&quot;"
+        errorLine2="                ~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="3"
-            column="18"/>
-    </issue>
-
-    <issue
-        id="NewerVersionAvailable"
-        message="A newer version of com.mikepenz.aboutlibraries.plugin.android than 15.0.4 is available: 15.1.1"
-        errorLine1="aboutlibraries = &quot;15.0.4&quot;"
-        errorLine2="                 ~~~~~~~~">
-        <location
-            file="gradle/libs.versions.toml"
-            line="2"
-            column="18"/>
+            line="22"
+            column="17"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of com.mikepenz:aboutlibraries-compose-m3 than 15.0.4 is available: 15.1.1"
-        errorLine1="aboutlibraries = &quot;15.0.4&quot;"
-        errorLine2="                 ~~~~~~~~">
+        message="A newer version of io.coil-kt.coil3:coil-compose than 3.5.0 is available: 3.6.3"
+        errorLine1="coil = &quot;3.5.0&quot;"
+        errorLine2="       ~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="2"
-            column="18"/>
+            line="30"
+            column="8"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of com.mikepenz:multiplatform-markdown-renderer than 0.43.0 is available: 0.44.0"
+        message="A newer version of io.coil-kt.coil3:coil-network-okhttp than 3.5.0 is available: 3.6.3"
+        errorLine1="coil = &quot;3.5.0&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="30"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.mikepenz:multiplatform-markdown-renderer than 0.43.0 is available: 0.45.0"
         errorLine1="markdown-renderer = &quot;0.43.0&quot;"
         errorLine2="                    ~~~~~~~~">
         <location
@@ -80,7 +91,7 @@
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of com.mikepenz:multiplatform-markdown-renderer-m3 than 0.43.0 is available: 0.44.0"
+        message="A newer version of com.mikepenz:multiplatform-markdown-renderer-m3 than 0.43.0 is available: 0.45.0"
         errorLine1="markdown-renderer = &quot;0.43.0&quot;"
         errorLine2="                    ~~~~~~~~">
         <location
