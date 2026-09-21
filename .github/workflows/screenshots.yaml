@@ -48,7 +48,7 @@ jobs:
       - name: Set up Ruby and fastlane
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '4.0.6'
+          ruby-version: '4.0.7'
       - name: Install fastlane
         run: gem install fastlane --no-document
 
