@@ -12,7 +12,7 @@ androidx-compose = "1.12.1"
 # coupling to the newer compose-ui/foundation versions, so it's safe to pin independently.
 androidx-compose-material-icons-extended = "1.7.8"
 androidx-compose-material3 = "1.4.0"
-androidx-core = "1.19.0"
+androidx-core = "1.19.1"
 androidx-core-splashscreen = "1.2.0"
 androidx-glance = "1.2.0"
 androidx-hilt = "1.4.0"
