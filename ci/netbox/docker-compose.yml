@@ -20,7 +20,7 @@ services:
       retries: 12
 
   redis:
-    image: docker.io/valkey/valkey:9.1-alpine
+    image: docker.io/valkey/valkey:9.2-alpine
     command:
       - sh
       - -c
@@ -34,7 +34,7 @@ services:
       retries: 15
 
   redis-cache:
-    image: docker.io/valkey/valkey:9.1-alpine
+    image: docker.io/valkey/valkey:9.2-alpine
     command:
       - sh
       - -c
