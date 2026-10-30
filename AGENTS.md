@@ -13,8 +13,8 @@ not instead of it.
 
 ## Builds
 
-- **Never run Gradle builds locally on this machine** - always build on `rofl-13.brkn.lol` or
-  `rofl-14.brkn.lol` instead. The `justfile` automates this:
+- **Never run Gradle builds locally on this machine** - always build on a build host (see the
+  `brkn-infra` skill) instead. The `justfile` automates this:
   - `just sync [host]` - rsync the working tree to the remote build host (excludes `.git`,
     `build/`, `.gradle/`). Namespaced per git worktree so parallel agents don't clobber each
     other's remote sync directory mid-build.
@@ -23,7 +23,7 @@ not instead of it.
     `release`. Release builds are signed with the persistent CI keystore, fetched from the rbw
     entry `"NetBox and Chill CI Signing Keystore"`.
   - `just lint` - remote `ktfmtCheck` (mirrors `.github/workflows/lint.yaml`). **Not fully
-    trustworthy**: on rofl-13/rofl-14, `ktfmtCheckMain`/`ktfmtFormatMain` report `NO-SOURCE` for
+    trustworthy**: on the build hosts, `ktfmtCheckMain`/`ktfmtFormatMain` report `NO-SOURCE` for
     reasons still unclear, silently skipping the main sourceSet instead of actually checking it -
     a passing `just lint` does not guarantee CI's `Lint` job will also pass.
   - `just test` - remote unit test suite.
