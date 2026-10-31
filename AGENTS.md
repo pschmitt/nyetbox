@@ -1,10 +1,15 @@
 # AGENTS.md
 
+## Private infrastructure details
+
+Do not include private hostnames, device identifiers, network addresses or topology here. Use placeholders and consult the private `brkn-infra` skill for specific host or device details.
+
+
 Repository instructions for AI coding agents working on Nyetbox.
 
 See `.just/android-app-ci/AGENTS-shared.md` for the fleet-wide task-tracking convention, dev
 environment (`nix develop`/`git-hooks.nix`), CI-is-the-sole-lint-authority rule, and physical test
-device docs (this app has all three: Zenfone 10, Mi Pad 4, Pixel 5) - read it alongside this file,
+device docs (this app has all three: <phone>, <tablet>, <phone>) - read it alongside this file,
 not instead of it.
 
 ## Task tracking
@@ -56,7 +61,7 @@ not instead of it.
 ## Physical test devices
 
 See `.just/android-app-ci/AGENTS-shared.md` - this app has recipes for all three fleet devices
-(Zenfone 10, Mi Pad 4, Pixel 5), default to `just deploy-all [variant]`.
+(<phone>, <tablet>, <phone>), default to `just deploy-all [variant]`.
 
 ## Architecture
 
@@ -67,7 +72,7 @@ See `.just/android-app-ci/AGENTS-shared.md` - this app has recipes for all three
   client (see `data/api/DynamicBaseUrlInterceptor.kt`).
 - **Before writing JSON-parsing code against a NetBox endpoint whose exact response shape you
   don't already have confirmed in this repo, use the `netbox` skill to query the user's real
-  instance (`netbox.brkn.lol`) and look at the actual response first**, rather than relying on
+  instance (`<private-domain>`) and look at the actual response first**, rather than relying on
   NetBox's public docs/source on GitHub. This bit a real feature: the NBC-383 cable-trace tab was
   implemented against field names (`termination`, `TracedCableSerializer`'s field list) pulled from
   a web-fetched summary of NetBox's GitHub source, which turned out to be wrong for the live
