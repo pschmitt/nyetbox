@@ -46,17 +46,6 @@
     </issue>
 
     <issue
-        id="GradleDependency"
-        message="A newer version of com.google.devtools.ksp than 2.3.12 is available: 2.3.13"
-        errorLine1="ksp = &quot;2.3.12&quot;"
-        errorLine2="      ~~~~~~~~">
-        <location
-            file="gradle/libs.versions.toml"
-            line="38"
-            column="7"/>
-    </issue>
-
-    <issue
         id="NewerVersionAvailable"
         message="A newer version of io.coil-kt.coil3:coil-compose than 3.5.0 is available: 3.6.3"
         errorLine1="coil = &quot;3.5.0&quot;"
