@@ -84,12 +84,13 @@ fun displayEditValue(
     }
 }
 
-fun selectedValuesFromJson(text: String): List<String> = runCatching {
-    Json.decodeFromString(JsonArray.serializer(), text).mapNotNull {
-        (it as? JsonPrimitive)?.contentOrNull
-    }
-}
-    .getOrDefault(emptyList())
+fun selectedValuesFromJson(text: String): List<String> =
+    runCatching {
+            Json.decodeFromString(JsonArray.serializer(), text).mapNotNull {
+                (it as? JsonPrimitive)?.contentOrNull
+            }
+        }
+        .getOrDefault(emptyList())
 
 fun selectedValuesToJson(values: Collection<String>): String =
     JsonArray(values.map(::JsonPrimitive)).toString()

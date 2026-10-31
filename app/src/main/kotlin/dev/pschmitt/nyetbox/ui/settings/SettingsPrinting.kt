@@ -78,14 +78,14 @@ internal fun PrintingSettingsSection(
             settings.qrSize,
         ) {
             runCatching {
-                BrotherLabelRenderer.preview(
-                    objectUrl = "https://netbox.example/dcim/devices/1/",
-                    labelText = previewText,
-                    invert = settings.invertColors,
-                    vertical = settings.verticalText,
-                    qrSize = settings.qrSize,
-                )
-            }
+                    BrotherLabelRenderer.preview(
+                        objectUrl = "https://netbox.example/dcim/devices/1/",
+                        labelText = previewText,
+                        invert = settings.invertColors,
+                        vertical = settings.verticalText,
+                        qrSize = settings.qrSize,
+                    )
+                }
                 .getOrNull()
         }
     androidx.compose.runtime.DisposableEffect(previewBitmap) {

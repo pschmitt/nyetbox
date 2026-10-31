@@ -109,8 +109,8 @@ internal fun encodeWidgetActions(actions: List<NavBarItem>): String =
 internal fun decodeWidgetActions(value: String?): List<NavBarItem> {
     if (value.isNullOrBlank()) return emptyList()
     return runCatching {
-        Json.decodeFromString(ListSerializer(NavBarItem.serializer()), value)
-    }
+            Json.decodeFromString(ListSerializer(NavBarItem.serializer()), value)
+        }
         .getOrNull() ?: emptyList()
 }
 

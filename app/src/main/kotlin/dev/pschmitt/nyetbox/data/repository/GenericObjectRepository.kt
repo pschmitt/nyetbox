@@ -300,8 +300,8 @@ constructor(
             .mapNotNull { entity ->
                 val objectJson =
                     runCatching {
-                        json.decodeFromString(JsonObject.serializer(), entity.json)
-                    }
+                            json.decodeFromString(JsonObject.serializer(), entity.json)
+                        }
                         .getOrNull() ?: return@mapNotNull null
                 val appLabel = (objectJson["app_label"] as? JsonPrimitive)?.contentOrNull.orEmpty()
                 val model = (objectJson["model"] as? JsonPrimitive)?.contentOrNull.orEmpty()
@@ -604,9 +604,10 @@ internal fun buildCreateBody(
                                     .map(::JsonPrimitive)
                             )
                         }
-                field.type == "json" -> runCatching {
-                        Json.decodeFromString(JsonElement.serializer(), value)
-                    }
+                field.type == "json" ->
+                    runCatching {
+                            Json.decodeFromString(JsonElement.serializer(), value)
+                        }
                         .getOrElse {
                             return Result.failure(
                                 IllegalArgumentException("${field.label} must contain valid JSON")

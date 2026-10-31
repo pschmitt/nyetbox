@@ -40,16 +40,18 @@ data class CableTraceSegment(
 
 private val traceJson = Json { ignoreUnknownKeys = true }
 
-internal fun parseCableTraceSegment(index: Int, rawJson: String): CableTraceSegment? = runCatching {
-    val array = traceJson.decodeFromString(JsonArray.serializer(), rawJson)
-    val nearEnds =
-        (array.getOrNull(0) as? JsonArray)?.mapNotNull { it.asCableTraceNode() }.orEmpty()
-    val cable = (array.getOrNull(1) as? JsonObject)?.asCableTraceCableInfo()
-    val farEnds = (array.getOrNull(2) as? JsonArray)?.mapNotNull { it.asCableTraceNode() }.orEmpty()
-    if (nearEnds.isEmpty() && cable == null && farEnds.isEmpty()) null
-    else CableTraceSegment(index, nearEnds, cable, farEnds)
-}
-    .getOrNull()
+internal fun parseCableTraceSegment(index: Int, rawJson: String): CableTraceSegment? =
+    runCatching {
+            val array = traceJson.decodeFromString(JsonArray.serializer(), rawJson)
+            val nearEnds =
+                (array.getOrNull(0) as? JsonArray)?.mapNotNull { it.asCableTraceNode() }.orEmpty()
+            val cable = (array.getOrNull(1) as? JsonObject)?.asCableTraceCableInfo()
+            val farEnds =
+                (array.getOrNull(2) as? JsonArray)?.mapNotNull { it.asCableTraceNode() }.orEmpty()
+            if (nearEnds.isEmpty() && cable == null && farEnds.isEmpty()) null
+            else CableTraceSegment(index, nearEnds, cable, farEnds)
+        }
+        .getOrNull()
 
 private fun JsonElement.asCableTraceNode(): CableTraceNode? {
     val obj = this as? JsonObject ?: return null

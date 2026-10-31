@@ -78,12 +78,13 @@ internal fun SyncProgress.itemProgressText(): String? =
         null
     }
 
-internal fun SyncProgress.notificationSubText(): String = buildList {
-    add(if (isFullSync) "Full sync" else "Quick sync")
-    add("${step.coerceIn(0, totalSteps.coerceAtLeast(1))}/${totalSteps.coerceAtLeast(1)}")
-    itemProgressText()?.let(::add)
-}
-    .joinToString(" · ")
+internal fun SyncProgress.notificationSubText(): String =
+    buildList {
+            add(if (isFullSync) "Full sync" else "Quick sync")
+            add("${step.coerceIn(0, totalSteps.coerceAtLeast(1))}/${totalSteps.coerceAtLeast(1)}")
+            itemProgressText()?.let(::add)
+        }
+        .joinToString(" · ")
 
 internal fun SyncProgress.notificationText(): String = buildString {
     append(message)
@@ -411,10 +412,11 @@ constructor(
                 }
                 val cables = genericObjectRepository.cachedObjects(NetBoxRef.CABLES_ENDPOINT_PATH)
                 cables.syncConcurrently(concurrency) { cable ->
-                    val cableJson = runCatching {
-                        json.decodeFromString(JsonObject.serializer(), cable.json)
-                    }
-                        .getOrNull()
+                    val cableJson =
+                        runCatching {
+                                json.decodeFromString(JsonObject.serializer(), cable.json)
+                            }
+                            .getOrNull()
                     val target = cableJson?.let(::cableTraceStartTarget)
                     if (target != null) {
                         val (endpointPath, id) = target
@@ -457,17 +459,18 @@ constructor(
                     val attachmentProgress =
                         reportProgress("Downloading cached images and documents…")
                     runCatching {
-                        syncAttachments(concurrency, isFullSyncPass) { completed, total, bytes ->
-                            onProgress(
-                                attachmentProgress.copy(
-                                    itemLabel = "images/documents",
-                                    itemCompleted = completed,
-                                    itemTotal = total,
-                                    bytesDownloaded = bytes,
+                            syncAttachments(concurrency, isFullSyncPass) { completed, total, bytes
+                                ->
+                                onProgress(
+                                    attachmentProgress.copy(
+                                        itemLabel = "images/documents",
+                                        itemCompleted = completed,
+                                        itemTotal = total,
+                                        bytesDownloaded = bytes,
+                                    )
                                 )
-                            )
+                            }
                         }
-                    }
                         .getOrElse {
                             recordFailure("Attachment sync", it)
                             0
@@ -585,30 +588,31 @@ constructor(
             )
         }
 
-        val attachments = buildList {
-            addAll(genericObjectRepository.cachedMediaAttachments())
-            deviceTypeRepository.cachedAll().forEach { deviceType ->
-                deviceType.frontImageUrl?.let {
-                    add(OfflineAttachment(it, "device-type-${deviceType.id}-front"))
+        val attachments =
+            buildList {
+                    addAll(genericObjectRepository.cachedMediaAttachments())
+                    deviceTypeRepository.cachedAll().forEach { deviceType ->
+                        deviceType.frontImageUrl?.let {
+                            add(OfflineAttachment(it, "device-type-${deviceType.id}-front"))
+                        }
+                        deviceType.rearImageUrl?.let {
+                            add(OfflineAttachment(it, "device-type-${deviceType.id}-rear"))
+                        }
+                    }
+                    imageAttachmentRepository.cachedAll().forEach { attachment ->
+                        attachment.imageUrl?.let {
+                            add(
+                                OfflineAttachment(
+                                    it,
+                                    attachment.name?.takeIf(String::isNotBlank)
+                                        ?: attachment.display?.takeIf(String::isNotBlank)
+                                        ?: "image-attachment-${attachment.id}",
+                                )
+                            )
+                        }
+                    }
                 }
-                deviceType.rearImageUrl?.let {
-                    add(OfflineAttachment(it, "device-type-${deviceType.id}-rear"))
-                }
-            }
-            imageAttachmentRepository.cachedAll().forEach { attachment ->
-                attachment.imageUrl?.let {
-                    add(
-                        OfflineAttachment(
-                            it,
-                            attachment.name?.takeIf(String::isNotBlank)
-                                ?: attachment.display?.takeIf(String::isNotBlank)
-                                ?: "image-attachment-${attachment.id}",
-                        )
-                    )
-                }
-            }
-        }
-            .distinctBy(OfflineAttachment::url)
+                .distinctBy(OfflineAttachment::url)
 
         val downloaded = AtomicInteger(0)
         val totalBytesDownloaded = AtomicLong(0)

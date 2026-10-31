@@ -59,12 +59,12 @@ class DeviceRepository @Inject constructor(private val api: NetBoxApi, private v
             return it
         }
         return runCatching {
-            api.listDevices(limit = 50, search = withoutPrefix)
-                .results
-                .firstOrNull { normalizeAssetTag(it.assetTag) == normalizeAssetTag(trimmed) }
-                ?.toEntity()
-                ?.also { dao.upsert(it) }
-        }
+                api.listDevices(limit = 50, search = withoutPrefix)
+                    .results
+                    .firstOrNull { normalizeAssetTag(it.assetTag) == normalizeAssetTag(trimmed) }
+                    ?.toEntity()
+                    ?.also { dao.upsert(it) }
+            }
             .getOrNull()
     }
 

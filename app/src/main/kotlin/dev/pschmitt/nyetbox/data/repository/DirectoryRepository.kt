@@ -134,11 +134,12 @@ constructor(
      * object identity; OPTIONS alone cannot distinguish an XML export, an action that happens to
      * allow GET, or an operational summary collection such as background queues.
      */
-    private suspend fun isPaginatedCollection(endpointPath: String): Boolean = runCatching {
-        val page = api.listObjects(endpointPath, mapOf("limit" to "1", "offset" to "0"))
-        page.results.isEmpty() || page.results.any(JsonObject::hasNumericId)
-    }
-        .getOrDefault(false)
+    private suspend fun isPaginatedCollection(endpointPath: String): Boolean =
+        runCatching {
+                val page = api.listObjects(endpointPath, mapOf("limit" to "1", "offset" to "0"))
+                page.results.isEmpty() || page.results.any(JsonObject::hasNumericId)
+            }
+            .getOrDefault(false)
 
     private fun relativePath(url: String): String =
         url.toHttpUrlOrNull()?.encodedPath?.trimStart('/') ?: url.trimStart('/')

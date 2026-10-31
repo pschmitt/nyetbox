@@ -31,34 +31,34 @@ constructor(
     suspend fun refresh(): Result<Int> =
         withContext(Dispatchers.IO) {
             runCatching {
-                val request =
-                    Request.Builder()
-                        .url(FEED_URL)
-                        .header("Accept", "application/rss+xml, application/xml, text/xml")
-                        .header("User-Agent", "Nyetbox/${BuildConfig.VERSION_NAME}")
-                        .build()
-                client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) {
-                        throw IOException("News feed returned HTTP ${response.code}")
-                    }
-                    val parsed = parseNewsFeed(response.body.string())
-                    if (parsed.isEmpty()) throw IOException("News feed contained no items")
-                    val now = System.currentTimeMillis()
-                    dao.upsertAll(
-                        parsed.map { item ->
-                            NewsItemEntity(
-                                guid = item.guid,
-                                title = item.title,
-                                link = item.link,
-                                summary = item.summary,
-                                publishedAt = item.publishedAt,
-                                syncedAt = now,
-                            )
+                    val request =
+                        Request.Builder()
+                            .url(FEED_URL)
+                            .header("Accept", "application/rss+xml, application/xml, text/xml")
+                            .header("User-Agent", "Nyetbox/${BuildConfig.VERSION_NAME}")
+                            .build()
+                    client.newCall(request).execute().use { response ->
+                        if (!response.isSuccessful) {
+                            throw IOException("News feed returned HTTP ${response.code}")
                         }
-                    )
-                    parsed.size
+                        val parsed = parseNewsFeed(response.body.string())
+                        if (parsed.isEmpty()) throw IOException("News feed contained no items")
+                        val now = System.currentTimeMillis()
+                        dao.upsertAll(
+                            parsed.map { item ->
+                                NewsItemEntity(
+                                    guid = item.guid,
+                                    title = item.title,
+                                    link = item.link,
+                                    summary = item.summary,
+                                    publishedAt = item.publishedAt,
+                                    syncedAt = now,
+                                )
+                            }
+                        )
+                        parsed.size
+                    }
                 }
-            }
                 .onFailure { Timber.w(it, "Couldn't refresh NetBox news") }
         }
 

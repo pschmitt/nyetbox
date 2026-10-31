@@ -76,8 +76,8 @@ constructor(
     private fun parseDocument(entity: NetBoxObjectEntity): CachedDocumentWithTarget? {
         val objectJson =
             runCatching {
-                json.decodeFromString(JsonObject.serializer(), entity.json)
-            }
+                    json.decodeFromString(JsonObject.serializer(), entity.json)
+                }
                 .getOrNull() ?: return null
         val assignedObject = objectJson["assigned_object"] as? JsonObject
         val assignedUrl = assignedObject?.get("url")?.jsonPrimitive?.contentOrNull

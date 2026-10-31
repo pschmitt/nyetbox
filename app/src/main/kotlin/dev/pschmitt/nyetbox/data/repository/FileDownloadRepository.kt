@@ -90,22 +90,22 @@ private fun java.io.InputStream.copyToWithProgress(
  */
 private fun isUnchangedByHead(okHttpClient: OkHttpClient, url: String, target: File): Boolean =
     runCatching {
-        val request =
-            Request.Builder()
-                .url(url)
-                .head()
-                .header("If-Modified-Since", httpDate(target.lastModified()))
-                .build()
-        okHttpClient.newCall(request).execute().use { response ->
-            when {
-                response.code == 304 -> true
-                response.isSuccessful ->
-                    response.header("Content-Length")?.toLongOrNull() == target.length()
-                else -> false
+            val request =
+                Request.Builder()
+                    .url(url)
+                    .head()
+                    .header("If-Modified-Since", httpDate(target.lastModified()))
+                    .build()
+            okHttpClient.newCall(request).execute().use { response ->
+                when {
+                    response.code == 304 -> true
+                    response.isSuccessful ->
+                        response.header("Content-Length")?.toLongOrNull() == target.length()
+                    else -> false
+                }
             }
         }
-    }
-    .getOrDefault(false)
+        .getOrDefault(false)
 
 /** RFC 1123 (`If-Modified-Since`-compatible) rendering of an epoch-millis timestamp. */
 internal fun httpDate(epochMillis: Long): String =

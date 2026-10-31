@@ -494,10 +494,11 @@ constructor(
         server: JsonObject,
         fallbackLocalJson: String,
     ): ReconciledItem {
-        val fallback = runCatching {
-            decode(fallbackLocalJson)
-        }
-            .getOrDefault(JsonObject(emptyMap()))
+        val fallback =
+            runCatching {
+                    decode(fallbackLocalJson)
+                }
+                .getOrDefault(JsonObject(emptyMap()))
         return ReconciledItem(
             endpointPath = endpointPath,
             id = (server["id"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull() ?: 0,

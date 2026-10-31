@@ -229,10 +229,12 @@ private fun documentTypeOptionsFromDocuments(
 ): List<MediaDocumentTypeOption> =
     objects
         .mapNotNull { entity ->
-            val raw = runCatching {
-                mediaJson.decodeFromString(JsonObject.serializer(), entity.json)["document_type"]
-            }
-                .getOrNull()
+            val raw =
+                runCatching {
+                        mediaJson
+                            .decodeFromString(JsonObject.serializer(), entity.json)["document_type"]
+                    }
+                    .getOrNull()
             val value =
                 when (raw) {
                     is JsonPrimitive -> raw.contentOrNull

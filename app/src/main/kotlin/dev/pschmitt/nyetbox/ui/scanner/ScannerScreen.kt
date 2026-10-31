@@ -496,23 +496,23 @@ private fun CameraPreview(
                         )
                     }
                 runCatching {
-                    // CameraX must be fully unbound before a different physical or facing
-                    // camera can be selected. Keeping this in one synchronous effect avoids
-                    // an old async listener rebinding the previous lens after a user switch.
-                    provider.unbindAll()
-                    provider
-                        .bindToLifecycle(
-                            lifecycleOwner,
-                            activeCamera.selector,
-                            preview,
-                            analysis,
-                        )
-                        .also {
-                            // Physical rear-lens selection chooses the sensor; this zoom is a
-                            // separate digital crop applied to whichever sensor is active.
-                            it.cameraControl.setZoomRatio(zoomRatio)
-                        }
-                }
+                        // CameraX must be fully unbound before a different physical or facing
+                        // camera can be selected. Keeping this in one synchronous effect avoids
+                        // an old async listener rebinding the previous lens after a user switch.
+                        provider.unbindAll()
+                        provider
+                            .bindToLifecycle(
+                                lifecycleOwner,
+                                activeCamera.selector,
+                                preview,
+                                analysis,
+                            )
+                            .also {
+                                // Physical rear-lens selection chooses the sensor; this zoom is a
+                                // separate digital crop applied to whichever sensor is active.
+                                it.cameraControl.setZoomRatio(zoomRatio)
+                            }
+                    }
                     .onSuccess {
                         boundCamera.value = it
                         onCameraReady(it)

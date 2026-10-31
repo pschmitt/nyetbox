@@ -20,32 +20,32 @@ internal fun renderPdfPage(
 ): Bitmap? {
     if (file == null || !file.isFile || !looksLikePdf(file, filename, url)) return null
     return runCatching {
-        ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
-            PdfRenderer(descriptor).use { renderer ->
-                if (renderer.pageCount == 0) return@runCatching null
-                val page = renderer.openPage(0)
-                try {
-                    val scale =
-                        minOf(
-                            1f,
-                            maxWidth.toFloat() / page.width,
-                            maxHeight.toFloat() / page.height,
-                        )
-                    val bitmap =
-                        createBitmap(
-                            (page.width * scale).toInt().coerceAtLeast(1),
-                            (page.height * scale).toInt().coerceAtLeast(1),
-                            Bitmap.Config.ARGB_8888,
-                        )
-                    bitmap.eraseColor(android.graphics.Color.WHITE)
-                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                    bitmap
-                } finally {
-                    page.close()
+            ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
+                PdfRenderer(descriptor).use { renderer ->
+                    if (renderer.pageCount == 0) return@runCatching null
+                    val page = renderer.openPage(0)
+                    try {
+                        val scale =
+                            minOf(
+                                1f,
+                                maxWidth.toFloat() / page.width,
+                                maxHeight.toFloat() / page.height,
+                            )
+                        val bitmap =
+                            createBitmap(
+                                (page.width * scale).toInt().coerceAtLeast(1),
+                                (page.height * scale).toInt().coerceAtLeast(1),
+                                Bitmap.Config.ARGB_8888,
+                            )
+                        bitmap.eraseColor(android.graphics.Color.WHITE)
+                        page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        bitmap
+                    } finally {
+                        page.close()
+                    }
                 }
             }
         }
-    }
         .getOrNull()
 }
 
@@ -53,10 +53,10 @@ internal fun renderPdfPage(
 internal fun pdfPageCount(file: File?, filename: String, url: String?): Int? {
     if (file == null || !file.isFile || !looksLikePdf(file, filename, url)) return null
     return runCatching {
-        ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
-            PdfRenderer(descriptor).use { renderer -> renderer.pageCount }
+            ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
+                PdfRenderer(descriptor).use { renderer -> renderer.pageCount }
+            }
         }
-    }
         .getOrNull()
 }
 

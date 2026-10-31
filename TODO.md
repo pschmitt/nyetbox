@@ -9478,3 +9478,16 @@ validated on the large cached Zenfone 10 dataset with targeted and broad global-
 - [x] Add focused About-page UI coverage and verify the change
 
 Status: **done** (2026-08-15; CI runs 31910324321/31910324373/31910324429 passed; debug APK installed on ZF10, Mi Pad 4, and PX5).
+
+## NBC-451: ktfmt is nix-only (remove the ktfmt Gradle plugin)
+
+- [x] Bump the `android-app-ci` flake input and `.just/android-app-ci` submodule to 5f6ff4a (always-on
+      nixpkgs `ktfmt` pre-commit hook, `.#ktfmt` devShell, local `just lint`/`just format`, CI lint
+      via `nix develop .#ktfmt`)
+- [x] Remove the `com.ncorti.ktfmt.gradle` plugin (root `build.gradle.kts`, `libs.versions.toml`);
+      it pinned ktfmt 0.27.0 and silently skipped the main sourceSet (`NO-SOURCE`)
+- [x] Reformat every tracked `.kt`/`.kts` once with nixpkgs ktfmt 0.63 (kotlinlang style) - formatting only
+- [x] Update `AGENTS.md` (drop the `NO-SOURCE` and version-drift caveats)
+
+Status: **done**, 2026-10-31 - `ktfmt --dry-run --set-exit-if-changed` clean over all tracked Kotlin
+files, Gradle still configures and compiles on rofl-13 without the plugin, pre-commit hook ran on commit.

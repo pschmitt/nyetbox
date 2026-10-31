@@ -55,33 +55,36 @@ fun AddItemScreen(
     val modelsByApp by viewModel.modelsByApp.collectAsStateWithLifecycle()
     val pinnedPaths by viewModel.settingsRepository.pinnedModelPaths.collectAsStateWithLifecycle()
     var query by remember { mutableStateOf("") }
-    val models = buildList {
-        add(
-            NetBoxModelEntity(
-                appKey = "dcim",
-                appLabel = "DCIM",
-                modelKey = "devices",
-                modelLabel = "Devices",
-                endpointPath = NetBoxRef.DEVICES_ENDPOINT_PATH,
-            )
-        )
-        add(
-            NetBoxModelEntity(
-                appKey = "dcim",
-                appLabel = "DCIM",
-                modelKey = "device-types",
-                modelLabel = "Device types",
-                endpointPath = NetBoxRef.DEVICE_TYPES_ENDPOINT_PATH,
-            )
-        )
-        addAll(
-            modelsByApp
-                .toList()
-                .sortedBy { (appKey, models) -> models.firstOrNull()?.appLabel ?: appKey }
-                .flatMap { (_, appModels) -> appModels.sortedBy { it.modelLabel.lowercase() } }
-        )
-    }
-        .distinctBy { it.endpointPath }
+    val models =
+        buildList {
+                add(
+                    NetBoxModelEntity(
+                        appKey = "dcim",
+                        appLabel = "DCIM",
+                        modelKey = "devices",
+                        modelLabel = "Devices",
+                        endpointPath = NetBoxRef.DEVICES_ENDPOINT_PATH,
+                    )
+                )
+                add(
+                    NetBoxModelEntity(
+                        appKey = "dcim",
+                        appLabel = "DCIM",
+                        modelKey = "device-types",
+                        modelLabel = "Device types",
+                        endpointPath = NetBoxRef.DEVICE_TYPES_ENDPOINT_PATH,
+                    )
+                )
+                addAll(
+                    modelsByApp
+                        .toList()
+                        .sortedBy { (appKey, models) -> models.firstOrNull()?.appLabel ?: appKey }
+                        .flatMap { (_, appModels) ->
+                            appModels.sortedBy { it.modelLabel.lowercase() }
+                        }
+                )
+            }
+            .distinctBy { it.endpointPath }
     val normalizedQuery = query.trim().lowercase()
     val filteredModels = models.filter { model ->
         normalizedQuery.isBlank() ||
@@ -91,22 +94,24 @@ fun AddItemScreen(
     }
     val defaultPinnedEndpoints =
         listOf(NetBoxRef.DEVICES_ENDPOINT_PATH, NetBoxRef.DEVICE_TYPES_ENDPOINT_PATH)
-    val pinnedEndpoints = buildList {
-        addAll(defaultPinnedEndpoints.filter { it in pinnedPaths })
-        addAll(
-            filteredModels
-                .filter {
-                    it.endpointPath in pinnedPaths && it.endpointPath !in defaultPinnedEndpoints
-                }
-                .sortedWith(
-                    compareBy<NetBoxModelEntity> { it.appLabel.lowercase() }
-                        .thenBy { it.modelLabel.lowercase() }
+    val pinnedEndpoints =
+        buildList {
+                addAll(defaultPinnedEndpoints.filter { it in pinnedPaths })
+                addAll(
+                    filteredModels
+                        .filter {
+                            it.endpointPath in pinnedPaths &&
+                                it.endpointPath !in defaultPinnedEndpoints
+                        }
+                        .sortedWith(
+                            compareBy<NetBoxModelEntity> { it.appLabel.lowercase() }
+                                .thenBy { it.modelLabel.lowercase() }
+                        )
+                        .map { it.endpointPath }
                 )
-                .map { it.endpointPath }
-        )
-    }
-        .distinct()
-        .take(MAX_PINNED_ITEM_TYPES)
+            }
+            .distinct()
+            .take(MAX_PINNED_ITEM_TYPES)
     val pinnedModels = pinnedEndpoints.mapNotNull { endpoint ->
         filteredModels.firstOrNull { it.endpointPath == endpoint }
     }

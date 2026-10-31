@@ -112,10 +112,11 @@ constructor(
             .map { JournalMutationResult(it is EditSubmission.Queued) }
     }
 
-    private fun NetBoxObjectEntity.toJsonObject(): JsonObject? = runCatching {
-        parser.decodeFromString(JsonObject.serializer(), json)
-    }
-        .getOrNull()
+    private fun NetBoxObjectEntity.toJsonObject(): JsonObject? =
+        runCatching {
+                parser.decodeFromString(JsonObject.serializer(), json)
+            }
+            .getOrNull()
 
     private fun JsonObject.matchesAssignedObject(endpointPath: String): Boolean {
         val assignedObjectType = this["assigned_object_type"] ?: return true

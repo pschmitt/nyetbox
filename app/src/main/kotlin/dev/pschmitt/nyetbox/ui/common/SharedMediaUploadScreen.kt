@@ -199,26 +199,27 @@ internal fun isSharedImage(
     return extension in setOf("avif", "bmp", "gif", "heic", "heif", "jpeg", "jpg", "png", "webp")
 }
 
-private fun renderSharedPdfPreview(context: Context, uri: Uri): Bitmap? = runCatching {
-    context.contentResolver.openFileDescriptor(uri, "r")?.use { descriptor ->
-        PdfRenderer(descriptor).use { renderer ->
-            if (renderer.pageCount == 0) return@runCatching null
-            val page = renderer.openPage(0)
-            try {
-                val scale = minOf(1f, 240f / page.width, 320f / page.height)
-                val bitmap =
-                    createBitmap(
-                        (page.width * scale).toInt().coerceAtLeast(1),
-                        (page.height * scale).toInt().coerceAtLeast(1),
-                        Bitmap.Config.ARGB_8888,
-                    )
-                bitmap.eraseColor(android.graphics.Color.WHITE)
-                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                bitmap
-            } finally {
-                page.close()
+private fun renderSharedPdfPreview(context: Context, uri: Uri): Bitmap? =
+    runCatching {
+            context.contentResolver.openFileDescriptor(uri, "r")?.use { descriptor ->
+                PdfRenderer(descriptor).use { renderer ->
+                    if (renderer.pageCount == 0) return@runCatching null
+                    val page = renderer.openPage(0)
+                    try {
+                        val scale = minOf(1f, 240f / page.width, 320f / page.height)
+                        val bitmap =
+                            createBitmap(
+                                (page.width * scale).toInt().coerceAtLeast(1),
+                                (page.height * scale).toInt().coerceAtLeast(1),
+                                Bitmap.Config.ARGB_8888,
+                            )
+                        bitmap.eraseColor(android.graphics.Color.WHITE)
+                        page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        bitmap
+                    } finally {
+                        page.close()
+                    }
+                }
             }
         }
-    }
-}
-    .getOrNull()
+        .getOrNull()

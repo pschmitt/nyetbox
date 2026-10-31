@@ -81,19 +81,20 @@ constructor(
             .firstOrNull { model -> !model.modelKey.contains("type", ignoreCase = true) }
             ?.endpointPath
 
-    private suspend fun objectTypeChoices(endpointPath: String): List<String> = runCatching {
-        val options = genericApi.getObjectOptions(endpointPath)
-        val actions = options["actions"]?.jsonObject
-        (actions?.get("POST") ?: actions?.get("PUT"))
-            ?.jsonObject
-            ?.get("object_type")
-            ?.jsonObject
-            ?.get("choices")
-            ?.jsonArray
-            ?.mapNotNull { it.jsonObject["value"]?.jsonPrimitive?.contentOrNull }
-            .orEmpty()
-    }
-        .getOrDefault(emptyList())
+    private suspend fun objectTypeChoices(endpointPath: String): List<String> =
+        runCatching {
+                val options = genericApi.getObjectOptions(endpointPath)
+                val actions = options["actions"]?.jsonObject
+                (actions?.get("POST") ?: actions?.get("PUT"))
+                    ?.jsonObject
+                    ?.get("object_type")
+                    ?.jsonObject
+                    ?.get("choices")
+                    ?.jsonArray
+                    ?.mapNotNull { it.jsonObject["value"]?.jsonPrimitive?.contentOrNull }
+                    .orEmpty()
+            }
+            .getOrDefault(emptyList())
 
     suspend fun uploadImageAttachment(
         endpointPath: String,

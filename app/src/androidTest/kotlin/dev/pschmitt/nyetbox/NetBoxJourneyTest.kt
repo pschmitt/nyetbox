@@ -182,10 +182,11 @@ abstract class NetBoxJourneyTest {
         repeat(maxAttempts) { attempt ->
             waitForTagAbsent(overlayTag, timeoutMillis = 60_000)
             click()
-            val landed = runCatching {
-                waitForTag(destinationTag, timeoutMillis = perAttemptTimeoutMillis)
-            }
-                .isSuccess
+            val landed =
+                runCatching {
+                        waitForTag(destinationTag, timeoutMillis = perAttemptTimeoutMillis)
+                    }
+                    .isSuccess
             if (landed) return
             check(attempt < maxAttempts - 1) {
                 "Never reached tag '$destinationTag' after $maxAttempts clicks"

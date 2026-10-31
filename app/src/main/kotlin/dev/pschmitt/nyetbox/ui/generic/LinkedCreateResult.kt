@@ -21,7 +21,7 @@ fun LinkedCreateResult.encodeForSavedState(): String =
 
 fun decodeLinkedCreateResult(raw: String?): LinkedCreateResult? = raw?.let {
     runCatching {
-        linkedCreateJson.decodeFromString(LinkedCreateResult.serializer(), it)
-    }
+            linkedCreateJson.decodeFromString(LinkedCreateResult.serializer(), it)
+        }
         .getOrNull()
 }

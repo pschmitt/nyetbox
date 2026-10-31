@@ -655,9 +655,10 @@ fun EditFieldKind.toJsonElement(text: String): JsonElement =
     when (this) {
         EditFieldKind.STRING,
         EditFieldKind.LONG_TEXT -> JsonPrimitive(text)
-        EditFieldKind.JSON -> runCatching {
-                Json.decodeFromString(JsonElement.serializer(), text)
-            }
+        EditFieldKind.JSON ->
+            runCatching {
+                    Json.decodeFromString(JsonElement.serializer(), text)
+                }
                 .getOrElse { JsonPrimitive(text) }
         EditFieldKind.CHOICE -> text.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull
         EditFieldKind.NUMBER -> text.toDoubleOrNull()?.let(::JsonPrimitive) ?: JsonPrimitive(text)

@@ -97,10 +97,10 @@ object NetBoxUrlParser {
         }
         if (QrConfigCodec.looksLikeQrConfigUri(trimmed)) {
             return runCatching {
-                QrConfigCodec.decodePayload(trimmed).let {
-                    NetBoxTarget.Setup(it.baseUrl, it.token)
+                    QrConfigCodec.decodePayload(trimmed).let {
+                        NetBoxTarget.Setup(it.baseUrl, it.token)
+                    }
                 }
-            }
                 .getOrNull()
         }
         trimmed.toIntOrNull()?.let {
@@ -174,10 +174,11 @@ object NetBoxUrlParser {
         }
     }
 
-    private fun decodeSegment(segment: String): String = runCatching {
-        URLDecoder.decode(segment, StandardCharsets.UTF_8.name())
-    }
-        .getOrDefault(segment)
+    private fun decodeSegment(segment: String): String =
+        runCatching {
+                URLDecoder.decode(segment, StandardCharsets.UTF_8.name())
+            }
+            .getOrDefault(segment)
 
     /** Returns a barcode-friendly asset-tag candidate without changing URL/ID parsing semantics. */
     fun parseAssetTag(text: String): String? {

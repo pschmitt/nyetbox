@@ -130,16 +130,17 @@ fun parseGlobalSearchQuery(queryText: String): ParsedGlobalSearchQuery {
         return ParsedGlobalSearchQuery(queryText, queryText.trim(), emptyList())
     }
 
-    val freeText = buildString {
-        var cursor = 0
-        filters.forEach { filter ->
-            append(queryText.substring(cursor, filter.tokenRange.first))
-            cursor = filter.tokenRange.last + 1
-        }
-        append(queryText.substring(cursor))
-    }
-        .trim()
-        .replace(Regex("\\s+"), " ")
+    val freeText =
+        buildString {
+                var cursor = 0
+                filters.forEach { filter ->
+                    append(queryText.substring(cursor, filter.tokenRange.first))
+                    cursor = filter.tokenRange.last + 1
+                }
+                append(queryText.substring(cursor))
+            }
+            .trim()
+            .replace(Regex("\\s+"), " ")
     return ParsedGlobalSearchQuery(queryText, freeText, filters)
 }
 
@@ -297,15 +298,16 @@ constructor(
             objectJson = decodedObject.takeIf { searchIndexNeedsObjectJson(entity.endpointPath) },
             searchFields = searchFields,
             assetTag = tag,
-            normalizedSearchText = buildString {
-                    append(entity.display)
-                    append('\n')
-                    append(entity.secondaryLine.orEmpty())
-                    searchFields.values.forEach { value ->
+            normalizedSearchText =
+                buildString {
+                        append(entity.display)
                         append('\n')
-                        append(value)
+                        append(entity.secondaryLine.orEmpty())
+                        searchFields.values.forEach { value ->
+                            append('\n')
+                            append(value)
+                        }
                     }
-                }
                     .lowercase(),
         )
     }
@@ -636,10 +638,11 @@ constructor(
             }
             ?.takeIf(String::isNotBlank)
 
-    private fun decodeObject(raw: String): JsonObject? = runCatching {
-        json.decodeFromString(JsonObject.serializer(), raw)
-    }
-        .getOrNull()
+    private fun decodeObject(raw: String): JsonObject? =
+        runCatching {
+                json.decodeFromString(JsonObject.serializer(), raw)
+            }
+            .getOrNull()
 
     companion object {
         const val DEVICES_ENDPOINT_PATH = NetBoxRef.DEVICES_ENDPOINT_PATH

@@ -22,22 +22,17 @@ not instead of it.
   - `just build [variant] [host]` - build an APK remotely. `variant` is `debug` (default) or
     `release`. Release builds are signed with the persistent CI keystore, fetched from the rbw
     entry `"NetBox and Chill CI Signing Keystore"`.
-  - `just lint` - remote `ktfmtCheck` (mirrors `.github/workflows/lint.yaml`). **Not fully
-    trustworthy**: on the build hosts, `ktfmtCheckMain`/`ktfmtFormatMain` report `NO-SOURCE` for
-    reasons still unclear, silently skipping the main sourceSet instead of actually checking it -
-    a passing `just lint` does not guarantee CI's `Lint` job will also pass.
+  - `just lint` - local `ktfmt --dry-run` over tracked `.kt`/`.kts` files via `nix develop .#ktfmt`
+    (no Gradle, no build host). It is the same nixpkgs `ktfmt` (kotlinlang style) as the pre-commit
+    hook and CI's `Lint` job, so it is authoritative.
   - `just test` - remote unit test suite.
   - `just fetch [variant] [host] [abi]` - scp the built APK split back to `./dist/`.
   - `just build-fetch [variant] [host]` - build + fetch in one step.
-  - `just format` runs the standalone `ktfmt` CLI locally over tracked `.kt`/`.kts` files - fast,
-    but treat it as advisory only (see the flake.nix comment on why there's no ktfmt pre-commit
-    hook). It can also disagree with CI outright: the nixpkgs-packaged `ktfmt` binary version can
-    drift from the `com.ncorti.ktfmt.gradle`-resolved engine version CI actually uses, so it can
-    "fix" formatting that CI's version considers already correct (or vice versa).
+  - `just format` runs that same `ktfmt` locally over tracked `.kt`/`.kts` files. There is no ktfmt
+    Gradle plugin (removed, NBC-451): ktfmt is nix-only, so there is no local/CI version drift.
 
 **CI is the sole authority on lint/format** - see the shared doc for why and for the
-`ktfmt-diff-patch` retrieval procedure; both discrepancies above (the `NO-SOURCE` gotcha and
-local/CI `ktfmt` version drift) are why it applies doubly here.
+`ktfmt-diff-patch` retrieval procedure.
 
 - **Releasing a new version is exactly this procedure, in order - never skip or reorder a step:**
   1. Land every change for the release on `main` first (including the version bump below) and

@@ -53,8 +53,9 @@ fun JsonObject.frontImageUrl(): String? =
  * [frontImageUrl] from a not-yet-parsed JSON string - see [GenericObjectRepository.toEntity] for
  * the write-time, already-parsed equivalent this exists to avoid a redundant re-decode of.
  */
-fun frontImageUrlFromRawJson(raw: String): String? = runCatching {
-    Json.parseToJsonElement(raw) as? JsonObject
-}
-    .getOrNull()
-    ?.frontImageUrl()
+fun frontImageUrlFromRawJson(raw: String): String? =
+    runCatching {
+            Json.parseToJsonElement(raw) as? JsonObject
+        }
+        .getOrNull()
+        ?.frontImageUrl()
