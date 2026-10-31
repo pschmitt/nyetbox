@@ -9487,6 +9487,8 @@ Status: **done** (2026-08-15; CI runs 31910324321/31910324373/31910324429 passed
 - [x] Remove the `com.ncorti.ktfmt.gradle` plugin (root `build.gradle.kts`, `libs.versions.toml`);
       it pinned ktfmt 0.27.0 and silently skipped the main sourceSet (`NO-SOURCE`)
 - [x] Reformat every tracked `.kt`/`.kts` once with nixpkgs ktfmt 0.63 (kotlinlang style) - formatting only
+- [x] Refresh `app/lint-baseline.xml` (CI's baseline-drift check: line shifts from the reformat/catalog edit plus
+      upstream newer-version messages)
 - [x] Update `AGENTS.md` (drop the `NO-SOURCE` and version-drift caveats)
 
 Status: **done**, 2026-10-31 - `ktfmt --dry-run --set-exit-if-changed` clean over all tracked Kotlin

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="6" by="lint 9.4.0" type="baseline" client="gradle" dependencies="false" name="AGP (9.4.0)" variant="all" version="9.4.0">
+<issues format="6" by="lint 9.5.0" type="baseline" client="gradle" dependencies="false" name="AGP (9.5.0)" variant="all" version="9.5.0">
 
     <issue
         id="OldTargetApi"
@@ -14,7 +14,7 @@
 
     <issue
         id="GradleDependency"
-        message="A newer version of androidx.navigation:navigation-compose than 2.9.8 is available: 2.10.1"
+        message="A newer version of androidx.navigation:navigation-compose than 2.9.8 is available: 2.10.2"
         errorLine1="androidx-navigation = &quot;2.9.8&quot;"
         errorLine2="                      ~~~~~~~">
         <location
@@ -25,35 +25,35 @@
 
     <issue
         id="GradleDependency"
-        message="A newer version of androidx.room:room-compiler than 2.8.4 is available: 2.8.5"
-        errorLine1="androidx-room = &quot;2.8.4&quot;"
-        errorLine2="                ~~~~~~~">
+        message="A newer version of androidx.work:work-runtime-ktx than 2.11.2 is available: 2.12.0"
+        errorLine1="androidx-work = &quot;2.11.2&quot;"
+        errorLine2="                ~~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="22"
+            line="29"
             column="17"/>
     </issue>
 
     <issue
         id="GradleDependency"
-        message="A newer version of androidx.room:room-ktx than 2.8.4 is available: 2.8.5"
-        errorLine1="androidx-room = &quot;2.8.4&quot;"
-        errorLine2="                ~~~~~~~">
+        message="A newer version of androidx.work:work-testing than 2.11.2 is available: 2.12.0"
+        errorLine1="androidx-work = &quot;2.11.2&quot;"
+        errorLine2="                ~~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="22"
+            line="29"
             column="17"/>
     </issue>
 
     <issue
         id="GradleDependency"
-        message="A newer version of androidx.room:room-runtime than 2.8.4 is available: 2.8.5"
-        errorLine1="androidx-room = &quot;2.8.4&quot;"
-        errorLine2="                ~~~~~~~">
+        message="A newer version of com.google.devtools.ksp than 2.3.12 is available: 2.3.13"
+        errorLine1="ksp = &quot;2.3.12&quot;"
+        errorLine2="      ~~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="22"
-            column="17"/>
+            line="38"
+            column="7"/>
     </issue>
 
     <issue
@@ -80,56 +80,56 @@
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of com.mikepenz:multiplatform-markdown-renderer than 0.43.0 is available: 0.45.0"
+        message="A newer version of com.mikepenz:multiplatform-markdown-renderer than 0.43.0 is available: 0.46.0"
         errorLine1="markdown-renderer = &quot;0.43.0&quot;"
         errorLine2="                    ~~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="40"
+            line="39"
             column="21"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of com.mikepenz:multiplatform-markdown-renderer-m3 than 0.43.0 is available: 0.45.0"
+        message="A newer version of com.mikepenz:multiplatform-markdown-renderer-m3 than 0.43.0 is available: 0.46.0"
         errorLine1="markdown-renderer = &quot;0.43.0&quot;"
         errorLine2="                    ~~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="40"
+            line="39"
             column="21"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of com.squareup.okhttp3:logging-interceptor than 5.4.0 is available: 5.5.0"
+        message="A newer version of com.squareup.okhttp3:logging-interceptor than 5.4.0 is available: 5.5.1"
         errorLine1="okhttp = &quot;5.4.0&quot;"
         errorLine2="         ~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="41"
+            line="40"
             column="10"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of com.squareup.okhttp3:mockwebserver than 5.4.0 is available: 5.5.0"
+        message="A newer version of com.squareup.okhttp3:mockwebserver than 5.4.0 is available: 5.5.1"
         errorLine1="okhttp = &quot;5.4.0&quot;"
         errorLine2="         ~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="41"
+            line="40"
             column="10"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of com.squareup.okhttp3:okhttp than 5.4.0 is available: 5.5.0"
+        message="A newer version of com.squareup.okhttp3:okhttp than 5.4.0 is available: 5.5.1"
         errorLine1="okhttp = &quot;5.4.0&quot;"
         errorLine2="         ~~~~~~~">
         <location
             file="gradle/libs.versions.toml"
-            line="41"
+            line="40"
             column="10"/>
     </issue>
 
@@ -140,7 +140,7 @@
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/kotlin/dev/pschmitt/nyetbox/ui/devicedetail/DeviceDetailScreen.kt"
-            line="1591"
+            line="1592"
             column="5"/>
     </issue>
 
@@ -151,7 +151,7 @@
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/kotlin/dev/pschmitt/nyetbox/ui/devicedetail/DeviceDetailScreen.kt"
-            line="1591"
+            line="1592"
             column="5"/>
     </issue>
 
@@ -162,7 +162,7 @@
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/kotlin/dev/pschmitt/nyetbox/ui/devicedetail/DeviceDetailScreen.kt"
-            line="1653"
+            line="1654"
             column="5"/>
     </issue>
 
@@ -173,7 +173,7 @@
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/kotlin/dev/pschmitt/nyetbox/ui/devicedetail/DeviceDetailScreen.kt"
-            line="1653"
+            line="1654"
             column="5"/>
     </issue>
 
