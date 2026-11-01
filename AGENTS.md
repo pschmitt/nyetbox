@@ -127,3 +127,7 @@ See `.just/android-app-ci/AGENTS-shared.md` - this app has recipes for all three
   - `contentDescription` should be a real accessibility label when the icon is the only affordance
     (e.g. an `IconButton`); pass `null` when the icon is purely decorative next to a text label
     that already says the same thing (e.g. a `ListItem` leading icon next to its own headline).
+
+## Shared GitHub Actions
+
+- Before changing GitHub Actions, inspect the current guidance in `pschmitt/ci-workflows`. Use `@main` in every `uses:` reference to a shared workflow or action.
