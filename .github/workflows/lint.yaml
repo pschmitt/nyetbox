@@ -1,7 +1,7 @@
 name: Lint
 
 # Dispatchable on demand (e.g. to preemptively check formatting before pushing) in addition to
-# its normal push/PR gating. Delegates to pschmitt/android-app-ci's reusable lint workflow (ktfmt
+# its normal push/PR gating. Delegates to pschmitt/ci-workflows's reusable lint workflow (ktfmt
 # + Android Lint, with the ktfmt auto-fix-PR behavior) - see that repo's README for what it does.
 on:
   push:
@@ -28,7 +28,7 @@ on:
 
 jobs:
   lint:
-    uses: pschmitt/android-app-ci/.github/workflows/lint.yaml@main
+    uses: pschmitt/ci-workflows/.github/workflows/lint.yaml@de402fa0066beff208039023a006986142dac2ea
     secrets: inherit
     permissions:
       contents: write

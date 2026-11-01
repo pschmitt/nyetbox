@@ -3,7 +3,7 @@ name: Play Store Assets
 # Screenshot/icon uploads to the Play Console listing are content-triggered, not tag-triggered:
 # whenever a change to the committed screenshot images lands on main - i.e. the "Update
 # screenshots" PR that screenshots.yaml opens gets merged - push exactly what's now in the repo to
-# the release package's Play Console listing. Delegates to pschmitt/android-app-ci's reusable
+# the release package's Play Console listing. Delegates to pschmitt/ci-workflows's reusable
 # workflow, which requires the same PLAY_SERVICE_ACCOUNT_JSON secret as play-store.yaml.
 
 on:
@@ -16,7 +16,7 @@ on:
 
 jobs:
   upload:
-    uses: pschmitt/android-app-ci/.github/workflows/play-store-assets.yaml@main
+    uses: pschmitt/ci-workflows/.github/workflows/play-store-assets.yaml@de402fa0066beff208039023a006986142dac2ea
     with:
       application-id: dev.pschmitt.nyetbox
     secrets: inherit

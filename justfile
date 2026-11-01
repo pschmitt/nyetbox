@@ -48,7 +48,7 @@ default:
 # Recipes shared across the app fleet: format/nix-fmt/nix-lint/screenshots-upload (common.just, all
 # 4 apps) and the remote sync/build/deploy pipeline - sync/gradle/build/fetch/build-fetch/clean/
 # lint/test plus the zenfone-*/mipad-*/px5-*/deploy-all device recipes (single-module.just, the 3
-# single-Gradle-module apps). See pschmitt/android-app-ci's just/ for the source of truth.
+# single-Gradle-module apps). See pschmitt/ci-workflows's just/ for the source of truth.
 # Pulled in via a git submodule at .just/android-app-ci (tracking that repo's main branch);
 # `just update-common` (defined at the bottom of this file) refreshes it. The devShell's shellHook
 # auto-runs `git submodule update --init` on every `nix develop` entry, so a fresh git worktree
@@ -294,7 +294,7 @@ play-feature-graphic-upload:
       --type featureGraphic \
       --file "$temp_dir/feature-graphic.png"
 
-# --- Shared recipes (pschmitt/android-app-ci) -------------------------------
+# --- Shared recipes (pschmitt/ci-workflows) -------------------------------
 
 # Advance the .just/android-app-ci submodule to the tip of its tracked branch (main) and stage the
 # result - review the diff like any other dependency bump before committing it.

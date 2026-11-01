@@ -4,7 +4,7 @@ name: Play Store Release
 # "X.Y.Z"), always building a signed AAB for inspection. Publishes to both the internal and closed
 # (alpha) testing tracks in one upload - closed testing is the highest track this app is currently
 # eligible for, so every tagged release goes out to both simultaneously rather than needing a
-# separate promotion step. Delegates to pschmitt/android-app-ci's reusable play-store workflow,
+# separate promotion step. Delegates to pschmitt/ci-workflows's reusable play-store workflow,
 # which additionally requires the repository variable PLAY_PUBLISH_ENABLED=true and a
 # PLAY_SERVICE_ACCOUNT_JSON secret to actually publish - neither exists until those are
 # deliberately set up in Settings > Secrets and variables, so a tag push safely fails loudly (see
@@ -45,7 +45,7 @@ on:
 
 jobs:
   play-store:
-    uses: pschmitt/android-app-ci/.github/workflows/play-store.yaml@main
+    uses: pschmitt/ci-workflows/.github/workflows/play-store.yaml@de402fa0066beff208039023a006986142dac2ea
     with:
       application-id: dev.pschmitt.nyetbox
       artifact-label: nyetbox

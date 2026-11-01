@@ -11,8 +11,8 @@
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    android-app-ci = {
-      url = "github:pschmitt/android-app-ci";
+    ci-workflows = {
+      url = "github:pschmitt/ci-workflows/de402fa0066beff208039023a006986142dac2ea";
       flake = false;
     };
   };
@@ -23,7 +23,7 @@
       nixpkgs,
       android-nixpkgs,
       git-hooks,
-      android-app-ci,
+      ci-workflows,
     }:
     let
       system = "x86_64-linux";
@@ -41,7 +41,7 @@
         text = builtins.readFile ./bin/nyetbox-setup;
       };
 
-      androidEnv = import "${android-app-ci}/nix/devshells.nix" {
+      androidEnv = import "${ci-workflows}/nix/devshells.nix" {
         inherit pkgs android-nixpkgs system;
         appName = "Nyetbox";
         buildToolsVersion = "37.0.0";

@@ -3,7 +3,7 @@ name: Release
 # One pipeline, two release flavors depending on what got pushed:
 # - a push to main moves the rolling "latest" prerelease tag and republishes it
 # - a push of a semantic-version tag ("vX.Y.Z" or "X.Y.Z") publishes a real, permanent release
-# Delegates to pschmitt/android-app-ci's reusable release workflow - see that repo's README for
+# Delegates to pschmitt/ci-workflows's reusable release workflow - see that repo's README for
 # the full pipeline (signed APKs, SLSA attestation, checksums, stale-asset vacuuming, screenshot
 # refresh trigger).
 
@@ -18,7 +18,7 @@ on:
 
 jobs:
   release:
-    uses: pschmitt/android-app-ci/.github/workflows/release.yaml@main
+    uses: pschmitt/ci-workflows/.github/workflows/release.yaml@de402fa0066beff208039023a006986142dac2ea
     with:
       app-display-name: Nyetbox
       application-id: dev.pschmitt.nyetbox

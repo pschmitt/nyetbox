@@ -2,7 +2,7 @@ name: Screenshots
 
 # Screenshot capture is intentionally manual. It uses the same disposable fixture and Android
 # emulator action as the E2E workflow, then uploads the reviewed images as a build artifact (or,
-# with open_pr, opens/updates a PR with them committed - see pschmitt/android-app-ci's
+# with open_pr, opens/updates a PR with them committed - see pschmitt/ci-workflows's
 # screenshots-open-pr.yaml reusable workflow for that part).
 on:
   workflow_dispatch:
@@ -43,7 +43,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - uses: pschmitt/android-app-ci/.github/actions/setup-jdk-gradle@main
+      - uses: pschmitt/ci-workflows/.github/actions/setup-jdk-gradle@de402fa0066beff208039023a006986142dac2ea
 
       - name: Set up Ruby and fastlane
         uses: ruby/setup-ruby@v1
@@ -71,7 +71,7 @@ jobs:
           cp app/build/outputs/apk/debug/app-x86_64-debug.apk dist/
           cp app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk dist/
 
-      - uses: pschmitt/android-app-ci/.github/actions/enable-kvm@main
+      - uses: pschmitt/ci-workflows/.github/actions/enable-kvm@de402fa0066beff208039023a006986142dac2ea
 
       - name: Capture screenshots in a ${{ matrix.device_type }} emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -100,7 +100,7 @@ jobs:
           # (captureE2eScreenshot, written straight to the app's external files dir) while still
           # preserving the real exit code of the capture itself.
           script: |
-            curl -fsSL https://raw.githubusercontent.com/pschmitt/android-app-ci/main/scripts/wait-for-android-emulator.sh | bash
+            curl -fsSL https://raw.githubusercontent.com/pschmitt/ci-workflows/de402fa0066beff208039023a006986142dac2ea/scripts/wait-for-android-emulator.sh | bash
             adb reverse tcp:8000 tcp:8000
             serial="$(adb devices | awk '$2 == "device" { print $1; exit }')" && test -n "$serial" && adb -s "$serial" install -r -g -t dist/app-x86_64-debug.apk && E2E_TOKEN="$E2E_TOKEN" SCREENGRAB_DEVICE_TYPE=${{ matrix.device_type }} SCREENGRAB_SPECIFIC_DEVICE="$serial" fastlane screenshots; rc=$?; mkdir -p dist/failure-screenshots dist/logcat; adb -s "$serial" pull /sdcard/Android/data/dev.pschmitt.nyetbox.debug/files/e2e-screenshots dist/failure-screenshots >/dev/null 2>&1 || true; adb -s "$serial" logcat -d > dist/logcat/logcat.txt 2>/dev/null || true; exit $rc
 
@@ -135,7 +135,7 @@ jobs:
   open-pr:
     needs: capture
     if: ${{ !cancelled() && !failure() && inputs.open_pr }}
-    uses: pschmitt/android-app-ci/.github/workflows/screenshots-open-pr.yaml@main
+    uses: pschmitt/ci-workflows/.github/workflows/screenshots-open-pr.yaml@de402fa0066beff208039023a006986142dac2ea
     with:
       artifact-label: nyetbox
       commit-message: "chore: update Play Store and README screenshots (phone, 7in, 10in tablet)"
