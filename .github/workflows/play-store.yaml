@@ -45,7 +45,7 @@ on:
 
 jobs:
   play-store:
-    uses: pschmitt/ci-workflows/.github/workflows/play-store.yaml@de402fa0066beff208039023a006986142dac2ea
+    uses: pschmitt/ci-workflows/.github/workflows/play-store.yaml@main
     with:
       application-id: dev.pschmitt.nyetbox
       artifact-label: nyetbox

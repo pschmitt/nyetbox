@@ -6,4 +6,4 @@ on:
 
 jobs:
   build:
-    uses: pschmitt/ci-workflows/.github/workflows/build.yaml@de402fa0066beff208039023a006986142dac2ea
+    uses: pschmitt/ci-workflows/.github/workflows/build.yaml@main

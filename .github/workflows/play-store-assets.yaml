@@ -16,7 +16,7 @@ on:
 
 jobs:
   upload:
-    uses: pschmitt/ci-workflows/.github/workflows/play-store-assets.yaml@de402fa0066beff208039023a006986142dac2ea
+    uses: pschmitt/ci-workflows/.github/workflows/play-store-assets.yaml@main
     with:
       application-id: dev.pschmitt.nyetbox
     secrets: inherit
