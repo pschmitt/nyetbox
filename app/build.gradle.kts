@@ -39,6 +39,10 @@ android {
         // Keep the known legacy findings visible without blocking CI; new findings still fail
         // the gate. Remove entries as the underlying permission/API/accessibility issues are fixed.
         baseline = file("lint-baseline.xml")
+        // "A newer version of X is available" findings go stale with every dependency bump
+        // (Renovate), and since CI rejects any baseline drift they broke the Lint job after each
+        // one. Renovate already tracks dependency updates, so these checks add nothing here.
+        disable += setOf("GradleDependency", "NewerVersionAvailable", "AndroidGradlePluginVersion")
     }
 
     defaultConfig {
