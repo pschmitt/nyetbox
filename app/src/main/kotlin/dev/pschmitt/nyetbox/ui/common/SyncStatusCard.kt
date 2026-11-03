@@ -5,45 +5,61 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.pschmitt.nyetbox.sync.SyncOverview
 import dev.pschmitt.nyetbox.sync.SyncProgress
 import dev.pschmitt.nyetbox.sync.notificationSubText
+import dev.pschmitt.nyetbox.ui.sync.compactLine
+import dev.pschmitt.nyetbox.ui.sync.detailLines
+import dev.pschmitt.nyetbox.ui.sync.headline
+import dev.pschmitt.nyetbox.ui.sync.headlineIcon
+import dev.pschmitt.nyetbox.ui.sync.isProblem
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.delay
 
 /**
- * A persistent, low-key "when did this last sync" indicator for the dashboard - shown in place of
- * [SyncIssueCard] whenever there is no active issue to report (see
- * DashboardScreen.shouldShowSyncStatus), so the two never compete for the same slot.
+ * The dashboard/settings sync status card (NBC-455): what sync is doing right now, why it is
+ * waiting, how and when the last run ended (and with which error), and when the next background
+ * sync is due - driven by [SyncOverview], so it reflects the persistent sync history and
+ * WorkManager's real state rather than just "Synced"/a spinner.
  *
- * While syncing, renders the same step/message/item-count detail as [SyncNotifier]'s system
- * notification (NBC-370) via [syncProgress], instead of a generic spinner + "Syncing…" - falls back
- * to that generic text only for the brief window before the first [SyncProgress] arrives.
+ * While syncing it shows the live step (the same text as the system notification, NBC-370) and a
+ * progress bar.
  */
 @Composable
 fun SyncStatusCard(
+    overview: SyncOverview,
     lastSuccessfulSyncAt: Long?,
-    isSyncing: Boolean,
     modifier: Modifier = Modifier,
-    syncProgress: SyncProgress? = null,
-    nowMillis: Long = System.currentTimeMillis(),
+    offlineMode: Boolean = false,
+    nowMillis: Long = rememberSyncClock(),
     onShowDetails: (() -> Unit)? = null,
+    detailed: Boolean = false,
 ) {
+    val problem = !overview.isSyncing && overview.lastRun?.outcome?.isProblem() == true
     NyetboxCard(
         modifier =
             modifier.fillMaxWidth().let {
@@ -54,30 +70,74 @@ fun SyncStatusCard(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (isSyncing) {
+            if (overview.isSyncing) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
             } else {
                 Icon(
-                    Icons.Default.CloudDone,
+                    overview.headlineIcon(),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint =
+                        if (problem) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp),
                 )
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(
-                    syncStatusHeadline(isSyncing, syncProgress),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    syncStatusSubText(isSyncing, syncProgress, lastSuccessfulSyncAt, nowMillis),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Text(overview.headline(), style = MaterialTheme.typography.titleMedium)
+                val progress = overview.progress
+                if (overview.isSyncing && progress != null) {
+                    Text(
+                        progress.notificationSubText(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    LinearProgressIndicator(
+                        progress = {
+                            progress.step.toFloat() / progress.totalSteps.coerceAtLeast(1)
+                        },
+                        // Capped so it reads as a compact gauge rather than a full-width rule.
+                        modifier = Modifier.widthIn(max = 240.dp).fillMaxWidth(),
+                    )
+                }
+                // The dashboard/settings card stays to one quiet line; the diagnostics screen
+                // asks for the full breakdown.
+                val lines =
+                    if (detailed) {
+                        overview.detailLines(lastSuccessfulSyncAt, nowMillis, offlineMode)
+                    } else {
+                        listOfNotNull(
+                            overview.compactLine(lastSuccessfulSyncAt, nowMillis, offlineMode)
+                        )
+                    }
+                if (detailed && overview.isSyncing && lines.isNotEmpty())
+                    Spacer(Modifier.height(6.dp))
+                lines.forEach {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = if (detailed) Int.MAX_VALUE else 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
+}
+
+/** A clock that ticks every few seconds, so relative times ("5m ago") stay current. */
+@Composable
+internal fun rememberSyncClock(): Long {
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(5_000)
+            now = System.currentTimeMillis()
+        }
+    }
+    return now
 }
 
 /** The card's headline: the current sync step's message while syncing, else "Synced". */

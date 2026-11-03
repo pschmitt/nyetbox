@@ -30,6 +30,7 @@ import dev.pschmitt.nyetbox.ui.search.GlobalSearchScreen
 import dev.pschmitt.nyetbox.ui.settings.LibrariesScreen
 import dev.pschmitt.nyetbox.ui.settings.SettingsCategoryScreen
 import dev.pschmitt.nyetbox.ui.settings.SettingsScreen
+import dev.pschmitt.nyetbox.ui.sync.SyncDiagnosticsScreen
 import dev.pschmitt.nyetbox.ui.sync.SyncSummaryScreen
 import dev.pschmitt.nyetbox.ui.topology.TopologyScreen
 
@@ -407,10 +408,14 @@ fun NetBoxNavHost(
                     navController.navigate(Route.Onboarding) { popUpTo(0) { inclusive = true } }
                 },
                 onShowLibraries = { navController.navigate(Route.Libraries) },
+                onShowSyncDiagnostics = { navController.navigate(Route.SyncDiagnostics) },
             )
         }
         composable<Route.Libraries> {
             LibrariesScreen(onBack = { navController.navigateBackSafely() })
+        }
+        composable<Route.SyncDiagnostics> {
+            SyncDiagnosticsScreen(onBack = { navController.navigateBackSafely() })
         }
         composable<Route.EditConflicts> {
             EditConflictsScreen(onBack = { navController.navigateBackSafely() })

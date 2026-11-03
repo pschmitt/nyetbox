@@ -143,6 +143,7 @@ fun SettingsCategoryScreen(
     onBack: () -> Unit,
     onLoggedOut: () -> Unit,
     onShowLibraries: () -> Unit = {},
+    onShowSyncDiagnostics: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
     printSettingsViewModel: PrintSettingsViewModel = hiltViewModel(),
     backupViewModel: SettingsBackupViewModel = hiltViewModel(),
@@ -157,6 +158,8 @@ fun SettingsCategoryScreen(
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
     val lastSuccessfulSyncAt by viewModel.lastSuccessfulSyncAt.collectAsStateWithLifecycle()
     val syncProgress by viewModel.syncProgress.collectAsStateWithLifecycle()
+    val syncOverview by viewModel.syncOverview.collectAsStateWithLifecycle()
+    val offlineMode by viewModel.settingsRepository.offlineMode.collectAsStateWithLifecycle()
     val isUpdatingBaseUrl by viewModel.isUpdatingBaseUrl.collectAsStateWithLifecycle()
     val cachedDeviceCount by viewModel.cachedDeviceCount.collectAsStateWithLifecycle()
     val cachedObjectCount by viewModel.cachedObjectCount.collectAsStateWithLifecycle()
@@ -503,6 +506,8 @@ fun SettingsCategoryScreen(
                         syncIssue = syncIssue,
                         lastSuccessfulSyncAt = lastSuccessfulSyncAt,
                         syncProgress = syncProgress,
+                        syncOverview = syncOverview,
+                        offlineMode = offlineMode,
                         cachedDeviceCount = cachedDeviceCount,
                         cachedObjectCount = cachedObjectCount,
                         cachedImageCount = cachedImageCount,
@@ -587,6 +592,7 @@ fun SettingsCategoryScreen(
                         onShowObjectTypeColors = { objectTypeColorsDialogVisible = true },
                         onShowHiddenFields = { hiddenFieldsDialogVisible = true },
                         onShowLibraries = onShowLibraries,
+                        onShowSyncDiagnostics = onShowSyncDiagnostics,
                         onSetScannerLens = viewModel::setScannerLens,
                         onSetScannerRearLens = viewModel::setScannerRearLens,
                         onSetScannerResolution = viewModel::setScannerResolution,

@@ -9493,3 +9493,50 @@ Status: **done** (2026-08-15; CI runs 31910324321/31910324373/31910324429 passed
 
 Status: **done**, 2026-10-31 - `ktfmt --dry-run --set-exit-if-changed` clean over all tracked Kotlin
 files, Gradle still configures and compiles on rofl-13 without the plugin, pre-commit hook ran on commit.
+
+## NBC-454: Sync must not be cancelled by Battery Saver / low battery mid-run
+
+Field report (1.5.11, 2026-11-03): sync issue reports full of `Job was cancelled` and
+`Directory discovery failed for <app>: Job was cancelled`, and background sync hadn't run for ~14
+days. Root cause on the reporting phone: Battery Saver triggers at 60%, which Android also uses as
+its "battery low" threshold. Every sync request carried `setRequiresBatteryNotLow(true)`, so
+(a) periodic/startup/manual work never started below 60%, and (b) a running sync was cancelled by
+WorkManager the moment the battery-low broadcast arrived or Battery Saver blocked background network
+after leaving the app. The cancellation was then caught by `runCatching` and recorded as a sync
+failure. `ExistingWorkPolicy.REPLACE` on "Sync now" also cancelled a sync already in progress.
+
+- [x] Drop the `batteryNotLow` WorkManager constraint; `SyncWorker` checks Battery Saver / battery
+      low only when a run starts (non-forced runs retry later), never mid-run
+- [x] Promote a running sync to a foreground service as soon as the app leaves the foreground, so
+      Battery Saver can't cut its network; tolerate `setForeground` being refused
+- [x] Propagate coroutine cancellation through `OfflineSyncRepository`/`DirectoryRepository`
+      instead of recording it as a sync issue; clear progress UI/notification on cancellation
+- [x] "Sync now" keeps a manual sync that is already running instead of replacing (cancelling) it
+- [x] Unit tests; verify on a device with Battery Saver toggled mid-sync and the app backgrounded
+
+Status: **done**, 2026-11-03 - unit tests green on the build host; signed release on the reporting
+Pixel: a background sync with the screen off promoted itself to a foreground service (progress
+notification shown) and finished SUCCESS. Also fixed: Glance 1.2 widget receivers crashing
+`updateAll()` (lateinit injection), which had turned every sync into a WorkManager FAILURE.
+
+## NBC-455: Make sync observable - history, detailed status card, diagnostics
+
+Follow-up to NBC-454: there was no way to tell from the app whether sync works at all (release
+builds log nothing; the status card only knew "Synced"/spinner; a warning-only pass never advanced
+"Last synced").
+
+- [x] Persistent, capped sync history (`SyncHistoryRepository`): trigger, start/end, outcome
+      (succeeded / with warnings / up to date / retrying / failed / waiting / stopped), full vs
+      quick, items, error message, per-step warnings, WorkManager stop reason; deferrals coalesced
+- [x] `SyncRunPolicy`: one documented place for when a sync runs or waits
+- [x] `SyncOverview`: live run + last run + waiting reason + next background sync + raw WorkManager
+      state of every scheduled request
+- [x] Status card (dashboard + settings) shows what sync is doing, why it waits, how/when the last
+      run ended (with its error) and when the next background sync is due, plus a progress bar
+- [x] Sync diagnostics screen (Settings > Sync, and from the dashboard sync dialog): status,
+      policy, scheduled syncs, history with expandable warnings, copy/share report, clear history
+- [x] Unit tests for policy, overview assembly and formatting
+- [x] Verify on device
+
+Status: **done**, 2026-11-03 - unit tests green; reviewed on the Pixel by the user (card trimmed to
+a headline + one line, full detail kept on the diagnostics screen).

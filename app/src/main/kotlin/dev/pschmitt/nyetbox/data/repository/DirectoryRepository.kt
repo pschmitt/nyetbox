@@ -7,6 +7,7 @@ import dev.pschmitt.nyetbox.data.schema.Humanize
 import dev.pschmitt.nyetbox.sync.SyncIssueReporter
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -51,6 +52,8 @@ constructor(
             if (appKey in SKIPPED_ROOT_KEYS) continue
             runCatching { discoverApp(appKey, appUrl, models) }
                 .onFailure {
+                    // A stopped sync is not a discovery failure (NBC-454).
+                    if (it is CancellationException) throw it
                     Timber.w(it, "Failed to discover NetBox app '%s'", appKey)
                     failedApps += appKey
                     syncIssueReporter.report(
@@ -81,7 +84,9 @@ constructor(
             // sidebar group.
             for ((pluginKey, pluginUrl) in appModels) {
                 val pluginModels =
-                    runCatching { api.getUrlMap(relativePath(pluginUrl)) }.getOrNull() ?: continue
+                    runCatching { api.getUrlMap(relativePath(pluginUrl)) }
+                        .onFailure { if (it is CancellationException) throw it }
+                        .getOrNull() ?: continue
                 for ((modelKey, modelUrl) in pluginModels) {
                     addCollectionModel(
                         into = into,
@@ -139,6 +144,9 @@ constructor(
                 val page = api.listObjects(endpointPath, mapOf("limit" to "1", "offset" to "0"))
                 page.results.isEmpty() || page.results.any(JsonObject::hasNumericId)
             }
+            // A cancelled probe must abort discovery, not mark the model as "not a collection" and
+            // leave a partial directory behind (NBC-454).
+            .onFailure { if (it is CancellationException) throw it }
             .getOrDefault(false)
 
     private fun relativePath(url: String): String =

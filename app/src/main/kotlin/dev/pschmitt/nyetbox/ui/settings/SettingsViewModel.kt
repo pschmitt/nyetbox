@@ -24,6 +24,7 @@ import dev.pschmitt.nyetbox.data.repository.ScannerRearLens
 import dev.pschmitt.nyetbox.data.repository.ScannerResolution
 import dev.pschmitt.nyetbox.data.repository.SettingsRepository
 import dev.pschmitt.nyetbox.data.schema.jsonInt
+import dev.pschmitt.nyetbox.sync.SyncOverview
 import dev.pschmitt.nyetbox.sync.SyncProgress
 import dev.pschmitt.nyetbox.sync.SyncScheduler
 import dev.pschmitt.nyetbox.sync.SyncStatusRepository
@@ -92,6 +93,13 @@ constructor(
     // reused here so the Sync settings screen shows one consolidated indicator instead of a bare
     // "Syncing…" label (NBC-334).
     val syncProgress: StateFlow<SyncProgress?> = syncStatusRepository.syncProgress
+
+    val syncOverview: StateFlow<SyncOverview> =
+        syncStatusRepository.overview.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            SyncOverview(),
+        )
 
     val gestureTargets: StateFlow<Map<GestureShortcut, GestureTarget>> =
         settingsRepository.gestureTargets

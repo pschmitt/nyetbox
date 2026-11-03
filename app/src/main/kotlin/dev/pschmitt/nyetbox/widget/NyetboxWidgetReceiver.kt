@@ -2,14 +2,11 @@ package dev.pschmitt.nyetbox.widget
 
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
-import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 
-@AndroidEntryPoint
+/** See [WidgetEntryPoint] for why this doesn't use `@AndroidEntryPoint` field injection. */
 class NyetboxWidgetReceiver : GlanceAppWidgetReceiver() {
 
-    @Inject lateinit var widget: NyetboxGlanceWidget
-
-    override val glanceAppWidget: GlanceAppWidget
-        get() = widget
+    override val glanceAppWidget: GlanceAppWidget by lazy {
+        WidgetEntryPoint.get().nyetboxGlanceWidget()
+    }
 }

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Troubleshoot
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +28,7 @@ import dev.pschmitt.nyetbox.R
 import dev.pschmitt.nyetbox.data.db.NetBoxModelEntity
 import dev.pschmitt.nyetbox.data.db.NetBoxObjectEntity
 import dev.pschmitt.nyetbox.data.repository.*
+import dev.pschmitt.nyetbox.sync.SyncOverview
 import dev.pschmitt.nyetbox.sync.SyncProgress
 import dev.pschmitt.nyetbox.ui.common.RotatingSyncIcon
 import dev.pschmitt.nyetbox.ui.common.SyncIssueCard
@@ -106,6 +108,8 @@ internal data class SettingsCategoryState(
     val syncIssue: SyncIssue?,
     val lastSuccessfulSyncAt: Long? = null,
     val syncProgress: SyncProgress? = null,
+    val syncOverview: SyncOverview = SyncOverview(),
+    val offlineMode: Boolean = false,
     val cachedDeviceCount: Int,
     val cachedObjectCount: Int,
     val cachedImageCount: Int,
@@ -169,6 +173,7 @@ internal data class SettingsCategoryActions(
     val onShowObjectTypeColors: () -> Unit,
     val onShowHiddenFields: () -> Unit,
     val onShowLibraries: () -> Unit = {},
+    val onShowSyncDiagnostics: () -> Unit = {},
     val onSetScannerLens: (ScannerLens) -> Unit,
     val onSetScannerRearLens: (ScannerRearLens) -> Unit,
     val onSetScannerResolution: (ScannerResolution) -> Unit,
@@ -538,10 +543,22 @@ private fun SyncSettingsContent(
             SyncIssueCard(issue, onRetry = actions.onSync, isSyncing = state.isSyncing)
         }
             ?: SyncStatusCard(
+                overview = state.syncOverview,
                 lastSuccessfulSyncAt = state.lastSuccessfulSyncAt,
-                isSyncing = state.isSyncing,
-                syncProgress = state.syncProgress,
+                offlineMode = state.offlineMode,
+                onShowDetails = actions.onShowSyncDiagnostics,
             )
+        // Always reachable, including while the issue card takes the status card's place (NBC-455).
+        SettingsSingleItemCard {
+            SettingsListItem(
+                modifier = Modifier.clickable(onClick = actions.onShowSyncDiagnostics),
+                leadingContent = { Icon(Icons.Default.Troubleshoot, contentDescription = null) },
+                headlineContent = { Text("Sync diagnostics") },
+                supportingContent = {
+                    Text("Sync history, scheduled syncs and why a sync is waiting")
+                },
+            )
+        }
         SettingsGroupCard(title = "Sync policy", icon = Icons.Default.Sync) {
             SettingsToggleItem(
                 checked = state.syncAttachmentsToDisk,

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Troubleshoot
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -54,6 +55,7 @@ fun SyncStatusDetailsDialog(
     cacheSummary: CacheSummary?,
     onSyncNow: () -> Unit,
     onDismiss: () -> Unit,
+    onShowDiagnostics: (() -> Unit)? = null,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -111,6 +113,14 @@ fun SyncStatusDetailsDialog(
                         "Downloaded files",
                         "${cacheSummary.fileCount} (${formatBytes(cacheSummary.bytes)})",
                     )
+                }
+                if (onShowDiagnostics != null) {
+                    Spacer(Modifier.height(8.dp))
+                    TextButton(onClick = onShowDiagnostics) {
+                        Icon(Icons.Default.Troubleshoot, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Sync history & diagnostics")
+                    }
                 }
             }
         },

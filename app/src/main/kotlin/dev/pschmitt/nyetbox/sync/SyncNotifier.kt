@@ -21,6 +21,9 @@ import dev.pschmitt.nyetbox.data.repository.ChangeNotificationEvent
 import dev.pschmitt.nyetbox.data.repository.ReconciliationSummary
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /** Owns the progress and failure notifications for the background WorkManager sync. */
 // Every notification path is guarded by notificationsAllowed(); lint does not infer that helper
@@ -29,7 +32,13 @@ import javax.inject.Singleton
 @Singleton
 class SyncNotifier @Inject constructor(@ApplicationContext private val context: Context) {
 
-    @Volatile private var appInForeground = false
+    private val appInForegroundState = MutableStateFlow(false)
+    private var appInForeground: Boolean
+        get() = appInForegroundState.value
+        set(value) {
+            appInForegroundState.value = value
+        }
+
     @Volatile private var syncActive = false
     @Volatile private var lastProgress: SyncProgress? = null
 
@@ -68,17 +77,29 @@ class SyncNotifier @Inject constructor(@ApplicationContext private val context: 
     /** Whether the app UI is currently visible to the user. */
     fun isAppInForeground(): Boolean = appInForeground
 
+    /**
+     * Observable form of [isAppInForeground], so a running [SyncWorker] can promote itself to a
+     * foreground service the moment the user leaves the app (NBC-454).
+     */
+    val appInForegroundFlow: StateFlow<Boolean> = appInForegroundState.asStateFlow()
+
     /** Called when the app leaves the foreground so active sync progress becomes visible again. */
     fun onAppBackground() {
         appInForeground = false
         if (syncActive) lastProgress?.let(::postProgress)
     }
 
-    /** Builds the foreground notification required for long-running WorkManager syncs. */
+    /**
+     * Builds the foreground notification required for long-running WorkManager syncs. When a sync
+     * is already in progress (promotion after the app was backgrounded mid-run), the notification
+     * keeps showing its current step instead of resetting to [message].
+     */
     fun foregroundInfo(message: String = "Syncing NetBox data…"): ForegroundInfo {
+        val progress =
+            lastProgress?.takeIf { syncActive } ?: SyncProgress(message, step = 0, totalSteps = 1)
         syncActive = true
-        lastProgress = SyncProgress(message, step = 0, totalSteps = 1)
-        val notification = progressNotification(lastProgress!!)
+        lastProgress = progress
+        val notification = progressNotification(progress)
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ForegroundInfo(
                 NOTIFICATION_ID,
@@ -164,6 +185,17 @@ class SyncNotifier @Inject constructor(@ApplicationContext private val context: 
         lastProgress = null
         NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
         if (reconciliation.total > 0) postReconciliation(reconciliation)
+    }
+
+    /**
+     * Clears the progress notification after a run was stopped (cancelled by WorkManager or the OS)
+     * without a result. WorkManager reschedules such a run itself, so there is nothing to report to
+     * the user (NBC-454).
+     */
+    fun notifySyncStopped() {
+        syncActive = false
+        lastProgress = null
+        NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
     }
 
     private fun postProgress(progress: SyncProgress) {

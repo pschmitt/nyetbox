@@ -5,6 +5,8 @@ import androidx.glance.appwidget.updateAll
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
+import timber.log.Timber
 
 /**
  * Single seam every sync/offline-mode-change call site refreshes the widget through, instead of
@@ -19,8 +21,18 @@ constructor(
     private val rackViewWidget: RackViewGlanceWidget,
 ) {
 
+    /**
+     * Best-effort: a widget that can't be refreshed must never turn the sync (or whatever else
+     * called this) into a failure - it did once, NBC-454.
+     */
     suspend fun updateAll() {
-        widget.updateAll(context)
-        rackViewWidget.updateAll(context)
+        try {
+            widget.updateAll(context)
+            rackViewWidget.updateAll(context)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            Timber.w(error, "Widget refresh failed")
+        }
     }
 }

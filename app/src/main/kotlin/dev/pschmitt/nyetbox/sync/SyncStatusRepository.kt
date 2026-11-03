@@ -23,7 +23,12 @@ import kotlinx.coroutines.flow.map
  * (see its `NetworkType.CONNECTED` constraint); observing whether it's running does not.
  */
 @Singleton
-class SyncStatusRepository @Inject constructor(private val workManager: WorkManager) {
+class SyncStatusRepository
+@Inject
+constructor(
+    private val workManager: WorkManager,
+    syncHistoryRepository: SyncHistoryRepository,
+) {
 
     val isSyncing: Flow<Boolean> =
         combine(
@@ -54,4 +59,20 @@ class SyncStatusRepository @Inject constructor(private val workManager: WorkMana
     fun publishProgress(progress: SyncProgress?) {
         _syncProgress.value = progress
     }
+
+    /** Full picture for the sync status card and the diagnostics screen (NBC-455). */
+    val overview: Flow<SyncOverview> =
+        combine(
+            isSyncing,
+            syncProgress,
+            syncHistoryRepository.runs,
+            workManager.getWorkInfosForUniqueWorkFlow(SyncScheduler.PERIODIC_WORK_NAME),
+            combine(
+                workManager.getWorkInfosForUniqueWorkFlow(SyncScheduler.ONE_TIME_WORK_NAME),
+                workManager.getWorkInfosForUniqueWorkFlow(SyncScheduler.STARTUP_WORK_NAME),
+                ::Pair,
+            ),
+        ) { syncing, progress, history, periodic, (manual, startup) ->
+            buildSyncOverview(syncing, progress, history, periodic, manual, startup)
+        }
 }

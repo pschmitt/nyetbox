@@ -30,9 +30,12 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.json.Json
@@ -45,7 +48,23 @@ data class OfflineSyncSummary(
     val genericObjects: Int,
     val durableAttachments: Int,
     val reconciliation: ReconciliationSummary = ReconciliationSummary(),
+    /** True when the pass was skipped because the cache is fresh (NBC-427). */
+    val skipped: Boolean = false,
+    val isFullSync: Boolean = false,
+    /** Non-fatal per-step problems of this pass (NBC-455 sync history). */
+    val warnings: List<String> = emptyList(),
 )
+
+/**
+ * A failed sync pass, carrying the per-step warnings collected before it failed (NBC-455), so the
+ * sync history can show them next to the error. [cause] is the original error.
+ */
+class SyncPassException(
+    message: String?,
+    val warnings: List<String>,
+    val isFullSync: Boolean,
+    cause: Throwable,
+) : Exception(message, cause)
 
 data class SyncProgress(
     val message: String,
@@ -226,7 +245,12 @@ constructor(
             )
         ) {
             return Result.success(
-                OfflineSyncSummary(devices = 0, genericObjects = 0, durableAttachments = 0)
+                OfflineSyncSummary(
+                    devices = 0,
+                    genericObjects = 0,
+                    durableAttachments = 0,
+                    skipped = true,
+                )
             )
         }
         val isFullSyncPass =
@@ -246,6 +270,10 @@ constructor(
         }
 
         fun recordFailure(scope: String, error: Throwable) {
+            // The repositories' runCatching wrappers also catch coroutine cancellation (the worker
+            // being stopped). That is not a sync failure: propagate it so the pass stops right
+            // here instead of logging "<scope>: Job was cancelled" for every remaining step.
+            if (error is CancellationException) throw error
             failureCount.incrementAndGet()
             syncIssueReporter.report(
                 "$scope: ${error.message ?: error::class.simpleName ?: "failed"}"
@@ -492,6 +520,17 @@ constructor(
             )
         }
         val warnings = syncIssueReporter.drain()
+        if (
+            result.exceptionOrNull() is CancellationException || !currentCoroutineContext().isActive
+        ) {
+            // NBC-454: a stopped run (WorkManager constraint change, OS quota, a replacing
+            // request) is rescheduled by WorkManager. Recording it as a sync issue would surface
+            // "Job was cancelled" plus a cascade of per-step warnings for something that isn't
+            // a failure. Drop the warnings collected by this aborted pass and keep the previous
+            // sync status untouched.
+            throw result.exceptionOrNull() as? CancellationException
+                ?: CancellationException("Sync pass cancelled")
+        }
         when {
             result.isFailure ->
                 settingsRepository.recordSyncIssue(
@@ -517,7 +556,14 @@ constructor(
                 )
             }
         }
-        return result
+        return result.fold(
+            onSuccess = {
+                Result.success(it.copy(isFullSync = isFullSyncPass, warnings = warnings))
+            },
+            onFailure = { error ->
+                Result.failure(SyncPassException(error.message, warnings, isFullSyncPass, error))
+            },
+        )
     }
 
     private fun Throwable.isRetryableSyncFailure(): Boolean =
