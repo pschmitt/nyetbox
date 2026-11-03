@@ -105,7 +105,12 @@ constructor(
                     runId,
                     SyncRunOutcome.Stopped,
                     System.currentTimeMillis(),
-                    message = syncStopReasonLabel(stopReason),
+                    message =
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            syncStopReasonLabel(stopReason)
+                        } else {
+                            null
+                        },
                 )
                 throw cancelled
             } finally {

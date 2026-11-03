@@ -95,8 +95,9 @@ internal fun Constraints.requirementLabels(): List<String> = buildList {
         NetworkType.UNMETERED -> add("Unmetered network (Wi-Fi)")
         NetworkType.NOT_ROAMING -> add("Network, not roaming")
         NetworkType.METERED -> add("Metered network")
-        NetworkType.TEMPORARILY_UNMETERED -> add("Temporarily unmetered network")
         NetworkType.NOT_REQUIRED -> Unit
+        // TEMPORARILY_UNMETERED is API 30+; this app never requests it.
+        else -> add("Network")
     }
     if (requiresCharging()) add("Charging")
     if (requiresBatteryNotLow()) add("Battery not low")

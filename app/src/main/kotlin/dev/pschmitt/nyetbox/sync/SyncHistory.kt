@@ -1,6 +1,7 @@
 package dev.pschmitt.nyetbox.sync
 
 import android.content.Context
+import androidx.core.content.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.UUID
 import javax.inject.Inject
@@ -188,10 +189,7 @@ class SyncHistoryRepository @Inject constructor(@ApplicationContext context: Con
         synchronized(lock) {
             val updated = transform(_runs.value).take(MAX_RUNS)
             _runs.value = updated
-            prefs
-                .edit()
-                .putString(KEY_RUNS, json.encodeToString(runListSerializer, updated))
-                .apply()
+            prefs.edit { putString(KEY_RUNS, json.encodeToString(runListSerializer, updated)) }
         }
     }
 
