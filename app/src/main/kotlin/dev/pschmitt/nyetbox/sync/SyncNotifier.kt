@@ -243,15 +243,15 @@ class SyncNotifier @Inject constructor(@ApplicationContext private val context: 
         if (events.isEmpty() || appInForeground || !notificationsAllowed()) return
         val details =
             events.take(MAX_CHANGE_DETAILS).joinToString("\n") {
-                "\${it.actionLabel}: \${it.objectRepr}"
+                "${it.actionLabel}: ${it.objectRepr}"
             } +
                 if (events.size > MAX_CHANGE_DETAILS) {
-                    "\n…and \${events.size - MAX_CHANGE_DETAILS} more"
+                    "\n…and ${events.size - MAX_CHANGE_DETAILS} more"
                 } else {
                     ""
                 }
         val countLabel =
-            if (events.size == 1) "1 matching change" else "\${events.size} matching changes"
+            if (events.size == 1) "1 matching change" else "${events.size} matching changes"
         val openAppIntent =
             Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
