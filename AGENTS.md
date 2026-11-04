@@ -19,7 +19,7 @@ not instead of it.
 ## Builds
 
 - **Never run Gradle builds locally on this machine** - always build on a build host (see the
-  `brkn-infra` skill) instead. The `justfile` automates this:
+  `brkn-infra` skill) instead; for heavy or parallel builds an ad-hoc `rworker` (see the `rworker` skill) is an alternative. The `justfile` automates the shared-host route:
   - `just sync [host]` - rsync the working tree to the remote build host (excludes `.git`,
     `build/`, `.gradle/`). Namespaced per git worktree so parallel agents don't clobber each
     other's remote sync directory mid-build.
