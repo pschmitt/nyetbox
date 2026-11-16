@@ -1,0 +1,18 @@
+name: 'Nyetbox'
+summary: 'Offline-first NetBox companion app with QR/barcode device lookup'
+license: GPL-3.0-only
+categories:
+  - System
+description: |
+  Nyetbox is a native Android companion app for your self-hosted NetBox instance.
+
+  Point the camera at the QR/barcode sticker on a physical device (the same sticker that links to
+  its public NetBox URL, e.g. https://netbox.example.com/dcim/devices/393/) and jump straight to
+  that device's details - status, site, rack, role, manufacturer/model, serial, asset tag, and
+  primary IP.
+
+  The device inventory is cached locally, so browsing and searching your devices works even
+  without connectivity in the server room. Cached data syncs automatically in the background and on
+  pull-to-refresh.
+
+  To use this app you need your own NetBox instance and an API token.
