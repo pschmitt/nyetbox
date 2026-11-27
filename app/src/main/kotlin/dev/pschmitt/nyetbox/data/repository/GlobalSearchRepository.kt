@@ -166,10 +166,10 @@ fun recentVisitsToSearchHits(visits: List<RecentVisitEntity>): List<SearchHit> =
  * on top of the cache, not a parallel live-only path.
  *
  * NetBox has no global-search REST endpoint to call into for the refresh step - confirmed against
- * the real instance (netbox.brkn.lol, NetBox 4.5): `GET /api/extras/` lists no `search` key, `GET
- * /api/extras/search/` 404s, and the full `/api/schema/` OpenAPI document has zero paths containing
- * "search". What *does* work, also confirmed live: NetBox's per-model list endpoints accept a
- * free-text `?q=<term>` filter - used here as the refresh mechanism.
+ * the real instance (netbox.example.com, NetBox 4.5): `GET /api/extras/` lists no `search` key,
+ * `GET /api/extras/search/` 404s, and the full `/api/schema/` OpenAPI document has zero paths
+ * containing "search". What *does* work, also confirmed live: NetBox's per-model list endpoints
+ * accept a free-text `?q=<term>` filter - used here as the refresh mechanism.
  */
 @OptIn(kotlinx.coroutines.FlowPreview::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @Singleton

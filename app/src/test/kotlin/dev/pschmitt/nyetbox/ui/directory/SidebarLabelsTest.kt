@@ -7,8 +7,8 @@ class SidebarLabelsTest {
     @Test
     fun `displays hostname from https URL`() {
         assertEquals(
-            "netbox.brkn.lol",
-            displayNetBoxHostname("https://netbox.brkn.lol/"),
+            "netbox.example.com",
+            displayNetBoxHostname("https://netbox.example.com/"),
         )
     }
 

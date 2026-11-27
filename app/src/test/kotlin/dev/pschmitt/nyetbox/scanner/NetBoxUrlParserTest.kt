@@ -12,7 +12,7 @@ class NetBoxUrlParserTest {
     fun `parses device id from full url with trailing slash`() {
         assertEquals(
             NetBoxTarget.Device(393),
-            NetBoxUrlParser.parse("https://netbox.brkn.lol/dcim/devices/393/"),
+            NetBoxUrlParser.parse("https://netbox.example.com/dcim/devices/393/"),
         )
     }
 
@@ -20,7 +20,7 @@ class NetBoxUrlParserTest {
     fun `parses device id from url without trailing slash`() {
         assertEquals(
             NetBoxTarget.Device(393),
-            NetBoxUrlParser.parse("https://netbox.brkn.lol/dcim/devices/393"),
+            NetBoxUrlParser.parse("https://netbox.example.com/dcim/devices/393"),
         )
     }
 
@@ -88,7 +88,7 @@ class NetBoxUrlParserTest {
     fun `parses a non-device object url into its endpoint path and id`() {
         assertEquals(
             NetBoxTarget.Object("api/dcim/racks/", 12),
-            NetBoxUrlParser.parse("https://netbox.brkn.lol/dcim/racks/12/"),
+            NetBoxUrlParser.parse("https://netbox.example.com/dcim/racks/12/"),
         )
     }
 
@@ -96,7 +96,7 @@ class NetBoxUrlParserTest {
     fun `parses an ipam object url`() {
         assertEquals(
             NetBoxTarget.Object("api/ipam/prefixes/", 7),
-            NetBoxUrlParser.parse("https://netbox.brkn.lol/ipam/prefixes/7/"),
+            NetBoxUrlParser.parse("https://netbox.example.com/ipam/prefixes/7/"),
         )
     }
 
@@ -113,7 +113,7 @@ class NetBoxUrlParserTest {
 
     @Test
     fun `does not treat urls or numeric ids as asset tags`() {
-        assertNull(NetBoxUrlParser.parseAssetTag("https://netbox.brkn.lol/dcim/devices/393/"))
+        assertNull(NetBoxUrlParser.parseAssetTag("https://netbox.example.com/dcim/devices/393/"))
         assertNull(NetBoxUrlParser.parseAssetTag("393"))
         assertNull(NetBoxUrlParser.parseAssetTag("not a netbox url"))
     }

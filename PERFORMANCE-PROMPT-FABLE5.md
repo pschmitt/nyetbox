@@ -132,7 +132,7 @@ apply in full, and live testing may well turn up something none of these five pr
 **Do real, hands-on performance testing on the physical devices — this is expected, not optional
 if a device is reachable.** Nyetbox is already installed on both:
 
-- **Mi Pad 4** (SSH at `mi-pad-4.lan:8022`, via `just mipad-connect` then the `mipad-*` recipes) —
+- **Mi Pad 4** (SSH at `$MIPAD_HOST:8022`, via `just mipad-connect` then the `mipad-*` recipes) —
   **this is by far the slowest device the project has, and therefore the most important one.** If
   the app is smooth here, it's smooth everywhere; if it's sluggish anywhere, it'll show up worst
   here. Prioritize it as your primary test target.
@@ -140,7 +140,7 @@ if a device is reachable.** Nyetbox is already installed on both:
   (`just zenfone-logcat`, `just zenfone-install`, etc.). Use it as a faster secondary device to
   confirm whether a given jank source is universal or specific to weaker hardware.
 
-**Do not touch the Pixel 5 (`px5.lan`) without asking first.** It's also reachable via
+**Do not touch the Pixel 5 (`$PX5_HOST`) without asking first.** It's also reachable via
 `just px5-connect`/`px5-*` and has the app installed, but it's the user's actual daily-driver
 phone — it may be in active use (in their pocket, on their lap, mid-call) when you'd run adb
 against it. Any `px5-*` recipe (install, uninstall, logcat, an interactive shell, anything that

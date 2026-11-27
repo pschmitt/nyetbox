@@ -116,7 +116,7 @@ UI/UX thing" as a live possibility, not a certainty either way.
 Prioritize the **Mi Pad 4** (SSH via `just mipad-connect`, then `mipad-*` recipes — by far the
 weakest/slowest device, and also whichever network it's on is worth checking for
 metered/cellular-like conditions) and the **Zenfone 10** (wired USB, `zenfone-*` recipes, no
-discovery step). **Do not touch the Pixel 5 (`px5.lan`) without asking first, every time** — it's
+discovery step). **Do not touch the Pixel 5 (`$PX5_HOST`) without asking first, every time** — it's
 the user's actual daily-driver phone and may be in active use; only bring it in if you have a
 specific reason the other two can't cover, and ask before any `px5-*` command.
 

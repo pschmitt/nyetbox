@@ -838,7 +838,7 @@ Status: **done**, 2026-08-05 - remote compilation, instrumentation tests (Androi
 CI), and debug installation on Zenfone 10, Mi Pad 4, and Pixel 5 passed. Verified on the Zenfone
 10 that the per-model sync loop runs concurrently (interleaved requests to different endpoints
 within milliseconds of each other) and that the second sync after upgrade uses
-`last_updated__gte` (confirmed via logcat against the real netbox.brkn.lol instance); the very
+`last_updated__gte` (confirmed via logcat against the real netbox.example.com instance); the very
 first sync after upgrade is necessarily a full fetch since pre-existing cached rows have no
 `lastUpdated` watermark yet, which is expected. Tagged 1.4.0.
 
@@ -894,7 +894,7 @@ Obtainium distribution.
 
 - [x] Public GitHub repo (pschmitt/nyetbox), GPL-3.0
 - [x] flake.nix (JDK 21, Android SDK, just, ktfmt, git-hooks pre-commit)
-- [x] justfile (remote build on rofl-13/rofl-14, install to Zenfone 10 / Mi Pad 4, logcat, format/lint)
+- [x] justfile (remote build on the remote build host, install to Zenfone 10 / Mi Pad 4, logcat, format/lint)
 - [x] Gradle project skeleton (single `:app` module, AGP/Kotlin/KSP/Hilt wiring, version catalog)
 - [x] AndroidManifest, Material 3 theme + splash screen, adaptive launcher icon, deep-link intent-filter
 - [x] NetBox API client (Retrofit + kotlinx.serialization, dynamic base URL, token auth) + Room offline cache
@@ -914,7 +914,7 @@ Known follow-ups (not blocking, tracked here for the next session):
   this MVP.
 
 Status: **done** (MVP), 2026-07-31. Verified via `just build`/`just lint`/`just test` on
-rofl-14.brkn.lol, installed and smoke-tested (launches without crashing, onboarding screen
+$ANDROID_REMOTE_HOST, installed and smoke-tested (launches without crashing, onboarding screen
 renders correctly) on both the Zenfone 10 (USB) and Mi Pad 4 (SSH/adb).
 
 Post-merge CI was actually broken (`material-icons-extended` pinned to a nonexistent version,
@@ -1002,13 +1002,13 @@ client instead of the plain one, so this never shipped as a live bug.
 The durable offline-asset pass now stores image/document bytes under `filesDir` when the Settings
 toggle is enabled, and all image/document views prefer those local files before using the network.
 
-`just build`/`just lint`/`just test` all green on rofl-14. Installed on all three physical
+`just build`/`just lint`/`just test` all green on $ANDROID_REMOTE_HOST. Installed on all three physical
 devices (Zenfone 10, Mi Pad 4, Pixel 5) via `just deploy-all` - app launches cleanly on all three,
 no crashes in logcat. Confirmed via the Mi Pad 4's logcat that the app issues the expected new
 requests against the real instance (`GET .../api/dcim/devices/...`, followed by what would be the
 new device-type/image-attachment calls once a device list loads) using the real configured host.
 
-**Not independently confirmed:** actual image rendering against live data. netbox.brkn.lol was
+**Not independently confirmed:** actual image rendering against live data. netbox.example.com was
 flapping during this session's verification pass (HTTPS alternating between a 10s+ TLS-handshake
 timeout and a 502 from its reverse proxy, confirmed via direct `curl` from outside the app too) -
 an existing infrastructure issue unrelated to this change, not something introduced by it. Revisit
@@ -1110,14 +1110,14 @@ Follow-up noted during/after this landed:
   the existing generic detail screens. The typed cache persists the related IDs while retaining
   its proven device-specific rendering; full migration to the generic renderer remains optional.
 - [x] Live verification - the Mi Pad 4 is logged into the user's real NetBox instance
-  (netbox.brkn.lol). Confirmed against real data: directory discovery correctly builds the full
+  (netbox.example.com). Confirmed against real data: directory discovery correctly builds the full
   sidebar tree (Circuits/Core/... groups, each with all their models, pin stars working), the
   generic list screen shows real synced objects (e.g. Provider Accounts), the generic detail
   screen renders real fields including a tappable Provider reference that navigates correctly,
   and Comments fields showing raw Markdown (`` `code` `` spans etc. as literal text) - confirms
   NBC-12 is a real, visible gap, not a hypothetical one.
 
-Status: **done**, 2026-07-31. `just build`/`just test`/`just lint` green on rofl-14; installed,
+Status: **done**, 2026-07-31. `just build`/`just test`/`just lint` green on $ANDROID_REMOTE_HOST; installed,
 launched without crashing, and live-verified against the real NetBox instance on the Mi Pad 4
 (directory discovery, generic list, generic detail with reference-following all confirmed working
 against real data) - also installed cleanly on the Zenfone 10 and Pixel 5.
@@ -1150,14 +1150,14 @@ sync sweep stores them durably, so the plugin needs no special API code for ordi
   generic renderer handles the observed detail payload.
 - [x] Add a regression fixture for the observed `netbox-documents` detail shape.
 
-Status: **done**, 2026-07-31 - live read-only API audit against netbox.brkn.lol, focused renderer
+Status: **done**, 2026-07-31 - live read-only API audit against netbox.example.com, focused renderer
 test, and the existing remote lint/test/build validation confirm generic list/detail, media opening,
 and durable offline copies cover this plugin without special-case code.
 
 ## NBC-8: App Links for the user's NetBox domain + deep link to specific object views
 
 Register Android App Link (domain-verified, not just the generic non-verified intent-filter from
-NBC-1) for the user's actual NetBox host so tapping e.g. `https://netbox.brkn.lol/dcim/devices/393/`
+NBC-1) for the user's actual NetBox host so tapping e.g. `https://netbox.example.com/dcim/devices/393/`
 anywhere opens the app directly (no chooser prompt), and extend beyond devices to open directly
 into whatever object type the link points at (device-type, rack, site, etc. - depends on NBC-6).
 
@@ -1165,7 +1165,7 @@ into whatever object type the link points at (device-type, rack, site, etc. - de
 this to work for more than just devices.
 **How to apply:** proper Android App Links need a `.well-known/assetlinks.json` served from the
 NetBox host itself (or a reverse proxy in front of it) for domain verification - that's
-infrastructure outside this repo (on brkn.lol's web server config), not just an app-side change.
+infrastructure outside this repo (on the author's web server config), not just an app-side change.
 The existing NBC-1 intent-filter (host="*", no autoVerify) still covers the "Open with" chooser
 path for any host in the meantime.
 
@@ -1174,7 +1174,7 @@ path for any host in the meantime.
   (dcim/ipam/circuits/tenancy/virtualization/wireless/vpn/extras/plugins), not just
   `/dcim/devices/`. Non-device links now resolve to the NBC-6 generic detail screen.
 - [x] Add an exact-host `android:autoVerify` filter whose host is a compile-time setting (defaults
-  to `netbox.brkn.lol`; override with `-PnetboxAppLinkHost=...` or `NETBOX_APP_LINK_HOST`); the
+  to `netbox.example.com`; override with `-PnetboxAppLinkHost=...` or `NETBOX_APP_LINK_HOST`); the
   wildcard chooser filter remains available for other configured NetBox instances.
 - [x] Publish the matching `/.well-known/assetlinks.json` on the NetBox host with the release
   certificate fingerprint.
@@ -1221,7 +1221,7 @@ power user would want to see first.
 RSS feed as an optional dashboard enhancement; it is cached locally and never receives the user's
 NetBox URL or API token.
 
-**Confirmed against the real instance (netbox.brkn.lol, NetBox 4.5.10) before writing any code:**
+**Confirmed against the real instance (netbox.example.com, NetBox 4.5.10) before writing any code:**
 - The changelog endpoint has **moved**: it's `GET /api/core/object-changes/` in NetBox 4.x, not
   `/api/extras/object-changes/` as the original ask assumed (that was true pre-4.0) - `extras`'s own
   app root (`GET /api/extras/`) doesn't list it at all; `GET /api/core/` does. Shape: paginated,
@@ -1361,7 +1361,7 @@ lives under - the sidebar's search (NBC-6) only filters the *list of sections/ca
 name, it doesn't search object data itself.
 
 **Investigated first, per this entry's own note not to blindly trust the `/api/extras/search/`
-guess:** checked the real instance (netbox.brkn.lol, NetBox 4.5) directly - `GET /api/extras/`'s
+guess:** checked the real instance (netbox.example.com, NetBox 4.5) directly - `GET /api/extras/`'s
 own root listing has no `search` key, `GET /api/extras/search/` itself 404s, and the full
 `/api/schema/` OpenAPI document has zero paths containing "search". So there is no global-search
 REST endpoint on this NetBox version - the TODO's original guess doesn't hold. Confirmed the
@@ -1430,11 +1430,11 @@ of pagination-only), merge, sort by display name.
 - [x] Results now rank exact display matches, display prefixes, display substrings, and secondary
   field matches before deterministic alphabetical tie-breaking; duplicate cache hits are removed.
 
-Status: **done**, 2026-07-31. `just build`/`just lint`/`just test` all green on rofl-13
+Status: **done**, 2026-07-31. `just build`/`just lint`/`just test` all green on $ANDROID_REMOTE_HOST
 (lint re-verified with `--rerun-tasks` to rule out a stale up-to-date cache hit) both before and
 after the cache-first rework above; ranking and cancellation have focused unit coverage. Live API
 verification of the underlying approach (no global-search endpoint exists; `?q=` works on per-model
-endpoints) *was* done directly against the real netbox.brkn.lol instance via `curl`, see above.
+endpoints) *was* done directly against the real netbox.example.com instance via `curl`, see above.
 
 ## NBC-14: UI polish batch (sidebar, comments, custom fields, share, scanner)
 
@@ -1504,8 +1504,8 @@ via `CommentCard` (NBC-12/14) with a kind icon (info/success/warning/danger, usi
 already wired in via the extended icon set) + timestamp header. Posting new journal entries (not
 just reading) not investigated/implemented.
 
-Status: **done**, 2026-07-31. `just test`/`just lint` green on rofl-14. Live-verified end-to-end on
-the Mi Pad 4 once netbox.brkn.lol's outage (NBC-18) resolved: navigated to the real "Office light
+Status: **done**, 2026-07-31. `just test`/`just lint` green on $ANDROID_REMOTE_HOST. Live-verified end-to-end on
+the Mi Pad 4 once netbox.example.com's outage (NBC-18) resolved: navigated to the real "Office light
 (retired)" device, tapped the Journal tab, and its real warning-kind entry rendered correctly -
 kind icon, timestamp, and the full Markdown body (headers, bullets, inline code spans) via
 `CommentCard`.
@@ -1531,7 +1531,7 @@ complete/correct and must not be re-prefixed) into `cacheDir/downloads/`, then
 `FileProvider`/`res/xml/file_paths.xml`. Plain (non-media) http(s) fields instead render as
 `FieldRow.ExternalLink` and open in the browser.
 
-Status: **done**, 2026-07-31. `just test`/`just lint`/`just build` green on rofl-14; installed on
+Status: **done**, 2026-07-31. `just test`/`just lint`/`just build` green on $ANDROID_REMOTE_HOST; installed on
 Mi Pad 4 and Pixel 5; live-verified end-to-end against the real instance - opened a real
 netbox-documents PDF (LG monitor dismantling instructions) from the "Documents" section, confirmed
 the natural Android "Open with" chooser appears (multiple PDF-capable apps installed) and the PDF
@@ -1576,7 +1576,7 @@ appropriate toast message if we are in the app. Maybe even retries."
 **Slice 1 (this pass):** `SettingsRepository.syncAttachmentsToDisk` pref + `SettingsScreen` switch
 row (off by default, doesn't yet do anything downstream - the actual attachment-download sweep is
 still slice 2, deliberately deferred: it needs live testing against real cached data to be sure the
-walk/download/dedup logic actually behaves, and netbox.brkn.lol is unreachable this session - see
+walk/download/dedup logic actually behaves, and netbox.example.com is unreachable this session - see
 NBC-18). `SettingsViewModel.syncNow()` now surfaces `deviceRepository.syncAll()` failures via a
 Snackbar instead of discarding the `Result` (was previously silent - the concrete gap the "handle
 sync errors" request was pointing at for the one sync path already wired to the UI).
@@ -1608,7 +1608,7 @@ around it, rather than the user seeing nothing until the network call resolves o
 
 **Why:** user request - "if the server is down at app launch we really should be displaying the
 offline cache we have and not just fail." Directly hit this live while verifying NBC-15: this
-session's network lost the route to netbox.brkn.lol entirely partway through (confirmed via a raw
+session's network lost the route to netbox.example.com entirely partway through (confirmed via a raw
 `curl` timeout to the instance from both the dev host and the Mi Pad 4 over SSH, not an app bug),
 which is exactly the scenario this todo describes.
 **How to apply:** most of this may already work as intended - `DeviceListViewModel.devices` and
@@ -1677,12 +1677,12 @@ just re-reasoning about it. No production code changes were made for this entry.
 the Room-`Flow`-first / `refresh()`-as-side-effect shape and that no failure path clears or
 replaces cached rows before a successful network response lands. It is **not** a live
 device/network test: there was no way in this session to physically kill connectivity mid-run
-against a populated cache (same limitation the original entry hit with the netbox.brkn.lol
+against a populated cache (same limitation the original entry hit with the netbox.example.com
 outage). A real device check - populate the cache, then kill/blackhole the route to the NetBox
 instance and confirm each screen still renders its last-synced data with only a non-blocking
 error/snackbar - is still owed next time a device and a controllable network are both available.
 
-**Live device attempt (separate, concurrent session):** with netbox.brkn.lol's outage resolved,
+**Live device attempt (separate, concurrent session):** with netbox.example.com's outage resolved,
 a populated cache (382 real devices) was available to actually test this against - but the
 attempt was aborted before producing a result: disabling WiFi on the Mi Pad 4 to simulate offline
 severed its only remote-control path too (wireless adb depends on the same WiFi), and it was only
@@ -1721,10 +1721,10 @@ uses, so a given NetBox object type reads with the same icon in both places). Ad
 conventions" section to `AGENTS.md` codifying the icon-everywhere rule for future work, including
 pointing at `AppIcons.forAppKey` as the thing to reuse rather than picking new icons ad hoc.
 
-Status: **done**, 2026-07-31. `just test`/`just lint` green on rofl-14; installed on the Mi Pad 4
+Status: **done**, 2026-07-31. `just test`/`just lint` green on $ANDROID_REMOTE_HOST; installed on the Mi Pad 4
 and visually confirmed (Settings screen icons, Onboarding "Connect" button icon) - screenshots
 match the intended layout with no crash. Installed on Pixel 5 too; Zenfone 10 not reachable this
-session. Mi Pad 4 was reconnected once netbox.brkn.lol's outage resolved.
+session. Mi Pad 4 was reconnected once netbox.example.com's outage resolved.
 
 ## NBC-20: tap an image to view it full-size with pinch/swipe zoom
 
@@ -1772,7 +1772,7 @@ friendlier paraphrase (this app should read like a faithful NetBox companion).
       from "Photos" to "Image attachments" since it's directly in this feature's path (left the
       Kotlin identifiers `deviceTypePhotos`/`imageAttachmentRow` themselves alone, out of scope).
 
-**Real `extras.ImageAttachment` API shape** (confirmed live against netbox.brkn.lol, not guessed):
+**Real `extras.ImageAttachment` API shape** (confirmed live against netbox.example.com, not guessed):
 `id`, `url`, `display` (server-derived filename when `name` is blank), `object_type`, `object_id`,
 `parent`, `name`, `image`, `description`, `image_height`, `image_width`, `created`, `last_updated`.
 No `size` (bytes) or `content_type` field exists on this serializer at all - the TODO's original
@@ -1792,7 +1792,7 @@ smaller reuse of the same `ImageViewerDialog`, not a separate feature.
 
 **How it landed:** new `ui/common/ImageViewerDialog.kt` - `ImageViewerDialog(items: List<ImageViewerItem>, initialIndex, onDismiss)`, deliberately decoupled from `ImageAttachmentEntity` (an `ImageViewerItem` is just a URL + title + optional metadata rows) so it covers both the image-attachment row and the device-type front/rear photos with one composable. A plain `Dialog` (`usePlatformDefaultWidth = false`) hosts a `Column` of `HorizontalPager` (image area) + a metadata panel below; the pager's `userScrollEnabled` and the outer vertical dismiss-drag detector are both gated off a shared `isZoomed` flag so pinch-zoom, page-swipe, and swipe-to-dismiss don't fight each other - custom pinch/pan gesture detector (`detectZoomPan`, built on `awaitEachGesture`/`calculateZoom`/`calculatePan` from `androidx.compose.foundation.gestures`) only consumes pointer events while actually zoomed or mid-pinch, leaving a plain single-finger drag at 1x scale unconsumed so it bubbles up to the pager/dismiss-drag instead. Swipe-to-dismiss uses `detectVerticalDragGestures` + an `Animatable` (snap while dragging, `animateTo(0f)` spring-back if released under the 120dp threshold) plus a background-scrim fade tied to drag distance; an explicit `Close` `IconButton` (Material icon, per AGENTS.md) is also always present. `DeviceDetailScreen.kt`'s `imageAttachmentRow`/`deviceTypePhotos` now build `ImageViewerItem` lists and open the dialog on tap (`clickableIfUrl` removed entirely, no longer used); `ImageAttachmentDto`/`ImageAttachmentEntity`/`ImageAttachmentRepository` extended with `display`, `description`, `imageHeight`, `imageWidth`, `created`, `lastUpdated` (Room DB version bumped 4 -> 5, fine under the existing `fallbackToDestructiveMigration`) to actually carry the metadata shown. Device list row thumbnails (`DeviceListScreen.DeviceRow`) intentionally untouched - still no click handler, per NBC-3's original call that the list row probably shouldn't open a viewer.
 
-Status: **done**, 2026-07-31. `just build`/`just lint`/`just test` all green on rofl-13 (only
+Status: **done**, 2026-07-31. `just build`/`just lint`/`just test` all green on $ANDROID_REMOTE_HOST (only
 pre-existing unrelated deprecation warnings, e.g. `hiltViewModel`/`EncryptedSharedPreferences`).
 **Not verified this session:** the actual pinch/pan/swipe-to-dismiss/horizontal-page-swipe gesture
 feel on a real device or emulator - no physical device was available in this session (this worktree
@@ -1819,7 +1819,7 @@ top bar. The bound `Camera` object (from `ProcessCameraProvider.bindToLifecycle`
 features) is threaded out of `CameraPreview`'s `AndroidView` factory via a new `onCameraReady`
 callback into `ScannerScreen`'s Compose state.
 
-Status: **done**, 2026-07-31. `just test`/`just lint` green on rofl-14 (zero warnings beyond the
+Status: **done**, 2026-07-31. `just test`/`just lint` green on $ANDROID_REMOTE_HOST (zero warnings beyond the
 two pre-existing unrelated deprecations); installed on Mi Pad 4 and Pixel 5. Live-verified on the
 Mi Pad 4 once reconnected: camera preview renders live video, tapping the preview to focus doesn't
 crash (checked logcat directly), and the flashlight button correctly does NOT appear - this tablet
@@ -1908,7 +1908,7 @@ existing test suite only covers plain-Kotlin logic (`NetBoxUrlParserTest`,
 `GenericFieldRendererTest`, `EditableFieldTest`). Left as a follow-up rather than bringing in new
 test infra as a side effect of this task.
 
-Status: **done**, 2026-07-31 - `just build`/`just lint`/`just test` all green on rofl-14. Not
+Status: **done**, 2026-07-31 - `just build`/`just lint`/`just test` all green on $ANDROID_REMOTE_HOST. Not
 verified on a physical device this session (no device was reachable to confirm the indicator
 actually renders live or that a real background-sync-failure `Notification` fires and looks right
 in the tray) - reasoned through the WorkManager/Notification APIs and matched existing in-repo
@@ -1946,7 +1946,7 @@ authenticate - NetBox 4.x tokens use a "token pepper" scheme where the full secr
 `nbp_<TOKEN_NAME>.<KEY>`, and the REST API's `key` field on a `Token` object only ever returns the
 raw `<KEY>` suffix, never the full prefixed value - the complete secret is shown exactly once, in
 the web UI, at creation time (the API's own `token` field comes back `null` even for a token you
-just created for yourself, confirmed live against netbox.brkn.lol). User's framing: "A little
+just created for yourself, confirmed live against netbox.example.com). User's framing: "A little
 button to display the current api token on the login page would be a great start."
 **How to apply:** the app can only ever show back what NetBox already gave *this* app instance when
 it was first configured (`SettingsRepository`'s stored `token` - EncryptedSharedPreferences, already
@@ -1965,7 +1965,7 @@ stays inaccessible.
 
 Follow-up, same thread: added a placeholder (not label) on `OnboardingScreen`'s API token field
 showing the real format, `nbt_xxxxxxxxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` - confirmed
-against netbox.brkn.lol's actual `Token` model source (`TOKEN_PREFIX = 'nbt_'`,
+against netbox.example.com's actual `Token` model source (`TOKEN_PREFIX = 'nbt_'`,
 `TOKEN_KEY_LENGTH = 12`, `TOKEN_DEFAULT_LENGTH = 40`) while debugging why a REST-API-created token
 wouldn't authenticate (see below) - the user's own recollection of the prefix was "nbp_", the actual
 constant is "nbt_".
@@ -1981,7 +1981,7 @@ this instance for v2 tokens (confirmed live) - the app's `AuthInterceptor` hardc
 which is fine, no change needed there.
 
 Status: **done**, 2026-07-31 - verified with remote `just lint`, `just test`, and `just build` on
-rofl-13; biometric/device-credential behavior was code-reviewed but not exercised on a physical
+$ANDROID_REMOTE_HOST; biometric/device-credential behavior was code-reviewed but not exercised on a physical
 device in this session.
 
 ## NBC-26: narrower sidebar + real app icon in the footer
@@ -2039,7 +2039,7 @@ search. Needs its own look at how NBC-13 actually shipped (this session didn't b
 concurrent session did) before deciding.
 
 Status: **done**, 2026-07-31 - verified with the generic renderer unit tests plus remote `just lint`,
-`just test`, and `just build` on rofl-13.
+`just test`, and `just build` on $ANDROID_REMOTE_HOST.
 
 ## NBC-28: real app icon on the onboarding screen + dashboard stat-card overflow fix
 
@@ -2082,7 +2082,7 @@ way NBC-15's Journal tab and NBC-16's file attachments did. Worth deciding which
 option (b) also happens to be the fix for NBC-30 below, for the same reason.
 
 Status: **done**, 2026-07-31 - verified with the generic renderer unit test, remote `just lint`,
-`just test`, and `just build` on rofl-13, plus a live Mi Pad 4 device-type detail screenshot showing
+`just test`, and `just build` on $ANDROID_REMOTE_HOST, plus a live Mi Pad 4 device-type detail screenshot showing
 the un-cropped front image.
 
 ## NBC-30: device/item title belongs in the page body, not the top app bar
@@ -2127,7 +2127,7 @@ free-text descriptions).
 - [x] Added coverage for serial, asset tag, primary IP, and non-copyable fields.
 
 Status: **done**, 2026-07-31 - verified with the generic renderer unit tests plus remote `just lint`,
-`just test`, and `just build` on rofl-13.
+`just test`, and `just build` on $ANDROID_REMOTE_HOST.
 
 ## NBC-32: detect and resolve edit conflicts (offline edit vs. server-side change)
 
@@ -2271,7 +2271,7 @@ screen) renders its own front/rear images and apply the same `contentScale = Con
 - [x] Added renderer coverage for both device-type image fields.
 
 Status: **done**, 2026-07-31 - verified with the generic renderer unit test plus remote `just lint`,
-`just test`, and `just build` on rofl-13; visual rendering was not exercised on a physical device
+`just test`, and `just build` on $ANDROID_REMOTE_HOST; visual rendering was not exercised on a physical device
 in this session.
 
 ## NBC-39: Settings screen has no way to change the configured NetBox server
@@ -2313,7 +2313,7 @@ repository wraps "clear everything") so no stale cross-server data lingers. The 
 dismisses immediately on Save rather than waiting for validation to finish, matching how every
 other async action on this screen already surfaces its result via Snackbar, not an inline spinner.
 
-Status: **done**, 2026-07-31. `just build`/`just lint`/`just test` all green on rofl-13; the Mi Pad 4
+Status: **done**, 2026-07-31. `just build`/`just lint`/`just test` all green on $ANDROID_REMOTE_HOST; the Mi Pad 4
 now also visually verifies the Settings edit affordance and pre-filled server dialog without
 changing the configured production server. The save path remains cache-clearing and revert-safe
 as documented above.
@@ -2329,7 +2329,7 @@ which failed the *entire* PATCH regardless of what the user meant to change).
 
 **Why:** user report - "edit does not seem to work at all atm?", narrowed down live (with real
 device access and log capture) to specifically device-type edits, confirmed via a live PATCH
-against netbox.brkn.lol/api/dcim/device-types/244/ returning HTTP 400 with exactly that message.
+against netbox.example.com/api/dcim/device-types/244/ returning HTTP 400 with exactly that message.
 Same thread, a sharp follow-up catch from the user comparing NetBox's own before/after change-log
 diff: "shouldnt our edits also ONLY include the stuff we changed? might be worth-while to compute
 the diff and only send that" - the *actual* root cause and the better fix, not just a band-aid for
@@ -2423,7 +2423,7 @@ rule out a stale cache hit).
 ## NBC-43: shorten displayed URL values
 
 Absolute URLs in generic object fields repeat the configured scheme and host, making otherwise
-useful paths hard to scan (for example, display `https://netbox.brkn.lol/dcim/device-types/244/`
+useful paths hard to scan (for example, display `https://netbox.example.com/dcim/device-types/244/`
 as `/dcim/device-types/244/`). Keep the full URL for opening/sharing; shorten only its visible
 label.
 
@@ -2938,7 +2938,7 @@ device-type match should also surface the devices using that type.
 - [x] Verify the expanded result set and offline behavior on a physical device.
 
 Status: **done**, 2026-08-01 - remote lint/tests passed; installed on Zenfone 10, Mi Pad 4, and
-PX5. Mi Pad 4 search for `10.5.0.5` returned both the cached IP row and matching device result;
+PX5. Mi Pad 4 search for `192.0.2.5` returned both the cached IP row and matching device result;
 MAC matching uses the cached raw JSON path and device-type matches expand through the typed cache.
 
 ## NBC-84: reduce app icon and splash artwork scale
@@ -3800,7 +3800,7 @@ MAC address, not only the device name or other primary text.
 
 Status: **done**, 2026-08-01 - remote lint, unit tests, and debug build passed; the Mi Pad 4
 returned Aranet4 Home for cached MAC `F5:97:0D:6C:3C:BA` and turris for cached IP
-`10.5.0.1/22`. APK installed update-in-place on Zenfone 10, Mi Pad 4, and PX5.
+`192.0.2.1/22`. APK installed update-in-place on Zenfone 10, Mi Pad 4, and PX5.
 
 ## NBC-149: show object-type badges in global search
 
@@ -4182,7 +4182,7 @@ The sidebar should display only the configured NetBox hostname, without the URL 
 - [x] Verify the shortened display works for HTTP and HTTPS URLs.
 
 Status: **done**, 2026-08-01 - remote ktfmt/unit tests and a clean debug build passed; focused
-HTTP/HTTPS hostname tests passed, and Mi Pad 4 showed `netbox.brkn.lol` in the sidebar while
+HTTP/HTTPS hostname tests passed, and Mi Pad 4 showed `netbox.example.com` in the sidebar while
 the app remained connected to the configured full URL. APK installed update-in-place on Zenfone
 10, Mi Pad 4, and PX5.
 
@@ -5043,7 +5043,7 @@ should expose an edit action with the same kind/comments form.
       Mi Pad 4 opened the device overflow and add-entry editor, while the focused unit suite covers
       the cached edit base. No existing journal entry was available on the test device to edit.
 
-Status: **done**, 2026-08-02; `just test rofl-14.brkn.lol` passed, the debug APK was deployed to
+Status: **done**, 2026-08-02; `just test $ANDROID_REMOTE_HOST` passed, the debug APK was deployed to
 all three devices, and the editor/menu were inspected on the Mi Pad 4 without saving production
 data.
 
@@ -5563,7 +5563,7 @@ setting; both normal and inverted previews were verified on the wired Zenfone wi
 ## NBC-273: reduce hardcoded NetBox App Links configuration
 
 Investigate how to support arbitrary NetBox hosts without tying the installed APK's Android App
-Links to `netbox.brkn.lol`, while preserving secure link verification and the runtime connection
+Links to `netbox.example.com`, while preserving secure link verification and the runtime connection
 configuration flow.
 
 - [x] Document which intent-filter and Digital Asset Links parts must remain manifest/build-time.
@@ -7058,7 +7058,7 @@ the setting is immediately understandable.
 Status: **done**, 2026-08-15; the icon-tinting behavior NBC-366 asked for was already implemented
 (NBC-212, 2026-08-03) by the time this entry was filed - verified by reading `SettingsDialogs.kt`
 directly. Only the missing test-coverage checklist item needed real work. Verified remotely
-(`:app:testDebugUnitTest` on rofl-13).
+(`:app:testDebugUnitTest` on $ANDROID_REMOTE_HOST).
 
 ## NBC-368: versioned settings backup and restore
 
@@ -7120,7 +7120,7 @@ resolve local-vs-remote off the main thread.
   (topology graphs can have hundreds of nodes; documents shouldn't auto-download for a preview
   card), which is different from the list-row bug and preserved via `RemoteThumbnail`'s
   `localFile` override.
-- [x] Verified remotely on rofl-13: `compileDebugKotlin`, `compileDebugAndroidTestKotlin`,
+- [x] Verified remotely on $ANDROID_REMOTE_HOST: `compileDebugKotlin`, `compileDebugAndroidTestKotlin`,
   `compileDebugUnitTestKotlin`, `ktfmtCheck`, and `testDebugUnitTest` all pass.
 - [x] Confirmed smooth scrolling on a physical device (Zenfone 10/Mi Pad 4/Pixel 5).
 - [x] While live-testing this fix, hit two unrelated `OutOfMemoryError` crashes on the Pixel 5
@@ -7183,7 +7183,7 @@ notification) instead of a static "Syncing…" string. `SyncScheduler.scheduleSt
 10s `setInitialDelay` (`STARTUP_SYNC_DELAY_SECONDS`) to the startup `OneTimeWorkRequest`. Unit tests
 added in `SyncStatusCardTest.kt` for the new pure `syncStatusHeadline`/`syncStatusSubText` helpers.
 
-Status: **done**, 2026-08-05 - `just gradle rofl-13 compileDebugKotlin
+Status: **done**, 2026-08-05 - `just gradle $ANDROID_REMOTE_HOST compileDebugKotlin
 compileDebugAndroidTestKotlin compileDebugUnitTestKotlin testDebugUnitTest` and `just lint` both
 green; merged to main.
 
@@ -7200,7 +7200,7 @@ search field in the app.
   `ModernSearchField` - generously rounded shape, `surfaceContainerHighest`-style tonal color
   instead of `primaryContainer`, leading search icon - while remaining a single tap-to-navigate
   target (keep long-press-to-reorder and the reorder-mode hide button working).
-- [x] Verify `just gradle rofl-13 compileDebugKotlin compileDebugAndroidTestKotlin
+- [x] Verify `just gradle $ANDROID_REMOTE_HOST compileDebugKotlin compileDebugAndroidTestKotlin
   compileDebugUnitTestKotlin testDebugUnitTest` and `just lint` pass.
 - [x] Visually confirm on a physical device via `adb screencap`.
 
@@ -7208,7 +7208,7 @@ search field in the app.
 **How to apply:** reuse the same `MaterialTheme.colorScheme.*` tonal primitives `ModernSearchField`
 already established rather than inventing a new visual style.
 
-Status: **done**, 2026-08-05, verified via `just gradle rofl-13
+Status: **done**, 2026-08-05, verified via `just gradle $ANDROID_REMOTE_HOST
 compileDebugKotlin compileDebugAndroidTestKotlin compileDebugUnitTestKotlin testDebugUnitTest`
 (pass), `just lint` (pass, ktfmtCheck clean), and a screenshot of the dashboard on the Zenfone 10
 after `just deploy-all` confirming the pill/tonal-surface look.
@@ -7251,7 +7251,7 @@ parsing at all, unlike NBC-13's Global Search (`GlobalSearchRepository.parseGlob
 - [x] Unit test coverage for the new filter-matching behavior (`DeviceRepositoryTest.kt`,
   `GenericObjectRepositoryTest.kt`), following the existing `FakeModelDao`-style fake-DAO pattern
   used in `DirectoryRepositoryTest.kt`.
-- [x] Verified remotely: `just gradle rofl-13 compileDebugKotlin compileDebugAndroidTestKotlin
+- [x] Verified remotely: `just gradle $ANDROID_REMOTE_HOST compileDebugKotlin compileDebugAndroidTestKotlin
   compileDebugUnitTestKotlin testDebugUnitTest` and `just lint` both pass.
 
 **Why:** user asked for the per-object-type list screens' search bars to support the same
@@ -7375,7 +7375,7 @@ re-fetch/re-decode on every tab switch).
   derivation in `GenericDetailScreen.kt` is computed above the `Scaffold` content lambda, so a
   `selectedTab` change alone doesn't force it to re-run (separate recomposition scope) - no fix
   needed there.
-- [x] Verified remotely on rofl-13: `compileDebugKotlin compileDebugAndroidTestKotlin
+- [x] Verified remotely on $ANDROID_REMOTE_HOST: `compileDebugKotlin compileDebugAndroidTestKotlin
   compileDebugUnitTestKotlin testDebugUnitTest` and `ktfmtCheck` (`just lint`) both pass.
 - [x] No new pure logic was introduced (pure Compose layout/structure refactor - virtualizing
   existing rows and merging LazyColumns), so no new unit tests were added, consistent with how
@@ -7435,7 +7435,7 @@ installed at all - not on whether the specific item type supports it.
 - [x] Verify formatting, compilation, unit tests, and lint remotely.
 
 Status: **done**, 2026-08-06; verified with remote compilation (`:app:compileDebugKotlin`), unit
-tests (`:app:testDebugUnitTest`), and `ktfmtCheck` on rofl-13. Not yet installed on a physical
+tests (`:app:testDebugUnitTest`), and `ktfmtCheck` on $ANDROID_REMOTE_HOST. Not yet installed on a physical
 device.
 
 ## NBC-378: carry over item-list header icons to the item detail view
@@ -7456,7 +7456,7 @@ list page.
 - [x] Verify formatting, compilation, unit tests, and lint remotely.
 
 Status: **done**, 2026-08-06; verified with remote compilation (`:app:compileDebugKotlin`), unit
-tests (`:app:testDebugUnitTest`), and `ktfmtCheck` on rofl-13.
+tests (`:app:testDebugUnitTest`), and `ktfmtCheck` on $ANDROID_REMOTE_HOST.
 
 ## NBC-379: sidebar visual/interaction fixes (pin icon, accent colors, sticky offline toggle, broken reorder)
 
@@ -7608,7 +7608,7 @@ alongside this JSON-based one, prefetched during background sync rather than laz
 `<a href>` links rewritten from the public NetBox web URLs to in-app deep links (likely needs a
 WebView, not a static image loader, so link taps are interceptable).
 
-**Bugfix, 2026-08-06:** the user tested against their real instance (`netbox.brkn.lol`) immediately
+**Bugfix, 2026-08-06:** the user tested against their real instance (`netbox.example.com`) immediately
 and hit "No cable path to trace" for every cable. Root cause: `cableTraceStartTarget()` read the
 termination out of `a_terminations[0]["termination"]`, a field name pulled from a web-fetched
 summary of NetBox's `CableTerminationSerializer` source - wrong for the live API, which nests it
@@ -7669,7 +7669,7 @@ JSON views' rows are more reliably tappable/scrollable on a phone.
 svg' button on the rack view and the cable termination in their respective tabs. we could then also
 pre-fetch the svgs... we should patch them though as they link to the public urls (which might not
 work out of the box)... by prefetching i mean during sync."
-**How to apply:** confirmed against the live instance (`netbox.brkn.lol`) that rack-elevation SVG
+**How to apply:** confirmed against the live instance (`netbox.example.com`) that rack-elevation SVG
 hrefs come in two shapes - absolute (`https://host/dcim/devices/15/`, occupied slots) and relative
 (`/dcim/devices/add/?...`, empty slots) - `loadDataWithBaseURL`'s `baseUrl` param must be the
 NetBox instance's real base URL (not null) for the relative ones to resolve before
@@ -7840,7 +7840,7 @@ a different tab once the layout finished settling.
   `isCable` are synchronous and `changelog`/`traceSegments` only affect badge counts, not which tabs
   show up). `GenericDetailScreen` gates on it the same way.
 - [x] Verified remotely: `:app:compileDebugKotlin` and `:app:testDebugUnitTest` (including
-  `DeviceDetailViewModelTest`) both pass on rofl-13 with the change in place.
+  `DeviceDetailViewModelTest`) both pass on $ANDROID_REMOTE_HOST with the change in place.
 - [x] Verify live on a physical device that the tab bar no longer visibly grows after the screen
   appears - caught it live via a rapid adb screenshot burst on the Zenfone 10 opening a device with
   three related tabs (Overview/Journal/Connected): the screen shows only a loading spinner (no tab
@@ -7863,7 +7863,7 @@ app bar itself.
   - the item's real name once loaded, falling back to the existing singular-type-label helper
   (`ui/common/ObjectTypeBadge.kt`, already used by global search) while loading or if the item
   genuinely has no display name, instead of the plural form.
-- [x] Verified remotely: `:app:compileDebugKotlin` passes on rofl-13 with the change in place.
+- [x] Verified remotely: `:app:compileDebugKotlin` passes on $ANDROID_REMOTE_HOST with the change in place.
 - [x] Verified live on the Zenfone 10: the rack detail screen's header now reads "Samson SRK16"
   instead of "Racks".
 
@@ -7918,8 +7918,8 @@ with the group name as its title, while ungrouped fields (the synthetic `"Other"
   clustered (matches today exactly); and one test running the whole pipeline (`buildFieldRows` +
   `clusterFieldRows`) against real `CustomFieldDefinition`s with groups/weights.
 - [x] Verified remotely: `:app:compileDebugKotlin` and the full `:app:testDebugUnitTest` suite (48
-  cases in `GenericFieldRendererTest`, including the 4 new ones) pass on rofl-13.
-- [x] Verified live on the Zenfone 10 against real data on `netbox.brkn.lol`: device `#30`
+  cases in `GenericFieldRendererTest`, including the 4 new ones) pass on $ANDROID_REMOTE_HOST.
+- [x] Verified live on the Zenfone 10 against real data on `netbox.example.com`: device `#30`
   ("8-inch monitor") has only its "Purchase Information" group populated (Store/Order Number/
   Date/Price/Currency) - renders as one shared card titled "Purchase Information" with no divider
   between fields. Device `#5` ("brkn-ap") has "Purchase Information" populated *and* an ungrouped
@@ -7971,7 +7971,7 @@ nothing about it is specific to NBC-391.
   trades one background resync for a hard launch crash. Forward migrations are untouched; only the
   downgrade path (`addMigrations`/`MIGRATIONS` has no matching entry) falls back to destructive.
 - [x] Verified remotely: `:app:compileDebugKotlin` and the full `:app:testDebugUnitTest` suite pass
-  on rofl-13.
+  on $ANDROID_REMOTE_HOST.
 - [x] Verified live: reinstalled onto the Pixel 5 (which was still crash-looping on the v18 cache
   from earlier NBC-391 testing) without first uninstalling - app opened cleanly straight into the
   "Connect to NetBox" setup flow instead of crashing, confirming the destructive-downgrade fallback
@@ -7992,7 +7992,7 @@ action.
   message plus the `Step X of Y · N of M items` detail, with the original sentence as the initial
   fallback before the first progress event.
 - [x] Added the required `SyncProgress`/`notificationSubText` imports and verified remotely with
-  `:app:compileDebugKotlin` and the full `:app:testDebugUnitTest` suite on rofl-13.
+  `:app:compileDebugKotlin` and the full `:app:testDebugUnitTest` suite on $ANDROID_REMOTE_HOST.
 - [x] Deployed the build to all three attached devices with `just deploy-all debug`. On the Zenfone
   10's fresh first sync, UI automation captured live overlay text including `Syncing 138 NetBox
   models…`, `Step 7 of 9 · 29 of 138 models`, and later `Syncing topology map…`/`Step 9 of 9`; the
@@ -8019,7 +8019,7 @@ specialized rows and custom-field groups with their existing behavior.
 - [x] Add renderer tests covering a lone field, the mixed native field run, comments/audit
   timestamps, and linked-item count grouping.
 - [x] Verified remotely with `:app:compileDebugKotlin` and the full `:app:testDebugUnitTest` suite on
-  rofl-13, then deployed the debug build to all three attached development devices with
+  $ANDROID_REMOTE_HOST, then deployed the debug build to all three attached development devices with
   `just deploy-all debug`.
 
 Status: **done**, 2026-08-06; verified with remote compilation, the full unit test suite, and
@@ -8033,7 +8033,7 @@ the manufacturer or device type represented by a device-type photo.
 - [x] Replace the separate `Open device type` action with inline clickable Manufacturer and Device type
   metadata values.
 - [x] Verify remotely with `:app:compileDebugKotlin` and the full `:app:testDebugUnitTest` suite on
-  rofl-13, then deploy the debug build to all three attached devices with `just deploy-all debug`.
+  $ANDROID_REMOTE_HOST, then deploy the debug build to all three attached devices with `just deploy-all debug`.
 
 Status: **done**, 2026-08-06; verified with remote compilation, the full unit test suite, and
 deployment to all attached physical devices.
@@ -8049,7 +8049,7 @@ The viewer should identify the source of the currently displayed image without o
 - [x] Add a bottom source badge to the viewer metadata panel for device-type images and image
   attachments.
 - [x] Verify remotely with `:app:compileDebugKotlin` and the full `:app:testDebugUnitTest` suite on
-  rofl-13, then deploy the debug build to all three attached devices with `just deploy-all debug`.
+  $ANDROID_REMOTE_HOST, then deploy the debug build to all three attached devices with `just deploy-all debug`.
 
 Status: **done**, 2026-08-06; verified with remote compilation, the full unit test suite, and
 deployment to all attached physical devices.
@@ -8092,7 +8092,7 @@ and documents as shared cards while preserving their existing counts and actions
 - [x] Wrap image attachments and documents in shared section cards on generic and device detail
   views; keep document rows inside the parent card rather than nesting cards.
 - [x] Verify remotely with `:app:compileDebugKotlin` and the full `:app:testDebugUnitTest` suite on
-  rofl-13, then deploy the debug build to all three attached devices with `just deploy-all debug`.
+  $ANDROID_REMOTE_HOST, then deploy the debug build to all three attached devices with `just deploy-all debug`.
 
 Status: **done**, 2026-08-06; verified with remote compilation, the full unit test suite, and
 deployment to all attached physical devices.
@@ -8134,7 +8134,7 @@ should be done at sync time").
 - [x] Fixed the two hand-written `NetBoxObjectDao` test fakes (`GenericObjectRepositoryTest`,
   `PendingEditRepositoryTest`) that needed the new interface method implemented to keep compiling.
 - [x] Verified remotely: `:app:compileDebugKotlin` and the full `:app:testDebugUnitTest` suite pass
-  on rofl-13.
+  on $ANDROID_REMOTE_HOST.
 - [x] Verified live on the Zenfone 10: installed over an existing v17 database with real cached
   devices/interfaces/ports - the migration ran without a crash or Room schema-validation error, the
   device list and a device's Overview/Rear ports (7)/Changelog tabs all rendered correctly from the
@@ -8586,7 +8586,7 @@ performance on the Mi Pad 4 (the project's weakest device, 60Hz panel) sits abov
       `BaselineProfileGenerator` journey: cold start → dashboard → device list scroll → open a
       device detail → global search. Reuse the E2E screenshot CI's emulator setup
       (`.github/workflows/`, NBC-200/367 infrastructure) to *generate* the profile on a
-      gradle-managed device in CI, or generate locally-on-remote (rofl-13) if the CI leg is too
+      gradle-managed device in CI, or generate locally-on-remote ($ANDROID_REMOTE_HOST) if the CI leg is too
       much scope - committing the generated `baseline-prof.txt` is the deliverable either way.
 - [ ] Add `androidx.profileinstaller:profileinstaller` as an explicit dependency so the profile
       actually installs on release builds (Obtainium/GitHub sideloads don't get Play Cloud
@@ -8650,7 +8650,7 @@ measured on the Mi Pad 4, 2026-08-08).
 ## NBC-427: one app open runs two complete sync passes back-to-back (missed periodic + startup
 worker) - add a freshness short-circuit to syncAllLocked
 
-Measured live on the Mi Pad 4 (debug 1.4.8 against netbox.brkn.lol, 2026-08-09, zero server-side
+Measured live on the Mi Pad 4 (debug 1.4.8 against netbox.example.com, 2026-08-09, zero server-side
 changes): one cold app open produced **two complete sync passes in a row** - 1,236 GET requests
 (617 + 619, serialized) and ~2.8 MB received in total, ~2 minutes of visible "Syncing…". A later
 single-pass reopen of the same build measured 616 GETs, confirming ~620 requests is the per-pass
@@ -8708,7 +8708,7 @@ wasn't clean).
 
 The device-type step (`sync/OfflineSyncRepository.kt:166-177`) calls
 `deviceTypeRepository.refresh(deviceTypeId)` for every distinct device type referenced by cached
-devices, on every pass, full or incremental. Live on the Mi Pad 4 (debug 1.4.8, netbox.brkn.lol,
+devices, on every pass, full or incremental. Live on the Mi Pad 4 (debug 1.4.8, netbox.example.com,
 2026-08-09, nothing changed server-side) this was **236 individual
 `GET /api/dcim/device-types/<id>/` requests per pass, 472 across the two passes of one app open**
 - the single largest request category, ~38% of a pass's 616 requests. Each response only feeds
@@ -8838,7 +8838,7 @@ cellular every 6h.
       covered by `OfflineSyncGatingTest`'s unit tests rather than a live repeat, since the only
       live "nothing changed" pass observed (Zenfone 10) was subsumed by NBC-427's short-circuit
       before reaching this step, and deliberately editing a cable/device on the real
-      netbox.brkn.lol instance just to force a live negative-branch check wasn't done to avoid
+      netbox.example.com instance just to force a live negative-branch check wasn't done to avoid
       mutating real inventory data for a test.
 
 Status: **done**, 2026-08-09; topology gate implemented, unit tested, and the positive (refetch)
@@ -8951,7 +8951,7 @@ silently shows the old bytes forever, with no indication. The Mi Pad 4's
       (zero attachment requests for existing files); only the 24h/forced full pass pays one
       conditional request per attachment, and those are ~zero-byte 304s when nothing changed.
 - [x] NetBox serves `/media/` via its web server (nginx/whitenoise), which answers
-      `If-Modified-Since` with 304 for static files - verify once against netbox.brkn.lol with
+      `If-Modified-Since` with 304 for static files - verify once against netbox.example.com with
       `curl -H "Authorization: Token …" -H "If-Modified-Since: <future date>" -sI <media url>`
       before relying on it; if the deployment doesn't honor it, fall back to comparing
       `Content-Length` from a HEAD request instead. **Verified live and it does NOT honor
@@ -9228,7 +9228,7 @@ indicator.
 - [x] Add `SyncPulseIcon`, a pulsing-ripple wrapper around the header object-type icon on both
       detail screens, active while `isRefreshing` is true - the in-progress signal for a feature
       that intentionally suppresses the large pull-to-refresh spinner over its content.
-- [x] Verify remotely (rofl-13): `:app:compileDebugKotlin` and the touched unit test suites
+- [x] Verify remotely ($ANDROID_REMOTE_HOST): `:app:compileDebugKotlin` and the touched unit test suites
       (`RefreshToastStateTest`, device-detail/generic-detail packages) both pass.
 - [x] Manually verify on a physical device (Zenfone 10, debug 1.5.5): pull-to-refresh on the
       "D-Link POE Switch" device (real interfaces/cables in the live cache) - header device-icon
@@ -9265,7 +9265,7 @@ user-facing control, and `SyncScheduler`'s constraints never required charging -
       defaults for older backup files that predate them.
 - [x] Add Settings UI: a "Sync only while charging" toggle and a "Background sync interval"
       dropdown (1/3/6/12/24h presets), in the existing Sync policy group.
-- [x] Verify remotely (rofl-13): full `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass.
+- [x] Verify remotely ($ANDROID_REMOTE_HOST): full `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass.
 - [x] Manually verify in Settings (Zenfone 10, debug 1.5.5): toggled "Sync only while charging" on
       in Settings > Sync, `am force-stop`'d the app (harder than backgrounding - confirms it's
       actually persisted to disk, not just held in memory) and relaunched - toggle was still on.
@@ -9286,7 +9286,7 @@ sync its devices, their device types/interfaces/cables, and the device on the ot
 cable; a site/location should cascade through its racks and devices the same way - uniformly for
 any object type, not a hand-written list per screen.
 
-Two live checks against netbox.brkn.lol (via the `netbox` skill) shaped the design: NetBox
+Two live checks against netbox.example.com (via the `netbox` skill) shaped the design: NetBox
 silently ignores an unrecognized filter param and returns the endpoint's full unfiltered contents
 instead of erroring (`?bogus_filter_xyz=1` -> HTTP 200, full count) - a wrong guess at a filter
 param name would silently turn a "targeted" sync into an accidental full sync with no error
@@ -9323,7 +9323,7 @@ signal. And a cable's far-end device is genuinely 4 raw JSON hops from a root de
       NBC-443.
 - [x] Add a unit test for `forwardReferences()` using real device/cable JSON snippets captured
       from the live-instance checks (deterministic, no mocking).
-- [x] Verify remotely (rofl-13): full `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass.
+- [x] Verify remotely ($ANDROID_REMOTE_HOST): full `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass.
 - [x] Manual on-device check (Zenfone 10, debug 1.5.5): pull-to-refresh on "D-Link POE Switch" (a
       real device with cables in the live cache, rack Samson SRK16) - after refresh, its
       "Connected devices" tab showed 13 devices reached via interface/cable traversal (an AP, a
@@ -9364,7 +9364,7 @@ type with a boolean field positioned mid-list hits the same fragmentation.
 - [x] Updated tests: replaced the test that encoded the old (buggy) fragment-and-duplicate-title
       behavior for a boolean with one confirming it now stays inline in one cluster; added a
       still-fragmenting-type (`Image`) case to keep covering the untitled-second-run behavior.
-- [x] Verify remotely (rofl-13): full `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass,
+- [x] Verify remotely ($ANDROID_REMOTE_HOST): full `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass,
       across all three passes.
 - [x] Manual on-device check (Zenfone 10, debug 1.5.5): opened the Samson SRK16 rack that
       originally surfaced this - one single "Details" card top to bottom (Name through
@@ -9377,7 +9377,7 @@ on-device on the exact rack that originally surfaced the bug.
 
 ## NBC-447: fix `CursorWindow` crash building the global search index on the Pixel 5
 
-Live crash report (px5.lan, build 1.5.5): `IllegalStateException: Couldn't read row 366, col 0
+Live crash report ($PX5_HOST, build 1.5.5): `IllegalStateException: Couldn't read row 366, col 0
 from CursorWindow` inside `NetBoxObjectDao_Impl.observeAllObjects$lambda$0`. Root cause:
 `GlobalSearchRepository.cachedGenericObjects` drove its index off
 `NetBoxObjectDao.observeAllObjects()`, a single `SELECT * FROM netbox_objects` with no
@@ -9396,7 +9396,7 @@ exact exception instead of an `OutOfMemoryError`.
       bounded to a single endpoint's rows (matching the sync's own ~200-row-page size) rather than
       the entire cache at once. Outer `debounce(300)` kept so a multi-endpoint sync burst still
       collapses into one rebuild instead of one per endpoint page.
-- [x] Verify remotely (rofl-13): full `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass.
+- [x] Verify remotely ($ANDROID_REMOTE_HOST): full `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass.
 - [x] Manual on-device check (Zenfone 10, debug build 1.5.5, ~388 devices/239 device types cached
       mid-sync): searched "switch" (126 hits) and "a" (438 hits, spans multiple endpoints) with a
       logcat watch for `FATAL EXCEPTION`/`CursorWindow`/`OutOfMemory` - none seen, results rendered
@@ -9434,7 +9434,7 @@ silently drift out of date as dependencies change.
       `Library.website` (POM `<url>`) falling back to `Library.scm?.url` (repo URL) and opens it via
       `LocalUriHandler`; a library with neither falls back to the container's own default of
       expanding its license text inline, so nothing dead-ends with no reaction to a tap.
-- [x] Verify remotely (rofl-13): `:app:compileDebugKotlin` and `:app:testDebugUnitTest` both pass.
+- [x] Verify remotely ($ANDROID_REMOTE_HOST): `:app:compileDebugKotlin` and `:app:testDebugUnitTest` both pass.
 - [x] Manual on-device check (Zenfone 10, debug build 1.5.6): Settings > About > Libraries renders
       real generated data (AboutLibraries' own modules, Accompanist, AndroidX Activity, App Startup,
       ...) with author/version/license badge per row; tapping a row (Accompanist Drawable Painter)
@@ -9462,7 +9462,7 @@ lists before parsing/indexing them, so the whole cache can still peak above the 
       network matching; ordinary endpoints no longer retain their full parsed object trees.
 - [x] Added focused regression coverage for the raw-JSON retention contract and the existing
       interface/IP network matching behavior.
-- [x] Verified remotely on rofl-13 with `compileDebugKotlin`, `testDebugUnitTest`, and `ktfmtCheck`.
+- [x] Verified remotely on $ANDROID_REMOTE_HOST with `compileDebugKotlin`, `testDebugUnitTest`, and `ktfmtCheck`.
 - [x] Re-tested after deploying the debug build to all three attached devices: on the Zenfone 10,
       `DLK-0001` returned the expected asset-tag-ranked result and `a` rendered 438 cached hits;
       neither query produced `FATAL EXCEPTION`, `OutOfMemoryError`, or `CursorWindow` log markers.
@@ -9492,7 +9492,7 @@ Status: **done** (2026-08-15; CI runs 31910324321/31910324373/31910324429 passed
 - [x] Update `AGENTS.md` (drop the `NO-SOURCE` and version-drift caveats)
 
 Status: **done**, 2026-10-31 - `ktfmt --dry-run --set-exit-if-changed` clean over all tracked Kotlin
-files, Gradle still configures and compiles on rofl-13 without the plugin, pre-commit hook ran on commit.
+files, Gradle still configures and compiles on $ANDROID_REMOTE_HOST without the plugin, pre-commit hook ran on commit.
 
 ## NBC-454: Sync must not be cancelled by Battery Saver / low battery mid-run
 

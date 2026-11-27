@@ -1,13 +1,13 @@
 # Nyetbox task runner.
 #
 # Gradle must never run on this machine directly - every build/test/lint recipe here shells out to
-# a remote host (rofl-13.brkn.lol or rofl-14.brkn.lol) over SSH instead. See AGENTS.md.
+# a remote host (the remote build host) over SSH instead. See AGENTS.md.
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
 application_id := "dev.pschmitt.nyetbox"
 
-remote_host := env_var_or_default("NBC_REMOTE_HOST", "rofl-13.brkn.lol")
+remote_host := env_var_or_default("NBC_REMOTE_HOST", env_var_or_default("ANDROID_REMOTE_HOST", ""))
 
 # Empty for the main checkout; "-<worktree-dirname>" when run from a linked git worktree (e.g. one
 # of Claude's isolated agent worktrees under .claude/worktrees/). Keeps parallel worktree agents
@@ -20,13 +20,13 @@ local_dist := env_var_or_default("NBC_DIST_DIR", "./dist")
 default_abi := env_var_or_default("NBC_ABI", "arm64-v8a")
 gradle_extra_props := ""
 
-zenfone_serial := env_var_or_default("ZENFONE_SERIAL", "R6AIB700W850L7G")
+zenfone_serial := env_var_or_default("ZENFONE_SERIAL", "")
 
-mipad_host := env_var_or_default("MIPAD_HOST", "mi-pad-4.lan")
+mipad_host := env_var_or_default("MIPAD_HOST", "")
 mipad_ssh_port := env_var_or_default("MIPAD_SSH_PORT", "8022")
 mipad_adb_port := env_var_or_default("MIPAD_ADB_PORT", "5555")
 
-px5_host := env_var_or_default("PX5_HOST", "px5.lan")
+px5_host := env_var_or_default("PX5_HOST", "")
 
 # Release builds are signed with the persistent CI keystore, fetched from this rbw entry and
 # staged on the build host only for the duration of the build. Without CI_KEYSTORE_*, Gradle

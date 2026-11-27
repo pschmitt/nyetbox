@@ -18,7 +18,7 @@ import org.junit.Test
 // Revalidation is HEAD-first (see isUnchangedByHead): a HEAD carries no body either way, so it
 // covers both a server that honors If-Modified-Since (304 on the HEAD itself) and one that doesn't
 // but still reports an accurate Content-Length (compared against the cached file's size) - the
-// latter is what a real deployment (netbox.brkn.lol) turned out to need, confirmed live.
+// latter is what a real deployment (netbox.example.com) turned out to need, confirmed live.
 class FileDownloadRevalidationTest {
     private lateinit var server: MockWebServer
     private lateinit var client: OkHttpClient

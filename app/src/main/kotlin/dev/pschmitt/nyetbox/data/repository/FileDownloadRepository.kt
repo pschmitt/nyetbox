@@ -22,7 +22,7 @@ import okhttp3.Request
  * project has no Robolectric) to reach a real cache directory. Must run on a background
  * dispatcher - callers are responsible for that, same as before this was extracted.
  *
- * Verified live against a real deployment (netbox.brkn.lol): its media server ignores
+ * Verified live against a real deployment (netbox.example.com): its media server ignores
  * `If-Modified-Since` entirely and always answers 200 with the full body, even when the file is
  * byte-for-byte identical - conditional GET alone would have turned every 24h full-sync pass into a
  * full re-download of every cached attachment (hundreds of files, hundreds of MB), the exact

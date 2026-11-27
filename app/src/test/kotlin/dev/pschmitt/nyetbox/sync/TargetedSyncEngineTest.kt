@@ -21,17 +21,17 @@ class TargetedSyncEngineTest {
                   "name": "8-inch monitor",
                   "site": {
                     "id": 3,
-                    "url": "https://netbox.brkn.lol/api/dcim/sites/3/",
+                    "url": "https://netbox.example.com/api/dcim/sites/3/",
                     "display": "gu5a"
                   },
                   "rack": {
                     "id": 1,
-                    "url": "https://netbox.brkn.lol/api/dcim/racks/1/",
+                    "url": "https://netbox.example.com/api/dcim/racks/1/",
                     "display": "Samson SRK16"
                   },
                   "location": {
                     "id": 17,
-                    "url": "https://netbox.brkn.lol/api/dcim/locations/17/",
+                    "url": "https://netbox.example.com/api/dcim/locations/17/",
                     "display": "Office"
                   }
                 }
@@ -65,14 +65,14 @@ class TargetedSyncEngineTest {
                       "object_id": 1,
                       "object": {
                         "id": 1,
-                        "url": "https://netbox.brkn.lol/api/dcim/interfaces/1/",
+                        "url": "https://netbox.example.com/api/dcim/interfaces/1/",
                         "device": {
                           "id": 1,
-                          "url": "https://netbox.brkn.lol/api/dcim/devices/1/"
+                          "url": "https://netbox.example.com/api/dcim/devices/1/"
                         },
                         "cable": {
                           "id": 1,
-                          "url": "https://netbox.brkn.lol/api/dcim/cables/1/"
+                          "url": "https://netbox.example.com/api/dcim/cables/1/"
                         }
                       }
                     }
@@ -83,14 +83,14 @@ class TargetedSyncEngineTest {
                       "object_id": 22,
                       "object": {
                         "id": 22,
-                        "url": "https://netbox.brkn.lol/api/dcim/interfaces/22/",
+                        "url": "https://netbox.example.com/api/dcim/interfaces/22/",
                         "device": {
                           "id": 5,
-                          "url": "https://netbox.brkn.lol/api/dcim/devices/5/"
+                          "url": "https://netbox.example.com/api/dcim/devices/5/"
                         },
                         "cable": {
                           "id": 1,
-                          "url": "https://netbox.brkn.lol/api/dcim/cables/1/"
+                          "url": "https://netbox.example.com/api/dcim/cables/1/"
                         }
                       }
                     }
@@ -127,7 +127,7 @@ class TargetedSyncEngineTest {
                 {
                   "id": 1,
                   "missing_url": {"id": 5, "display": "no url field"},
-                  "missing_id": {"url": "https://netbox.brkn.lol/api/dcim/sites/9/"}
+                  "missing_id": {"url": "https://netbox.example.com/api/dcim/sites/9/"}
                 }
                 """
                     .trimIndent()

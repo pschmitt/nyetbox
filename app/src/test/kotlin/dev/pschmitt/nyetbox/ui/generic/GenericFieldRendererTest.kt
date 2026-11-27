@@ -32,8 +32,8 @@ class GenericFieldRendererTest {
         assertEquals(
             "/dcim/device-types/244/?tab=details#photos",
             shortenDisplayedUrl(
-                "https://netbox.brkn.lol/dcim/device-types/244/?tab=details#photos",
-                "https://netbox.brkn.lol",
+                "https://netbox.example.com/dcim/device-types/244/?tab=details#photos",
+                "https://netbox.example.com",
             ),
         )
     }
@@ -41,12 +41,12 @@ class GenericFieldRendererTest {
     @Test
     fun `keeps external urls fully qualified`() {
         val external = "https://vendor.example.com/support/device"
-        assertEquals(external, shortenDisplayedUrl(external, "https://netbox.brkn.lol"))
+        assertEquals(external, shortenDisplayedUrl(external, "https://netbox.example.com"))
     }
 
     @Test
     fun `keeps urls unchanged when the netbox origin is unknown`() {
-        val url = "https://netbox.brkn.lol/dcim/device-types/244/"
+        val url = "https://netbox.example.com/dcim/device-types/244/"
         assertEquals(url, shortenDisplayedUrl(url))
     }
 
@@ -60,7 +60,7 @@ class GenericFieldRendererTest {
         val rows =
             buildFieldRows(
                 parse(
-                    """{"document":"https://netbox.brkn.lol/media/netbox-documents/188_x.pdf","filename":"x.pdf"}"""
+                    """{"document":"https://netbox.example.com/media/netbox-documents/188_x.pdf","filename":"x.pdf"}"""
                 )
             )
         // "filename" is also its own top-level field and renders as its own PlainText row too -
@@ -69,7 +69,7 @@ class GenericFieldRendererTest {
             rows.contains(
                 FieldRow.FileAttachment(
                     "Document",
-                    "https://netbox.brkn.lol/media/netbox-documents/188_x.pdf",
+                    "https://netbox.example.com/media/netbox-documents/188_x.pdf",
                     "x.pdf",
                 )
             )
@@ -82,10 +82,10 @@ class GenericFieldRendererTest {
             buildFieldRows(
                 parse(
                     """{
-                        "document":"https://netbox.brkn.lol/media/netbox-documents/127_manual.pdf",
+                        "document":"https://netbox.example.com/media/netbox-documents/127_manual.pdf",
                         "filename":"manual.pdf",
                         "document_type":"manual",
-                        "assigned_object":{"id":127,"url":"https://netbox.brkn.lol/api/dcim/device-types/127/","display":"Aranet4 Home"},
+                        "assigned_object":{"id":127,"url":"https://netbox.example.com/api/dcim/device-types/127/","display":"Aranet4 Home"},
                         "comments":"",
                         "tags":[]
                     }"""
@@ -96,7 +96,7 @@ class GenericFieldRendererTest {
             listOf(
                 FieldRow.FileAttachment(
                     "Document",
-                    "https://netbox.brkn.lol/media/netbox-documents/127_manual.pdf",
+                    "https://netbox.example.com/media/netbox-documents/127_manual.pdf",
                     "manual.pdf",
                 ),
                 FieldRow.PlainText("Filename", "manual.pdf"),
@@ -174,7 +174,7 @@ class GenericFieldRendererTest {
         val rows =
             buildFieldRows(
                 parse(
-                    """{"id":1,"url":"https://x/api/dcim/racks/1/","display":"Rack 1","display_url":"https://netbox.brkn.lol/dcim/racks/1/"}"""
+                    """{"id":1,"url":"https://x/api/dcim/racks/1/","display":"Rack 1","display_url":"https://netbox.example.com/dcim/racks/1/"}"""
                 )
             )
         assertTrue(rows.isEmpty())
@@ -829,7 +829,7 @@ class GenericFieldRendererTest {
         val rows =
             buildFieldRows(
                 parse(
-                    """{"site":{"id":3,"url":"https://netbox.brkn.lol/api/dcim/sites/3/","display":"HQ"}}"""
+                    """{"site":{"id":3,"url":"https://netbox.example.com/api/dcim/sites/3/","display":"HQ"}}"""
                 )
             )
         assertEquals(
