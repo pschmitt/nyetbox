@@ -8,7 +8,7 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 application_id := "dev.pschmitt.nyetbox"
 
 # Build host and device names come from the private Android dev config
-# (.just/android-app-ci/scripts/android-dev-env, ~/.config/android-dev/env); environment variables still win.
+# (.just/android-app-ci/scripts/android-dev-env, ~/.config/android/devices.env); environment variables still win.
 remote_host := env_var_or_default("NBC_REMOTE_HOST", `.just/android-app-ci/scripts/android-dev-env ANDROID_REMOTE_HOST 2>/dev/null || true`)
 
 # Empty for the main checkout; "-<worktree-dirname>" when run from a linked git worktree (e.g. one
